@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Neural Network-Based Model Diagrams &#8212; MagNavPy 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=01f34227"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Navigation Algorithms" href="nav.html" />
+    <link rel="prev" title="Aeromagnetic Compensation" href="comp.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="neural-network-based-model-diagrams">
+<h1>Neural Network-Based Model Diagrams<a class="headerlink" href="#neural-network-based-model-diagrams" title="Link to this heading">¶</a></h1>
+<p>The goal of neural network-based aeromagnetic compensation is to use machine learning in order to create a nonlinear aeromagnetic compensation model. It may be possible to use additional sensors, beyond a single scalar and vector magnetometer, to improve compensation performance. Shown on this page are diagrams for each of the neural network-based aeromagnetic compensation models available within the package.</p>
+<section id="model-1">
+<h2>Model 1<a class="headerlink" href="#model-1" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">:m1</span></code>   = standard feedforward neural network (NN)</p></li>
+</ul>
+<img alt="m1" src="_images/m1.png" />
+<p>The approach taken here is to include additional data along with the typical magnetometer data. An example of possible data fields is provided in the Appendix of <a class="reference external" href="https://dspace.mit.edu/handle/1721.1/145137">Gnadt, 2022</a>. The idea here is that this additional data allows for greater observability of the aircraft magnetic field, and machine learning can learn the relationship between the data and aircraft field. A baseline model for this approach is to use a standard neural network to represent the compensation model in a pure data-driven approach, as shown above.</p>
+<p>Here, the input data <span class="math notranslate nohighlight">\(\boldsymbol{data}_\mathrm{aux}\)</span>, also known as features, can be raw measurements and/or the Tolles-Lawson <span class="math notranslate nohighlight">\(\boldsymbol{A}\)</span> matrix terms. Using the Tolles-Lawson terms is a form of scientific machine learning (SciML), as these terms represent prior scientific knowledge. This can potentially reduce the amount of data required for training. Note that during training, the mean squared error (MSE) of the aeromagnetic compensation output is compared with the output target. During testing (evaluation), the aeromagnetic compensation output just prior to the “loss MSE” in the figure is used for navigation.</p>
+</section>
+<section id="model-2">
+<h2>Model 2<a class="headerlink" href="#model-2" title="Link to this heading">¶</a></h2>
+<section id="model-2a">
+<h3>Model 2a<a class="headerlink" href="#model-2a" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">:m2a</span></code>  = NN determines Tolles-Lawson (TL) coefficients</p></li>
+</ul>
+<img alt="m2a" src="_images/m2a.png" />
+<p>Model 1 can be extended into even more of a SciML approach using the physics of aeromagnetic compensation. Model 2a, shown above, more closely resembles the classical Tolles-Lawson model, now with</p>
+<div class="math notranslate nohighlight">
+\[B_\mathrm{target} = \boldsymbol{A}~\boldsymbol{\beta}_\mathrm{NN}\]</div>
+<p>where <span class="math notranslate nohighlight">\(B_\mathrm{target}\)</span> is some target magnetic value, <span class="math notranslate nohighlight">\(\boldsymbol{A}\)</span> is the Tolles-Lawson <span class="math notranslate nohighlight">\(\boldsymbol{A}\)</span> matrix, and <span class="math notranslate nohighlight">\(\boldsymbol{\beta}_\mathrm{NN}\)</span> is a vector of varying coefficients.</p>
+<p>Rather than directly determining some magnetic value, the output of the neural network is instead a set of varying coefficients. These are then multiplied by the Tolles-Lawson <span class="math notranslate nohighlight">\(\boldsymbol{A}\)</span> matrix to produce a magnetic value. The general idea here is that this model is easier to train and more interpretable, since the coefficients have meaning related to the permanent, induced, and eddy-current terms in the Tolles-Lawson model. This model uses the same input data <span class="math notranslate nohighlight">\(\boldsymbol{data}_\mathrm{aux}\)</span> as previously described, but also separately requires vector magnetometer measurements (<span class="math notranslate nohighlight">\(B_x\)</span>, <span class="math notranslate nohighlight">\(B_y\)</span>, <span class="math notranslate nohighlight">\(B_z\)</span>).</p>
+</section>
+<section id="model-2b">
+<h3>Model 2b<a class="headerlink" href="#model-2b" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">:m2b</span></code>  = NN determines additive correction to classical TL</p></li>
+</ul>
+<img alt="m2b" src="_images/m2b.png" />
+<p>Another SciML approach that uses the physics of aeromagnetic compensation is model 2b, which is shown above. Rather than predicting the Tolles-Lawson coefficients with a neural network, the Tolles-Lawson coefficients for this approach are pre-determined, using any of the classical, modified, or map-based Tolles-Lawson models. Tolles-Lawson aeromagnetic compensation is then carried out, but large errors still remain for compensation of in-cabin magnetometers. An additive correction is then made to the Tolles-Lawson compensated value to further reduce the errors. This additive correction is the output of a neural network, similar to model 1, except now the neural network does not need to learn the Tolles-Lawson (linear) portion of the desired compensation and instead primarily learns the higher-order nonlinear portion.</p>
+</section>
+<section id="model-2c">
+<h3>Model 2c<a class="headerlink" href="#model-2c" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">:m2c</span></code>  = NN determines additive correction to classical TL, TL coefficients tuned as well</p></li>
+</ul>
+<img alt="m2c" src="_images/m2c.png" />
+<p>An immediate extension of model 2b is model 2c, which is shown above. These models look very similar, but there is one key, subtle difference. In model 2c, the Tolles-Lawson coefficients are updated by including them as parameters during training of the neural network, rather leaving them as static values. The Tolles-Lawson coefficients are not actually part of the neural network, but the Flux machine learning library and Julia programming language provide the flexibility to backpropagate the error to the Tolles-Lawson coefficients just as with the weights of the neural network.</p>
+</section>
+<section id="model-2d">
+<h3>Model 2d<a class="headerlink" href="#model-2d" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">:m2d</span></code>  = NN determines additive correction to each TL coefficient</p></li>
+</ul>
+<img alt="m2d" src="_images/m2d.png" />
+<p>Model 2d combines the general idea behind models 2a and 2b. An additive correction is now made to each individual (static) Tolles-Lawson coefficient. This model was developed as it was thought that making the additive correction in a higher dimensional space may improve performance further.</p>
+</section>
+</section>
+<section id="model-3">
+<h2>Model 3<a class="headerlink" href="#model-3" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">:m3tl</span></code> = no NN, TL coefficients fine-tuned via SGD, without Taylor expansion for training target</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">:m3s</span></code>  = NN determines scalar correction to TL, using expanded TL vector terms for explainability</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">:m3v</span></code>  = NN determines vector correction to TL, using expanded TL vector terms for explainability</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">:m3sc</span></code> = <code class="docutils literal notranslate"><span class="pre">:m3s</span></code> with curriculum learning based on TL error</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">:m3vc</span></code> = <code class="docutils literal notranslate"><span class="pre">:m3v</span></code> with curriculum learning based on TL error</p></li>
+</ul>
+<img alt="m3s" src="_images/m3s.png" />
+<p>The various forms of model 3 use a NN to determine an additive correction to the expanded vector form of Tolles-Lawson. This is the newest model under development. Shown above is the scalar correction version, and shown below is the vector correction version.</p>
+<img alt="m3v" src="_images/m3v.png" />
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">MagNavPy</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="data.html">Flight Path &amp; INS Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="maps.html">Magnetic Anomaly Maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="comp.html">Aeromagnetic Compensation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Neural Network-Based Model Diagrams</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#model-1">Model 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model-2">Model 2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model-3">Model 3</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="nav.html">Navigation Algorithms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_functions.html">API: Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_structs.html">API: Structs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="comp.html" title="previous chapter">Aeromagnetic Compensation</a></li>
+      <li>Next: <a href="nav.html" title="next chapter">Navigation Algorithms</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, MagNav.jl Authors & AI Porting Team.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/nncomp.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

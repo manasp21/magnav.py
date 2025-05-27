@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Navigation Algorithms &#8212; MagNavPy 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=01f34227"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API: Functions" href="api_functions.html" />
+    <link rel="prev" title="Neural Network-Based Model Diagrams" href="nncomp.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="navigation-algorithms">
+<h1>Navigation Algorithms<a class="headerlink" href="#navigation-algorithms" title="Link to this heading">¶</a></h1>
+<p>The following are key functions related to navigation algorithms.</p>
+<section id="magnav-filter-model">
+<h2>MagNav Filter Model<a class="headerlink" href="#magnav-filter-model" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="MagNavPy.src.model_functions.create_model">
+<span class="sig-prename descclassname"><span class="pre">MagNavPy.src.model_functions.</span></span><span class="sig-name descname"><span class="pre">create_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat1_rad</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.7853981633974483</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_pos_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_alt_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_vel_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">init_att_sigma_rad</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.00017453292519943296</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meas_var</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">9.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">VRW_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.000238</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ARW_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5.81e-07</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baro_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ha_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a_hat_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acc_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.000245</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gyro_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7.27e-09</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fogm_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vec_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TL_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baro_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acc_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gyro_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fogm_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vec_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fogm_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P0_TL</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MagNavPy/src/model_functions.html#create_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MagNavPy.src.model_functions.create_model" title="Link to this definition">¶</a></dt>
+<dd><p>Create a magnetic navigation filter model for use in an EKF or a MPF.</p>
+</dd></dl>
+
+<section id="magnav-filter-model-internals">
+<h3>MagNav filter model internals<a class="headerlink" href="#magnav-filter-model-internals" title="Link to this heading">¶</a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="MagNavPy.src.model_functions.get_pinson">
+<span class="sig-prename descclassname"><span class="pre">MagNavPy.src.model_functions.</span></span><span class="sig-name descname"><span class="pre">get_pinson</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.13)"><span class="pre">int</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat_rad</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ve</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Cnb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baro_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acc_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gyro_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fogm_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vec_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fogm_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.03</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0003</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k3</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MagNavPy/src/model_functions.html#get_pinson"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MagNavPy.src.model_functions.get_pinson" title="Link to this definition">¶</a></dt>
+<dd><p>Get the nx x nx Pinson dynamics matrix F.
+States (errors) are 0-indexed:
+0: lat, 1: lon, 2: alt
+3: vn, 4: ve, 5: vd
+6: tn, 7: te, 8: td (tilts)
+9: ha (baro alt bias)
+10: a_hat (baro accel bias)
+11: ax_bias, 12: ay_bias, 13: az_bias (accel biases)
+14: gx_bias, 15: gy_bias, 16: gz_bias (gyro biases)
+(Optional) Tolles-Lawson coeffs
+(Optional) Vector mag biases
+(Optional) FOGM catch-all S</p>
+</dd></dl>
+
+</section>
+</section>
+<section id="cramerrao-lower-bound">
+<h2>Cramér–Rao Lower Bound<a class="headerlink" href="#cramerrao-lower-bound" title="Link to this heading">¶</a></h2>
+</section>
+<section id="extended-kalman-filter">
+<h2>Extended Kalman Filter<a class="headerlink" href="#extended-kalman-filter" title="Link to this heading">¶</a></h2>
+</section>
+<section id="run-filter-with-additional-options">
+<h2>Run Filter (with additional options)<a class="headerlink" href="#run-filter-with-additional-options" title="Link to this heading">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">MagNavPy</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="data.html">Flight Path &amp; INS Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="maps.html">Magnetic Anomaly Maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="comp.html">Aeromagnetic Compensation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nncomp.html">Neural Network-Based Model Diagrams</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Navigation Algorithms</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#magnav-filter-model">MagNav Filter Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cramerrao-lower-bound">Cramér–Rao Lower Bound</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#extended-kalman-filter">Extended Kalman Filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run-filter-with-additional-options">Run Filter (with additional options)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api_functions.html">API: Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_structs.html">API: Structs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="nncomp.html" title="previous chapter">Neural Network-Based Model Diagrams</a></li>
+      <li>Next: <a href="api_functions.html" title="next chapter">API: Functions</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, MagNav.jl Authors & AI Porting Team.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/nav.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

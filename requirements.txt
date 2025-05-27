@@ -1,0 +1,12 @@
+pandas
+torch
+matplotlib
+h5py
+scipy
+jax
+sphinx
+sphinx-rtd-theme
+myst-parser
+toml
+scikit-learn
+statsmodels

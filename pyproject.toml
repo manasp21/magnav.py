@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "magnavpy"
+version = "0.1.0"
+description = "Python port of MagNav.jl"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+gdal = "*"
+pandas = "*"
+torch = "*"
+matplotlib = "*"
+h5py = "*"
+scipy = "*"
+jax = "*"
+toml = "*"
+scikit-learn = "*"
+statsmodels = "*"
+
+[tool.poetry.group.dev.dependencies]
+sphinx = "*"
+sphinx-rtd-theme = "*"
+myst-parser = "*"
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

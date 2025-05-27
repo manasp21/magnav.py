@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MagNavPy.src.plot_functions &#8212; MagNavPy 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for MagNavPy.src.plot_functions</h1><div class="highlight"><pre>
+<span></span><span class="c1"># MagNavPy/src/plot_functions.py</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.signal</span><span class="w"> </span><span class="kn">import</span> <span class="n">detrend</span> <span class="k">as</span> <span class="n">scipy_detrend</span><span class="p">,</span> <span class="n">welch</span><span class="p">,</span> <span class="n">spectrogram</span>
+<span class="c1"># Note: firwin, filtfilt were in thought process but not directly used in final Julia code shown</span>
+<span class="c1"># from scipy.signal import firwin, filtfilt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">pearsonr</span><span class="p">,</span> <span class="n">linregress</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.special</span><span class="w"> </span><span class="kn">import</span> <span class="n">expit</span> <span class="k">as</span> <span class="n">sigmoid</span> <span class="c1"># for σ</span>
+<span class="c1"># from scipy.misc import derivative # Deprecated, implemented manually or using alternatives</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="c1"># Assuming these will be available from other modules in MagNavPy</span>
+<span class="c1"># It&#39;s crucial these imports are correct relative to the project structure.</span>
+<span class="c1"># For example: from .magnav import XYZ, MagV (if MagV is a class/type)</span>
+<span class="c1"># from .analysis_util import get_x</span>
+<span class="c1"># from .tolles_lawson import create_TL_A, create_TL_coef</span>
+
+<span class="c1"># Constants (assuming based on Julia code context)</span>
+<span class="n">NUM_MAG_MAX</span> <span class="o">=</span> <span class="mi">9</span> <span class="c1"># Assumption, based on mag_9_uc in Julia comments/usage</span>
+
+<span class="c1"># Helper for derivatives</span>
+<div class="viewcode-block" id="derivative">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.derivative">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">derivative</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes numerical derivative.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">dx</span><span class="p">)</span> <span class="o">-</span> <span class="n">func</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">dx</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dx</span><span class="p">)</span></div>
+
+
+<span class="c1"># Activation functions</span>
+<div class="viewcode-block" id="relu">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.relu">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">relu</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Rectified Linear Unit.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="relu_derivative">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.relu_derivative">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">relu_derivative</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Derivative of ReLU.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="c1"># Ensure float output</span></div>
+
+
+<span class="c1"># sigmoid is imported as scipy.special.expit</span>
+
+<div class="viewcode-block" id="sigmoid_derivative">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.sigmoid_derivative">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sigmoid_derivative</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Derivative of sigmoid.&quot;&quot;&quot;</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">sigmoid</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">s</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">s</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="swish">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.swish">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">swish</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Swish activation function.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">x</span> <span class="o">*</span> <span class="n">sigmoid</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="swish_derivative">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.swish_derivative">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">swish_derivative</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Derivative of Swish.&quot;&quot;&quot;</span>
+    <span class="n">sx</span> <span class="o">=</span> <span class="n">sigmoid</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">sx</span> <span class="o">+</span> <span class="n">x</span> <span class="o">*</span> <span class="n">sx</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">sx</span><span class="p">)</span> <span class="c1"># f&#39;(x) = f(x) + sigmoid(x)*(1-f(x)) where f(x) = x*sigmoid(x) -&gt; simpler: sigmoid(x) + x * sigmoid_derivative(x)</span></div>
+
+
+<div class="viewcode-block" id="tanh">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.tanh">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">tanh</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Hyperbolic tangent.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="tanh_derivative">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.tanh_derivative">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">tanh_derivative</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Derivative of tanh.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span></div>
+
+
+<span class="c1"># Helper for detrend to match Julia&#39;s detrend options</span>
+<div class="viewcode-block" id="detrend_mean_only">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.detrend_mean_only">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">detrend_mean_only</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Subtracts the mean from the data.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">data</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="detrend_linear">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.detrend_linear">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">detrend_linear</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Subtracts a linear fit from the data (default for scipy.signal.detrend).&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">scipy_detrend</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="plot_basic">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.plot_basic">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_basic</span><span class="p">(</span><span class="n">tt</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">ind</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lab</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">xlab</span><span class="o">=</span><span class="s2">&quot;time [min]&quot;</span><span class="p">,</span> <span class="n">ylab</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+               <span class="n">show_plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">save_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plot_png</span><span class="o">=</span><span class="s2">&quot;data_vs_time.png&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot data vs time.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        tt (np.ndarray): length-N time vector [s]</span>
+<span class="sd">        y (np.ndarray): length-N data vector</span>
+<span class="sd">        ind (np.ndarray, optional): boolean array for selected data indices. Defaults to all true.</span>
+<span class="sd">        lab (str, optional): data (legend) label. Defaults to &quot;&quot;.</span>
+<span class="sd">        xlab (str, optional): x-axis label. Defaults to &quot;time [min]&quot;.</span>
+<span class="sd">        ylab (str, optional): y-axis label. Defaults to &quot;&quot;.</span>
+<span class="sd">        show_plot (bool, optional): if true, show plot. Defaults to True.</span>
+<span class="sd">        save_plot (bool, optional): if true, save plot as plot_png. Defaults to False.</span>
+<span class="sd">        plot_png (str, optional): plot file name to save. Defaults to &quot;data_vs_time.png&quot;.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        matplotlib.figure.Figure: The plot figure.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">ind</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">tt</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+    <span class="c1"># Ensure tt[ind] is not empty before accessing tt[ind][0]</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">tt</span><span class="p">[</span><span class="n">ind</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">time_axis</span> <span class="o">=</span> <span class="p">(</span><span class="n">tt</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">-</span> <span class="n">tt</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mi">60</span>
+        <span class="n">data_axis</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">time_axis</span><span class="p">,</span> <span class="n">data_axis</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">lab</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Handle empty selection: plot nothing or a message</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s2">&quot;No data selected for plotting&quot;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="n">xlab</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">ylab</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">lab</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">save_plot</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">plot_png</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="s2">&quot;.pdf&quot;</span><span class="p">,</span> <span class="s2">&quot;.svg&quot;</span><span class="p">)):</span> <span class="c1"># Allow other extensions</span>
+            <span class="n">plot_png</span> <span class="o">+=</span> <span class="s2">&quot;.png&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">plot_png</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Plot saved to </span><span class="si">{</span><span class="n">plot_png</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+
+<div class="viewcode-block" id="plot_activation">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.plot_activation">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_activation</span><span class="p">(</span><span class="n">activation_func_names</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">plot_deriv</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">show_plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">save_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plot_png</span><span class="o">=</span><span class="s2">&quot;act_func.png&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot activation function(s) or their derivative(s).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        activation_func_names (list, optional): activation function names (strings: &#39;relu&#39;, &#39;sigmoid&#39;, &#39;swish&#39;, &#39;tanh&#39;).</span>
+<span class="sd">                                              Defaults to [&#39;relu&#39;, &#39;sigmoid&#39;, &#39;swish&#39;, &#39;tanh&#39;].</span>
+<span class="sd">        plot_deriv (bool, optional): if true, plot derivatives. Defaults to False.</span>
+<span class="sd">        show_plot (bool, optional): if true, show plot. Defaults to True.</span>
+<span class="sd">        save_plot (bool, optional): if true, save plot. Defaults to False.</span>
+<span class="sd">        plot_png (str, optional): plot file name to save. Defaults to &quot;act_func.png&quot;.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        matplotlib.figure.Figure: The plot figure.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">activation_func_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">activation_func_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;relu&#39;</span><span class="p">,</span> <span class="s1">&#39;sigmoid&#39;</span><span class="p">,</span> <span class="s1">&#39;swish&#39;</span><span class="p">,</span> <span class="s1">&#39;tanh&#39;</span><span class="p">]</span>
+
+    <span class="n">dpi</span> <span class="o">=</span> <span class="mi">500</span> <span class="k">if</span> <span class="n">save_plot</span> <span class="k">else</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.dpi&#39;</span><span class="p">]</span> <span class="c1"># Use default dpi if not saving high-res</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>
+
+    <span class="n">func_map</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;relu&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">relu</span><span class="p">,</span> <span class="n">relu_derivative</span><span class="p">),</span>
+        <span class="s1">&#39;sigmoid&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">sigmoid</span><span class="p">,</span> <span class="n">sigmoid_derivative</span><span class="p">),</span>
+        <span class="s1">&#39;swish&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">swish</span><span class="p">,</span> <span class="n">swish_derivative</span><span class="p">),</span>
+        <span class="s1">&#39;tanh&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">tanh</span><span class="p">,</span> <span class="n">tanh_derivative</span><span class="p">),</span>
+    <span class="p">}</span>
+
+    <span class="n">label_map</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;relu&#39;</span><span class="p">:</span> <span class="s2">&quot;ReLU&quot;</span><span class="p">,</span> <span class="s1">&#39;sigmoid&#39;</span><span class="p">:</span> <span class="s2">&quot;Sigmoid&quot;</span><span class="p">,</span> <span class="s1">&#39;swish&#39;</span><span class="p">:</span> <span class="s2">&quot;Swish&quot;</span><span class="p">,</span> <span class="s1">&#39;tanh&#39;</span><span class="p">:</span> <span class="s2">&quot;tanh&quot;</span>
+    <span class="p">}</span>
+    <span class="n">linestyle_map</span> <span class="o">=</span> <span class="p">{</span> <span class="c1"># From Julia code</span>
+        <span class="s1">&#39;relu&#39;</span><span class="p">:</span> <span class="s1">&#39;solid&#39;</span><span class="p">,</span> <span class="s1">&#39;sigmoid&#39;</span><span class="p">:</span> <span class="s1">&#39;solid&#39;</span><span class="p">,</span> <span class="s1">&#39;swish&#39;</span><span class="p">:</span> <span class="s1">&#39;dashed&#39;</span><span class="p">,</span> <span class="s1">&#39;tanh&#39;</span><span class="p">:</span> <span class="s1">&#39;dotted&#39;</span>
+    <span class="p">}</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;z&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">6</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="c1"># Julia&#39;s margin=2*mm. Matplotlib handles margins via tight_layout or subplots_adjust.</span>
+    <span class="c1"># plt.tight_layout() is often sufficient.</span>
+
+    <span class="n">target_funcs_data</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">plot_deriv</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;f(z)&quot;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">activation_func_names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">func_map</span><span class="p">:</span>
+                <span class="n">target_funcs_data</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">func_map</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">0</span><span class="p">](</span><span class="n">x</span><span class="p">),</span> <span class="n">label_map</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">linestyle_map</span><span class="p">[</span><span class="n">name</span><span class="p">]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;f&#39;(z)&quot;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">activation_func_names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">func_map</span><span class="p">:</span>
+                <span class="n">target_funcs_data</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">func_map</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="mi">1</span><span class="p">](</span><span class="n">x</span><span class="p">),</span> <span class="n">label_map</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="n">linestyle_map</span><span class="p">[</span><span class="n">name</span><span class="p">]))</span>
+
+    <span class="k">for</span> <span class="n">x_vals</span><span class="p">,</span> <span class="n">y_vals</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">ls</span> <span class="ow">in</span> <span class="n">target_funcs_data</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_vals</span><span class="p">,</span> <span class="n">y_vals</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="n">ls</span><span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper left&#39;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">save_plot</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">plot_png</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="s2">&quot;.pdf&quot;</span><span class="p">,</span> <span class="s2">&quot;.svg&quot;</span><span class="p">)):</span>
+            <span class="n">plot_png</span> <span class="o">+=</span> <span class="s2">&quot;.png&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">plot_png</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Plot saved to </span><span class="si">{</span><span class="n">plot_png</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+
+<span class="c1"># Placeholder for MagV type if it&#39;s a specific class.</span>
+<span class="c1"># If it&#39;s just a convention for objects with .x, .y, .z, .t, then hasattr checks are fine.</span>
+<span class="c1"># class MagVPlaceholder:</span>
+<span class="c1">#     def __init__(self, x, y, z, t): self.x, self.y, self.z, self.t = x, y, z, t</span>
+
+<div class="viewcode-block" id="plot_mag">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.plot_mag">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_mag</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">ind</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">detrend_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_mags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+             <span class="n">vec_terms</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ylim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show_plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+             <span class="n">save_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plot_png</span><span class="o">=</span><span class="s2">&quot;scalar_mags.png&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot scalar or vector (fluxgate) magnetometer data.</span>
+<span class="sd">    xyz: An object expected to have attributes like xyz.traj.tt, xyz.mag_1_c,</span>
+<span class="sd">    and for vector mags, attributes like xyz.flux_a which itself has .x, .y, .z, .t.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">ind</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">xyz</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">tt</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">use_mags</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">use_mags</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;all_mags&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">vec_terms</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">vec_terms</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;all&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">dpi</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">dpi</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.dpi&#39;</span><span class="p">]</span>
+
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">xyz</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">tt</span><span class="p">[</span><span class="n">ind</span><span class="p">])</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s2">&quot;No data selected for plotting&quot;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">fig</span>
+        
+    <span class="n">tt_plot</span> <span class="o">=</span> <span class="p">(</span><span class="n">xyz</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">tt</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">-</span> <span class="n">xyz</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">tt</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mi">60</span>
+    <span class="n">xlab</span> <span class="o">=</span> <span class="s2">&quot;time [min]&quot;</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="n">xlab</span><span class="p">)</span>
+
+    <span class="n">list_c_names</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;mag_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_c&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">NUM_MAG_MAX</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+    <span class="n">list_uc_names</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;mag_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_uc&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">NUM_MAG_MAX</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+
+    <span class="n">available_mags_c</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">list_c_names</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">name</span><span class="p">)]</span>
+    <span class="n">available_mags_uc</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">list_uc_names</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">name</span><span class="p">)]</span>
+    
+    <span class="c1"># Paired mags (both _c and _uc exist for the same number)</span>
+    <span class="n">paired_mag_indices</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">NUM_MAG_MAX</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="sa">f</span><span class="s2">&quot;mag_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_c&quot;</span> <span class="ow">in</span> <span class="n">available_mags_c</span> <span class="ow">and</span> <span class="sa">f</span><span class="s2">&quot;mag_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_uc&quot;</span> <span class="ow">in</span> <span class="n">available_mags_uc</span><span class="p">:</span>
+            <span class="n">paired_mag_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+    <span class="n">all_available_scalar_mags</span> <span class="o">=</span> <span class="n">available_mags_c</span> <span class="o">+</span> <span class="n">available_mags_uc</span>
+    <span class="n">plot_title</span> <span class="o">=</span> <span class="s2">&quot;Magnetometer Data&quot;</span> <span class="c1"># Default title</span>
+
+    <span class="k">if</span> <span class="s1">&#39;comp_mags&#39;</span> <span class="ow">in</span> <span class="n">use_mags</span><span class="p">:</span>
+        <span class="n">ylab</span> <span class="o">=</span> <span class="s2">&quot;magnetic field error [nT]&quot;</span>
+        <span class="n">plot_title</span> <span class="o">=</span> <span class="s2">&quot;Magnetometer Compensation Error&quot;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">paired_mag_indices</span><span class="p">:</span>
+            <span class="n">uc_data</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;mag_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_uc&quot;</span><span class="p">)[</span><span class="n">ind</span><span class="p">]</span>
+            <span class="n">c_data</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;mag_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_c&quot;</span><span class="p">)[</span><span class="n">ind</span><span class="p">]</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="n">uc_data</span> <span class="o">-</span> <span class="n">c_data</span>
+            <span class="k">if</span> <span class="n">detrend_data</span><span class="p">:</span> <span class="n">val</span> <span class="o">=</span> <span class="n">detrend_linear</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tt_plot</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;mag_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> comp&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;==== mag_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> comp ====&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;avg comp = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> nT, std dev = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> nT&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Check for vector magnetometers. This is a heuristic.</span>
+    <span class="c1"># Assumes vector mag fields are explicitly named in use_mags (e.g., &#39;flux_a&#39;)</span>
+    <span class="c1"># and these fields on xyz are objects with .x, .y, .z, .t attributes.</span>
+    <span class="k">elif</span> <span class="nb">any</span><span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">mag_name</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">mag_name</span><span class="p">),</span> <span class="n">term</span><span class="p">)</span> <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span><span class="s1">&#39;y&#39;</span><span class="p">,</span><span class="s1">&#39;z&#39;</span><span class="p">,</span><span class="s1">&#39;t&#39;</span><span class="p">])</span>
+             <span class="k">for</span> <span class="n">mag_name</span> <span class="ow">in</span> <span class="n">use_mags</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">mag_name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)):</span>
+        
+        <span class="n">actual_vec_plot_terms</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;z&#39;</span><span class="p">,</span> <span class="s1">&#39;t&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="s1">&#39;all&#39;</span> <span class="ow">in</span> <span class="n">vec_terms</span> <span class="k">else</span> \
+                                <span class="p">[</span><span class="n">term</span> <span class="k">for</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">vec_terms</span> <span class="k">if</span> <span class="n">term</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;z&#39;</span><span class="p">,</span> <span class="s1">&#39;t&#39;</span><span class="p">]]</span>
+        <span class="n">ylab</span> <span class="o">=</span> <span class="s2">&quot;magnetic field [nT]&quot;</span>
+        <span class="k">if</span> <span class="n">detrend_data</span><span class="p">:</span> <span class="n">ylab</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;detrended </span><span class="si">{</span><span class="n">ylab</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">plot_title</span> <span class="o">=</span> <span class="s2">&quot;Vector Magnetometer Data&quot;</span>
+
+        <span class="k">for</span> <span class="n">mag_name_str</span> <span class="ow">in</span> <span class="n">use_mags</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">mag_name_str</span><span class="p">):</span>
+                <span class="n">vector_mag_obj</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">mag_name_str</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">term_to_plot</span> <span class="ow">in</span> <span class="n">actual_vec_plot_terms</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">vector_mag_obj</span><span class="p">,</span> <span class="n">term_to_plot</span><span class="p">):</span>
+                        <span class="n">val_full_series</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">vector_mag_obj</span><span class="p">,</span> <span class="n">term_to_plot</span><span class="p">)</span>
+                        <span class="n">val</span> <span class="o">=</span> <span class="n">val_full_series</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="c1"># Assuming components are indexable like main data</span>
+                        <span class="k">if</span> <span class="n">detrend_data</span><span class="p">:</span> <span class="n">val</span> <span class="o">=</span> <span class="n">detrend_linear</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+                        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tt_plot</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">mag_name_str</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">term_to_plot</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Term &#39;</span><span class="si">{</span><span class="n">term_to_plot</span><span class="si">}</span><span class="s2">&#39; not found in vector mag &#39;</span><span class="si">{</span><span class="n">mag_name_str</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+            <span class="c1"># else: # This mag_name_str might not be a vector mag, could be scalar handled below</span>
+            <span class="c1">#    pass</span>
+
+    <span class="k">elif</span> <span class="s1">&#39;all_mags&#39;</span> <span class="ow">in</span> <span class="n">use_mags</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span><span class="n">m</span> <span class="ow">in</span> <span class="n">all_available_scalar_mags</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">use_mags</span><span class="p">):</span>
+        <span class="n">mags_to_plot_final</span> <span class="o">=</span> <span class="n">all_available_scalar_mags</span> <span class="k">if</span> <span class="s1">&#39;all_mags&#39;</span> <span class="ow">in</span> <span class="n">use_mags</span> <span class="k">else</span> \
+                             <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">use_mags</span> <span class="k">if</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">all_available_scalar_mags</span><span class="p">]</span>
+        <span class="n">ylab</span> <span class="o">=</span> <span class="s2">&quot;magnetic field [nT]&quot;</span>
+        <span class="k">if</span> <span class="n">detrend_data</span><span class="p">:</span> <span class="n">ylab</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;detrended </span><span class="si">{</span><span class="n">ylab</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">plot_title</span> <span class="o">=</span> <span class="s2">&quot;Scalar Magnetometer Data&quot;</span>
+        <span class="k">for</span> <span class="n">mag_name_str</span> <span class="ow">in</span> <span class="n">mags_to_plot_final</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">mag_name_str</span><span class="p">)[</span><span class="n">ind</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">detrend_data</span><span class="p">:</span> <span class="n">val</span> <span class="o">=</span> <span class="n">detrend_linear</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tt_plot</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">mag_name_str</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span> <span class="c1"># Fallback for specific scalar mags not caught by &#39;all_mags&#39; logic</span>
+        <span class="n">ylab</span> <span class="o">=</span> <span class="s2">&quot;magnetic field [nT]&quot;</span>
+        <span class="k">if</span> <span class="n">detrend_data</span><span class="p">:</span> <span class="n">ylab</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;detrended </span><span class="si">{</span><span class="n">ylab</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">mags_to_plot_specific</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">use_mags</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span><span class="n">m</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span><span class="n">m</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="n">mags_to_plot_specific</span><span class="p">:</span>
+            <span class="n">plot_title</span> <span class="o">=</span> <span class="s2">&quot;Selected Scalar Magnetometer Data&quot;</span>
+            <span class="k">for</span> <span class="n">mag_name_str</span> <span class="ow">in</span> <span class="n">mags_to_plot_specific</span><span class="p">:</span>
+                <span class="n">val</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">mag_name_str</span><span class="p">)[</span><span class="n">ind</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">detrend_data</span><span class="p">:</span> <span class="n">val</span> <span class="o">=</span> <span class="n">detrend_linear</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tt_plot</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">mag_name_str</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: No plottable magnetometers found for use_mags: </span><span class="si">{</span><span class="n">use_mags</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">ylab</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">plot_title</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ylim</span><span class="p">:</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">ylim</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">get_legend_handles_labels</span><span class="p">()[</span><span class="mi">1</span><span class="p">]):</span> <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">save_plot</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">plot_png</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="s2">&quot;.pdf&quot;</span><span class="p">,</span> <span class="s2">&quot;.svg&quot;</span><span class="p">)):</span> <span class="n">plot_png</span> <span class="o">+=</span> <span class="s2">&quot;.png&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">plot_png</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Plot saved to </span><span class="si">{</span><span class="n">plot_png</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+
+
+<div class="viewcode-block" id="plot_mag_c">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.plot_mag_c">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_mag_c</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">xyz_comp</span><span class="p">,</span> <span class="n">ind</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ind_comp</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">detrend_data</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+               <span class="n">lambda_ridge</span><span class="o">=</span><span class="mf">0.025</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pass1</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">pass2</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+               <span class="n">use_mags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_vec</span><span class="o">=</span><span class="s1">&#39;flux_a&#39;</span><span class="p">,</span> <span class="n">plot_diff</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+               <span class="n">plot_mag_1_uc</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">plot_mag_1_c_provided</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1"># Renamed from plot_mag_1_c</span>
+               <span class="n">ylim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show_plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">save_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+               <span class="n">plot_png</span><span class="o">=</span><span class="s2">&quot;scalar_mags_comp.png&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plot compensated magnetometer(s) data.</span>
+<span class="sd">    WARNING: This function relies on &#39;create_TL_A&#39; and &#39;create_TL_coef&#39;</span>
+<span class="sd">    from &#39;.tolles_lawson&#39; module, which are not defined here.</span>
+<span class="sd">    It will not work correctly without them.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: plot_mag_c is partially implemented and depends on external functions &quot;</span> <span class="o">+</span> \
+          <span class="s2">&quot;(create_TL_A, create_TL_coef) from other modules (e.g., .tolles_lawson).&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ind</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">xyz</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">N</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span> <span class="c1"># Assuming xyz.traj.N</span>
+    <span class="k">if</span> <span class="n">ind_comp</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">ind_comp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">xyz_comp</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">N</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">terms</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">terms</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;permanent&#39;</span><span class="p">,</span> <span class="s1">&#39;induced&#39;</span><span class="p">,</span> <span class="s1">&#39;eddy&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">use_mags</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">use_mags</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;all_mags&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">dpi</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">dpi</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.dpi&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">ind_comp</span><span class="p">)):</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">,</span> <span class="s2">&quot;No data for compensation plot.&quot;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">fig</span>
+
+    <span class="c1"># Check for essential external functions (placeholders)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.tolles_lawson</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_TL_A</span><span class="p">,</span> <span class="n">create_TL_coef</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR: plot_mag_c cannot proceed without &#39;create_TL_A&#39; and &#39;create_TL_coef&#39; from .tolles_lawson.&quot;</span><span class="p">)</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span><span class="mf">0.5</span><span class="p">,</span> <span class="s2">&quot;Missing dependencies for plot_mag_c&quot;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">fig</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">use_vec</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz_comp</span><span class="p">,</span> <span class="n">use_vec</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ERROR: Vector magnetometer &#39;</span><span class="si">{</span><span class="n">use_vec</span><span class="si">}</span><span class="s2">&#39; not found in xyz or xyz_comp.&quot;</span><span class="p">)</span>
+        <span class="c1"># Handle error appropriately</span>
+        <span class="k">return</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span> <span class="c1"># Return empty figure</span>
+
+    <span class="n">A_matrix_full_flight</span> <span class="o">=</span> <span class="n">create_TL_A</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">use_vec</span><span class="p">),</span> <span class="n">terms</span><span class="o">=</span><span class="n">terms</span><span class="p">)</span> <span class="c1"># This is for the flight to be compensated</span>
+    <span class="n">A_matrix_selected</span> <span class="o">=</span> <span class="n">A_matrix_full_flight</span><span class="p">[</span><span class="n">ind</span><span class="p">,</span> <span class="p">:]</span>
+
+
+    <span class="n">tt_plot</span> <span class="o">=</span> <span class="p">(</span><span class="n">xyz</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">tt</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">-</span> <span class="n">xyz</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">tt</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mi">60</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="s1">&#39;mag_1_c&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="s1">&#39;mag_1_uc&#39;</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: xyz.mag_1_c or xyz.mag_1_uc not found for baseline comparison.&quot;</span><span class="p">)</span>
+        <span class="c1"># Fallback or error</span>
+        <span class="k">return</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+
+    <span class="n">mag_1_c_provided_data</span> <span class="o">=</span> <span class="n">xyz</span><span class="o">.</span><span class="n">mag_1_c</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+    <span class="n">mag_1_uc_data</span> <span class="o">=</span> <span class="n">xyz</span><span class="o">.</span><span class="n">mag_1_uc</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">detrend_data</span><span class="p">:</span>
+        <span class="n">mag_1_c_provided_data</span> <span class="o">=</span> <span class="n">detrend_linear</span><span class="p">(</span><span class="n">mag_1_c_provided_data</span><span class="p">)</span>
+        <span class="n">mag_1_uc_data</span> <span class="o">=</span> <span class="n">detrend_linear</span><span class="p">(</span><span class="n">mag_1_uc_data</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;time [min]&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;magnetic field [nT]&quot;</span><span class="p">)</span>
+    <span class="n">plot_title</span> <span class="o">=</span> <span class="s2">&quot;Compensated Scalar Magnetometer Data&quot;</span>
+
+    <span class="k">if</span> <span class="n">plot_mag_1_uc</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">plot_diff</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tt_plot</span><span class="p">,</span> <span class="n">mag_1_uc_data</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;mag_1_uc (input)&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;cyan&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;:&#39;</span><span class="p">)</span>
+
+    <span class="n">available_uc_mags_in_xyz</span> <span class="o">=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;mag_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_uc&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">NUM_MAG_MAX</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;mag_</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">_uc&quot;</span><span class="p">)]</span>
+    
+    <span class="n">mags_to_process</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="s1">&#39;all_mags&#39;</span> <span class="ow">in</span> <span class="n">use_mags</span><span class="p">:</span>
+        <span class="n">mags_to_process</span> <span class="o">=</span> <span class="n">available_uc_mags_in_xyz</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">mags_to_process</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">use_mags</span> <span class="k">if</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">available_uc_mags_in_xyz</span><span class="p">]</span>
+
+    <span class="n">color_map</span> <span class="o">=</span> <span class="p">{</span> <span class="c1"># From Julia</span>
+        <span class="s1">&#39;mag_1_uc&#39;</span><span class="p">:</span> <span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="s1">&#39;mag_2_uc&#39;</span><span class="p">:</span> <span class="s1">&#39;purple&#39;</span><span class="p">,</span> <span class="s1">&#39;mag_3_uc&#39;</span><span class="p">:</span> <span class="s1">&#39;green&#39;</span><span class="p">,</span> <span class="s1">&#39;mag_4_uc&#39;</span><span class="p">:</span> <span class="s1">&#39;black&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;mag_5_uc&#39;</span><span class="p">:</span> <span class="s1">&#39;orange&#39;</span><span class="p">,</span> <span class="s1">&#39;mag_6_uc&#39;</span><span class="p">:</span> <span class="s1">&#39;gray&#39;</span><span class="p">,</span> <span class="s1">&#39;mag_7_uc&#39;</span><span class="p">:</span> <span class="s1">&#39;violet&#39;</span><span class="p">,</span> <span class="s1">&#39;mag_8_uc&#39;</span><span class="p">:</span> <span class="s1">&#39;brown&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;mag_9_uc&#39;</span><span class="p">:</span> <span class="s1">&#39;pink&#39;</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">default_color</span> <span class="o">=</span> <span class="s1">&#39;grey&#39;</span> <span class="c1"># Fallback color</span>
+
+    <span class="k">for</span> <span class="n">mag_name_uc_to_process</span> <span class="ow">in</span> <span class="n">mags_to_process</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz_comp</span><span class="p">,</span> <span class="n">mag_name_uc_to_process</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: </span><span class="si">{</span><span class="n">mag_name_uc_to_process</span><span class="si">}</span><span class="s2"> not found in xyz_comp. Skipping compensation for this mag.&quot;</span><span class="p">)</span>
+            <span class="k">continue</span>
+        
+        <span class="n">mag_uc_for_comp_coeffs</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">xyz_comp</span><span class="p">,</span> <span class="n">mag_name_uc_to_process</span><span class="p">)[</span><span class="n">ind_comp</span><span class="p">]</span>
+        <span class="n">vec_for_comp_coeffs</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">xyz_comp</span><span class="p">,</span> <span class="n">use_vec</span><span class="p">)</span> <span class="c1"># This needs to be the MagV object / arrays for ind_comp</span>
+
+        <span class="c1"># The create_TL_coef expects the vector mag data for ind_comp, not the whole thing</span>
+        <span class="c1"># This part needs careful handling of how vec_for_comp_coeffs is structured and indexed</span>
+        <span class="c1"># Assuming create_TL_coef can handle the MagV object and ind_comp correctly, or expects pre-indexed arrays</span>
+        <span class="c1"># For now, passing the MagV object and ind_comp separately.</span>
+        <span class="c1"># This might need adjustment based on actual create_TL_A/coef implementation.</span>
+        <span class="c1"># A common pattern is: vec_data_for_coeffs = {axis: getattr(vec_for_comp_coeffs, axis)[ind_comp] for axis in [&#39;x&#39;,&#39;y&#39;,&#39;z&#39;,&#39;t&#39;]}</span>
+        
+        <span class="n">tl_coeffs</span> <span class="o">=</span> <span class="n">create_TL_coef</span><span class="p">(</span><span class="n">vec_for_comp_coeffs</span><span class="p">,</span> <span class="c1"># Or pre-indexed vector data for ind_comp</span>
+                                   <span class="n">mag_uc_for_comp_coeffs</span><span class="p">,</span>
+                                   <span class="n">ind_comp</span><span class="p">,</span> <span class="c1"># This might be redundant if vec_for_comp_coeffs is pre-indexed</span>
+                                   <span class="n">lambda_ridge</span><span class="o">=</span><span class="n">lambda_ridge</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="n">terms</span><span class="p">,</span>
+                                   <span class="n">pass1</span><span class="o">=</span><span class="n">pass1</span><span class="p">,</span> <span class="n">pass2</span><span class="o">=</span><span class="n">pass2</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">)</span>
+
+        <span class="n">current_mag_uc_flight_data</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">mag_name_uc_to_process</span><span class="p">)[</span><span class="n">ind</span><span class="p">]</span>
+        
+        <span class="c1"># Compensation is applied: B_comp = B_uncomp - A * coeffs</span>
+        <span class="c1"># Julia: mag_uc - detrend(A*TL_coef;mean_only=true)</span>
+        <span class="c1"># The detrend(mean_only=true) on A*coeffs is important.</span>
+        <span class="n">compensated_noise_estimate</span> <span class="o">=</span> <span class="n">A_matrix_selected</span> <span class="o">@</span> <span class="n">tl_coeffs</span>
+        <span class="n">compensated_noise_estimate_detrended</span> <span class="o">=</span> <span class="n">detrend_mean_only</span><span class="p">(</span><span class="n">compensated_noise_estimate</span><span class="p">)</span>
+        
+        <span class="n">mag_c_calculated</span> <span class="o">=</span> <span class="n">current_mag_uc_flight_data</span> <span class="o">-</span> <span class="n">compensated_noise_estimate_detrended</span>
+        
+        <span class="c1"># For reporting mean_diff, Julia uses: mean(mag_c - xyz.mag_1_c[ind])</span>
+        <span class="c1"># This is before the final detrend_data step on mag_c_calculated for plotting</span>
+        <span class="n">mean_diff_to_provided_mag1c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">mag_c_calculated</span> <span class="o">-</span> <span class="n">xyz</span><span class="o">.</span><span class="n">mag_1_c</span><span class="p">[</span><span class="n">ind</span><span class="p">])</span>
+
+
+        <span class="k">if</span> <span class="n">detrend_data</span><span class="p">:</span> <span class="c1"># Final detrend for plotting</span>
+            <span class="n">mag_c_calculated</span> <span class="o">=</span> <span class="n">detrend_linear</span><span class="p">(</span><span class="n">mag_c_calculated</span><span class="p">)</span>
+            <span class="c1"># current_mag_uc_flight_data_detrended = detrend_linear(current_mag_uc_flight_data) # if needed</span>
+
+        <span class="n">label_base</span> <span class="o">=</span> <span class="n">mag_name_uc_to_process</span><span class="p">[:</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;_c (calc)&quot;</span> <span class="c1"># e.g. mag_1_c (calc)</span>
+        <span class="n">plot_val</span> <span class="o">=</span> <span class="n">mag_c_calculated</span>
+        
+        <span class="k">if</span> <span class="n">plot_diff</span><span class="p">:</span>
+            <span class="n">label_base</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Δ </span><span class="si">{</span><span class="n">label_base</span><span class="si">}</span><span class="s2"> vs provided mag_1_c&quot;</span>
+            <span class="n">plot_val</span> <span class="o">=</span> <span class="n">mag_c_calculated</span> <span class="o">-</span> <span class="n">mag_1_c_provided_data</span> <span class="c1"># Diff w.r.t provided (and possibly detrended) mag_1_c</span>
+
+        <span class="n">color</span> <span class="o">=</span> <span class="n">color_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">mag_name_uc_to_process</span><span class="p">,</span> <span class="n">default_color</span><span class="p">)</span>
+        <span class="c1"># Julia plots [1:end-1]. If this is due to filter artifacts, it might be needed.</span>
+        <span class="c1"># For now, plotting the whole series. If data length changes, adjust.</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tt_plot</span><span class="p">,</span> <span class="n">plot_val</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label_base</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">1.5</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">plot_diff</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;=== </span><span class="si">{</span><span class="n">label_base</span><span class="si">}</span><span class="s2"> ===&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;avg diff (calc_c vs provided_mag_1_c, before final detrend) = </span><span class="si">{</span><span class="n">mean_diff_to_provided_mag1c</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> nT&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;std dev of plotted diff = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">plot_val</span><span class="p">)</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> nT&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">plot_mag_1_c_provided</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">plot_diff</span><span class="p">:</span>
+        <span class="c1"># Julia plots [1:end-1] here too.</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tt_plot</span><span class="p">,</span> <span class="n">mag_1_c_provided_data</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;mag_1_c (provided)&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">ylim</span><span class="p">:</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">ylim</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">get_legend_handles_labels</span><span class="p">()[</span><span class="mi">1</span><span class="p">]):</span> <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;small&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">plot_title</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">save_plot</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">plot_png</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="s2">&quot;.pdf&quot;</span><span class="p">,</span> <span class="s2">&quot;.svg&quot;</span><span class="p">)):</span> <span class="n">plot_png</span> <span class="o">+=</span> <span class="s2">&quot;.png&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">plot_png</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Plot saved to </span><span class="si">{</span><span class="n">plot_png</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+
+
+<div class="viewcode-block" id="plot_psd">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.plot_psd">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_psd</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="s1">&#39;hamming&#39;</span><span class="p">,</span> <span class="n">nperseg</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show_plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+             <span class="n">save_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plot_png</span><span class="o">=</span><span class="s2">&quot;PSD.png&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plots Power Spectral Density using scipy.signal.welch.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dpi</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">dpi</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.dpi&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">nperseg</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">nperseg</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">256</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Empty data for PSD plot.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+
+    <span class="n">freqs</span><span class="p">,</span> <span class="n">Pxx</span> <span class="o">=</span> <span class="n">welch</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">,</span> <span class="n">nperseg</span><span class="o">=</span><span class="n">nperseg</span><span class="p">,</span> <span class="n">scaling</span><span class="o">=</span><span class="s1">&#39;density&#39;</span><span class="p">)</span>
+    <span class="n">Pxx_db</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">Pxx</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">freqs</span><span class="p">,</span> <span class="n">Pxx_db</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Frequency [Hz]&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Power/Frequency [dB/Hz]&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Power Spectral Density (Welch)&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">save_plot</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">plot_png</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="s2">&quot;.pdf&quot;</span><span class="p">,</span> <span class="s2">&quot;.svg&quot;</span><span class="p">)):</span> <span class="n">plot_png</span> <span class="o">+=</span> <span class="s2">&quot;.png&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">plot_png</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">);</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Plot saved to </span><span class="si">{</span><span class="n">plot_png</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+
+<div class="viewcode-block" id="plot_spectrogram_mpl">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.plot_spectrogram_mpl">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_spectrogram_mpl</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="s1">&#39;hamming&#39;</span><span class="p">,</span> <span class="n">nperseg</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                         <span class="n">show_plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">save_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plot_png</span><span class="o">=</span><span class="s2">&quot;spectrogram.png&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plots Spectrogram using scipy.signal.spectrogram and pcolormesh.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dpi</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">dpi</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.dpi&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">nperseg</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">nperseg</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">256</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Empty data for Spectrogram plot.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+
+    <span class="n">f</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">Sxx</span> <span class="o">=</span> <span class="n">spectrogram</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">,</span> <span class="n">nperseg</span><span class="o">=</span><span class="n">nperseg</span><span class="p">,</span> <span class="n">scaling</span><span class="o">=</span><span class="s1">&#39;density&#39;</span><span class="p">)</span>
+    <span class="n">Sxx_db</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">Sxx</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">)</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">Sxx_db</span><span class="p">,</span> <span class="n">shading</span><span class="o">=</span><span class="s1">&#39;gouraud&#39;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s1">&#39;viridis&#39;</span><span class="p">)</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">mesh</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Intensity [dB]&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Time [s]&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Frequency [Hz]&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Spectrogram&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">save_plot</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">plot_png</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="s2">&quot;.pdf&quot;</span><span class="p">,</span> <span class="s2">&quot;.svg&quot;</span><span class="p">)):</span> <span class="n">plot_png</span> <span class="o">+=</span> <span class="s2">&quot;.png&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">plot_png</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">);</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Plot saved to </span><span class="si">{</span><span class="n">plot_png</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+
+<div class="viewcode-block" id="plot_frequency">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.plot_frequency">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_frequency</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">ind</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">field</span><span class="o">=</span><span class="s1">&#39;mag_1_uc&#39;</span><span class="p">,</span> <span class="n">freq_type</span><span class="o">=</span><span class="s1">&#39;PSD&#39;</span><span class="p">,</span>
+                   <span class="n">detrend_data</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="s1">&#39;hamming&#39;</span><span class="p">,</span> <span class="n">nperseg</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">show_plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">save_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plot_png</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plots frequency domain data (PSD or Spectrogram) for a field in xyz.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">ind</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">xyz</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">tt</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">field</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Field &#39;</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">&#39; not found in xyz data.&quot;</span><span class="p">)</span>
+    
+    <span class="n">x_data</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">field</span><span class="p">)[</span><span class="n">ind</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_data</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: No data for field &#39;</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">&#39; after indexing. Skipping frequency plot.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+
+
+    <span class="k">if</span> <span class="n">detrend_data</span><span class="p">:</span> <span class="n">x_data</span> <span class="o">=</span> <span class="n">detrend_linear</span><span class="p">(</span><span class="n">x_data</span><span class="p">)</span>
+    <span class="n">fs</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">xyz</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">dt</span> <span class="c1"># Assumes xyz.traj.dt is sample period in seconds</span>
+
+    <span class="k">if</span> <span class="n">plot_png</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">plot_png</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">field</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">freq_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2">.png&quot;</span>
+    
+    <span class="n">fig_out</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">freq_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;PSD&#39;</span><span class="p">:</span>
+        <span class="n">fig_out</span> <span class="o">=</span> <span class="n">plot_psd</span><span class="p">(</span><span class="n">x_data</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">,</span> <span class="n">nperseg</span><span class="o">=</span><span class="n">nperseg</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">,</span>
+                           <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span> <span class="n">save_plot</span><span class="o">=</span><span class="n">save_plot</span><span class="p">,</span> <span class="n">plot_png</span><span class="o">=</span><span class="n">plot_png</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">freq_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;SPECTROGRAM&#39;</span><span class="p">,</span> <span class="s1">&#39;SPEC&#39;</span><span class="p">]:</span>
+        <span class="n">fig_out</span> <span class="o">=</span> <span class="n">plot_spectrogram_mpl</span><span class="p">(</span><span class="n">x_data</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="n">window</span><span class="p">,</span> <span class="n">nperseg</span><span class="o">=</span><span class="n">nperseg</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">,</span>
+                                       <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span> <span class="n">save_plot</span><span class="o">=</span><span class="n">save_plot</span><span class="p">,</span> <span class="n">plot_png</span><span class="o">=</span><span class="n">plot_png</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown freq_type: </span><span class="si">{</span><span class="n">freq_type</span><span class="si">}</span><span class="s2">. Choose &#39;PSD&#39; or &#39;spectrogram&#39;.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fig_out</span></div>
+
+
+
+<div class="viewcode-block" id="plot_correlation">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.plot_correlation">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_correlation</span><span class="p">(</span><span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span class="p">,</span> <span class="n">xfeature_name</span><span class="o">=</span><span class="s1">&#39;feature_1&#39;</span><span class="p">,</span> <span class="n">yfeature_name</span><span class="o">=</span><span class="s1">&#39;feature_2&#39;</span><span class="p">,</span>
+                     <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show_plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">save_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plot_png</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                     <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plots correlation between two data series.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dpi</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">dpi</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.dpi&#39;</span><span class="p">]</span>
+    <span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x_data</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y_data</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_data</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_data</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_data</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_data</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">silent</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Correlation plot for </span><span class="si">{</span><span class="n">yfeature_name</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">xfeature_name</span><span class="si">}</span><span class="s2"> skipped: insufficient/mismatched data.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="n">corr_coeff</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">pearsonr</span><span class="p">(</span><span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span class="p">)</span>
+    <span class="n">slope</span><span class="p">,</span> <span class="n">intercept</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">linregress</span><span class="p">(</span><span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span class="p">)</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">yfeature_name</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="n">xfeature_name</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">silent</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2"> | Pearson corr: </span><span class="si">{</span><span class="n">corr_coeff</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">, slope: </span><span class="si">{</span><span class="n">slope</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">fig_out</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">corr_coeff</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">limit</span><span class="p">:</span>
+        <span class="n">fig_out</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x_data</span><span class="p">,</span> <span class="n">y_data</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Data (Corr: </span><span class="si">{</span><span class="n">corr_coeff</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;black&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>
+        <span class="n">line_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">x_data</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">x_data</span><span class="p">)])</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">line_x</span><span class="p">,</span> <span class="n">slope</span> <span class="o">*</span> <span class="n">line_x</span> <span class="o">+</span> <span class="n">intercept</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;LinReg: y=</span><span class="si">{</span><span class="n">slope</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">x+</span><span class="si">{</span><span class="n">intercept</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">xfeature_name</span><span class="p">));</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">yfeature_name</span><span class="p">))</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">title</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">();</span> <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">plot_png</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">plot_png</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">xfeature_name</span><span class="p">)</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">yfeature_name</span><span class="p">)</span><span class="si">}</span><span class="s2">_corr.png&quot;</span>
+        <span class="k">if</span> <span class="n">save_plot</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">plot_png</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="s2">&quot;.pdf&quot;</span><span class="p">,</span> <span class="s2">&quot;.svg&quot;</span><span class="p">)):</span> <span class="n">plot_png</span> <span class="o">+=</span> <span class="s2">&quot;.png&quot;</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">plot_png</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">);</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Plot saved to </span><span class="si">{</span><span class="n">plot_png</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">silent</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Correlation (</span><span class="si">{</span><span class="nb">abs</span><span class="p">(</span><span class="n">corr_coeff</span><span class="p">)</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">) for </span><span class="si">{</span><span class="n">title</span><span class="si">}</span><span class="s2"> below limit (</span><span class="si">{</span><span class="n">limit</span><span class="si">}</span><span class="s2">). Plot skipped.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fig_out</span></div>
+
+
+<div class="viewcode-block" id="plot_correlation_xyz">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.plot_correlation_xyz">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_correlation_xyz</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">xfeature</span><span class="o">=</span><span class="s1">&#39;mag_1_c&#39;</span><span class="p">,</span> <span class="n">yfeature</span><span class="o">=</span><span class="s1">&#39;mag_1_uc&#39;</span><span class="p">,</span> <span class="n">ind</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                         <span class="n">limit</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show_plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">save_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                         <span class="n">plot_png</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plots correlation between two features from an XYZ object.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">ind</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">xyz</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">tt</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">xfeature</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">yfeature</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Features &#39;</span><span class="si">{</span><span class="n">xfeature</span><span class="si">}</span><span class="s2">&#39; or &#39;</span><span class="si">{</span><span class="n">yfeature</span><span class="si">}</span><span class="s2">&#39; not found in xyz data.&quot;</span><span class="p">)</span>
+    
+    <span class="n">x_d</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">xfeature</span><span class="p">)[</span><span class="n">ind</span><span class="p">]</span>
+    <span class="n">y_d</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">yfeature</span><span class="p">)[</span><span class="n">ind</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">plot_png</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">plot_png</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">xfeature</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">yfeature</span><span class="si">}</span><span class="s2">_corr.png&quot;</span>
+
+    <span class="k">return</span> <span class="n">plot_correlation</span><span class="p">(</span><span class="n">x_d</span><span class="p">,</span> <span class="n">y_d</span><span class="p">,</span> <span class="n">xfeature_name</span><span class="o">=</span><span class="n">xfeature</span><span class="p">,</span> <span class="n">yfeature_name</span><span class="o">=</span><span class="n">yfeature</span><span class="p">,</span>
+                            <span class="n">limit</span><span class="o">=</span><span class="n">limit</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">,</span> <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span> <span class="n">save_plot</span><span class="o">=</span><span class="n">save_plot</span><span class="p">,</span>
+                            <span class="n">plot_png</span><span class="o">=</span><span class="n">plot_png</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="n">silent</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="downsample_data">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.downsample_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">downsample_data</span><span class="p">(</span><span class="n">data_array</span><span class="p">,</span> <span class="n">max_points</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Helper to downsample data if it exceeds max_points, taking every Nth point.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_array</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">max_points</span><span class="p">:</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data_array</span><span class="p">)</span> <span class="o">/</span> <span class="n">max_points</span><span class="p">)</span> <span class="c1"># Ensure step is at least 1</span>
+        <span class="k">return</span> <span class="n">data_array</span><span class="p">[::</span><span class="n">step</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">data_array</span></div>
+
+
+<div class="viewcode-block" id="plot_correlation_matrix">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.plot_correlation_matrix">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_correlation_matrix</span><span class="p">(</span><span class="n">data_matrix</span><span class="p">,</span> <span class="n">features</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Nmax</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+                            <span class="n">show_plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">save_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                            <span class="n">plot_png</span><span class="o">=</span><span class="s2">&quot;correlation_matrix.png&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plots a scatter plot matrix for features.</span>
+<span class="sd">    data_matrix: (N_samples, N_features) numpy array.</span>
+<span class="sd">    features: List of N_features string names.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">dpi</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">dpi</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.dpi&#39;</span><span class="p">]</span>
+    <span class="n">Nf</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">features</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="mi">2</span> <span class="o">&lt;=</span> <span class="n">Nf</span> <span class="o">&lt;=</span> <span class="mi">5</span><span class="p">):</span> <span class="c1"># As per Julia original constraint</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of features must be 2-5, got </span><span class="si">{</span><span class="n">Nf</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">data_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">Nf</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Data matrix columns (</span><span class="si">{</span><span class="n">data_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">) != num features (</span><span class="si">{</span><span class="n">Nf</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">Nf</span><span class="p">,</span> <span class="n">Nf</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="n">Nf</span> <span class="o">*</span> <span class="mf">2.2</span><span class="p">,</span> <span class="n">Nf</span> <span class="o">*</span> <span class="mf">2.2</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">,</span> <span class="n">squeeze</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Nf</span><span class="p">):</span> <span class="c1"># y-axis of scatter (row in subplot grid)</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">Nf</span><span class="p">):</span> <span class="c1"># x-axis of scatter (col in subplot grid)</span>
+            <span class="n">ax</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">j</span><span class="p">:</span> <span class="c1"># Diagonal</span>
+                <span class="n">diag_data</span> <span class="o">=</span> <span class="n">downsample_data</span><span class="p">(</span><span class="n">data_matrix</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">Nmax</span><span class="p">)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">diag_data</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;grey&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">features</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">pad</span><span class="o">=-</span><span class="mi">13</span><span class="p">)</span> <span class="c1"># Title inside plot</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([])</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">Nf</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">([])</span> <span class="c1"># Hide x-ticks except for bottom row</span>
+                <span class="k">else</span><span class="p">:</span> <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span> <span class="c1"># Small ticks for bottom hist</span>
+            <span class="k">elif</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="n">j</span><span class="p">:</span> <span class="c1"># Lower triangle: Scatter plots</span>
+                <span class="n">x_scatter</span> <span class="o">=</span> <span class="n">downsample_data</span><span class="p">(</span><span class="n">data_matrix</span><span class="p">[:,</span> <span class="n">j</span><span class="p">],</span> <span class="n">Nmax</span><span class="p">)</span>
+                <span class="n">y_scatter</span> <span class="o">=</span> <span class="n">downsample_data</span><span class="p">(</span><span class="n">data_matrix</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">Nmax</span><span class="p">)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x_scatter</span><span class="p">,</span> <span class="n">y_scatter</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+                
+                <span class="c1"># Add correlation coefficient text</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_matrix</span><span class="p">[:,</span><span class="n">j</span><span class="p">])</span> <span class="o">&gt;=</span><span class="mi">2</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_matrix</span><span class="p">[:,</span><span class="n">i</span><span class="p">])</span> <span class="o">&gt;=</span><span class="mi">2</span> <span class="p">:</span> <span class="c1"># Pearsonr needs at least 2 points</span>
+                    <span class="n">corr</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">pearsonr</span><span class="p">(</span><span class="n">data_matrix</span><span class="p">[:,</span> <span class="n">j</span><span class="p">],</span> <span class="n">data_matrix</span><span class="p">[:,</span> <span class="n">i</span><span class="p">])</span>
+                    <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;r=</span><span class="si">{</span><span class="n">corr</span><span class="si">:</span><span class="s1">.2f</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
+                            <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">bbox</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">boxstyle</span><span class="o">=</span><span class="s1">&#39;round,pad=0.2&#39;</span><span class="p">,</span> <span class="n">fc</span><span class="o">=</span><span class="s1">&#39;wheat&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span> <span class="c1"># Upper triangle: Off</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+
+            <span class="c1"># Axis labels for outer plots</span>
+            <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="n">j</span> <span class="p">:</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="n">features</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span> <span class="c1"># Leftmost column y-labels</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">Nf</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">i</span> <span class="p">:</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="n">features</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span> <span class="c1"># Bottom row x-labels</span>
+            
+            <span class="c1"># Tick labels</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="n">j</span> <span class="p">:</span> <span class="c1"># Only for scatter plots in lower triangle</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;both&#39;</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">j</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">([])</span> <span class="c1"># No y-tick labels for inner scatters</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">Nf</span> <span class="o">-</span><span class="mi">1</span> <span class="p">:</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">([])</span> <span class="c1"># No x-tick labels for inner scatters</span>
+
+
+    <span class="n">fig</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">hspace</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">wspace</span><span class="o">=</span><span class="mf">0.15</span><span class="p">)</span> <span class="c1"># Reduce spacing</span>
+    <span class="c1"># plt.tight_layout(pad=0.5) # Alternative spacing adjustment</span>
+
+    <span class="k">if</span> <span class="n">save_plot</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">plot_png</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">((</span><span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="s2">&quot;.pdf&quot;</span><span class="p">,</span> <span class="s2">&quot;.svg&quot;</span><span class="p">)):</span> <span class="n">plot_png</span> <span class="o">+=</span> <span class="s2">&quot;.png&quot;</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">plot_png</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">);</span> <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Plot saved to </span><span class="si">{</span><span class="n">plot_png</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+
+
+<div class="viewcode-block" id="plot_correlation_matrix_xyz">
+<a class="viewcode-back" href="../../../api_reference.html#MagNavPy.src.plot_functions.plot_correlation_matrix_xyz">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_correlation_matrix_xyz</span><span class="p">(</span><span class="n">xyz</span><span class="p">,</span> <span class="n">ind</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">features_setup</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                <span class="n">terms</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sub_diurnal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sub_igrf</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                <span class="n">bpf_mag</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Nmax</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+                                <span class="n">show_plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">save_plot</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                <span class="n">plot_png</span><span class="o">=</span><span class="s2">&quot;correlation_matrix_xyz.png&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Plots correlation matrix for features derived from XYZ data.</span>
+<span class="sd">    WARNING: Relies on &#39;get_x&#39; from &#39;.analysis_util&#39; (not defined here).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;WARNING: plot_correlation_matrix_xyz relies on &#39;get_x&#39; from &#39;.analysis_util&#39; (or similar).&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ind</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">xyz</span><span class="o">.</span><span class="n">traj</span><span class="o">.</span><span class="n">tt</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">features_setup</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">features_setup</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;mag_1_uc&#39;</span><span class="p">,</span> <span class="s1">&#39;TL_A_flux_a&#39;</span><span class="p">]</span> <span class="c1"># Julia default</span>
+    <span class="k">if</span> <span class="n">terms</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">terms</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;permanent&#39;</span><span class="p">]</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">.analysis_util</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_x</span> <span class="c1"># Attempt to import</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERROR: Cannot import &#39;get_x&#39; from .analysis_util. plot_correlation_matrix_xyz will fail.&quot;</span><span class="p">)</span>
+        <span class="n">fig_err</span><span class="p">,</span> <span class="n">ax_err</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span> <span class="k">if</span> <span class="n">dpi</span> <span class="k">else</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.dpi&#39;</span><span class="p">])</span>
+        <span class="n">ax_err</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s2">&quot;Missing &#39;get_x&#39; dependency&quot;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span> <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">fig_err</span>
+
+    <span class="c1"># Call get_x to obtain data_matrix and final_feature_names</span>
+    <span class="c1"># The exact signature and return order of get_x must match.</span>
+    <span class="c1"># Julia: (x,_,features,_) = get_x(...) -&gt; Python: data_matrix, _, final_feature_names, _</span>
+    <span class="n">data_matrix</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">final_feature_names</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">get_x</span><span class="p">(</span>
+        <span class="n">xyz</span><span class="p">,</span> <span class="n">ind</span><span class="p">,</span> <span class="n">features_setup</span><span class="p">,</span>
+        <span class="n">terms</span><span class="o">=</span><span class="n">terms</span><span class="p">,</span> <span class="n">sub_diurnal</span><span class="o">=</span><span class="n">sub_diurnal</span><span class="p">,</span>
+        <span class="n">sub_igrf</span><span class="o">=</span><span class="n">sub_igrf</span><span class="p">,</span> <span class="n">bpf_mag</span><span class="o">=</span><span class="n">bpf_mag</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">plot_correlation_matrix</span><span class="p">(</span><span class="n">data_matrix</span><span class="p">,</span> <span class="n">final_feature_names</span><span class="p">,</span>
+                                   <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">,</span> <span class="n">Nmax</span><span class="o">=</span><span class="n">Nmax</span><span class="p">,</span> <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
+                                   <span class="n">save_plot</span><span class="o">=</span><span class="n">save_plot</span><span class="p">,</span> <span class="n">plot_png</span><span class="o">=</span><span class="n">plot_png</span><span class="p">)</span></div>
+
+
+<span class="c1"># Example of how XYZ and MagV might be structured for type hinting or internal use,</span>
+<span class="c1"># if not imported. These are NOT full implementations.</span>
+<span class="c1"># class TrajectoryPlaceholder:</span>
+<span class="c1">#   def __init__(self, tt, N, dt): self.tt, self.N, self.dt = tt, N, dt</span>
+<span class="c1"># class XYZPlaceholder:</span>
+<span class="c1">#   def __init__(self, tt, dt, mag_1_uc_data, mag_1_c_data=None, flux_a_data=None):</span>
+<span class="c1">#       self.traj = TrajectoryPlaceholder(tt, len(tt), dt)</span>
+<span class="c1">#       self.mag_1_uc = np.array(mag_1_uc_data)</span>
+<span class="c1">#       if mag_1_c_data is not None: self.mag_1_c = np.array(mag_1_c_data)</span>
+<span class="c1">#       if flux_a_data is not None: # flux_a_data could be a dict {&#39;x&#39;:[], &#39;y&#39;:[], ..}</span>
+<span class="c1">#           self.flux_a = type(&#39;FluxAPlaceholder&#39;, (), flux_a_data)() # Simple object from dict</span>
+<span class="c1"># Add other fields as needed...</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="c1"># Example Usage (requires dummy data or actual MagNavPy objects)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;plot_functions.py loaded. Contains plotting utilities for MagNavPy.&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;To run examples, define dummy XYZ data or integrate with MagNavPy modules.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Dummy data for basic plot</span>
+    <span class="c1"># tt_dummy = np.linspace(0, 600, 6000) # 10 minutes of data at 10Hz</span>
+    <span class="c1"># y_dummy = np.sin(tt_dummy / 60) + np.random.randn(len(tt_dummy)) * 0.1</span>
+    <span class="c1"># plot_basic(tt_dummy, y_dummy, lab=&quot;Dummy Sine Wave&quot;, show_plot=True)</span>
+
+    <span class="c1"># plot_activation(show_plot=True)</span>
+    <span class="c1"># plot_activation(activation_func_names=[&#39;relu&#39;, &#39;tanh&#39;], plot_deriv=True, show_plot=True)</span>
+    
+    <span class="c1"># Further examples would require creating XYZ-like objects and potentially</span>
+    <span class="c1"># stubbing/mocking the dependent analysis_util and tolles_lawson functions.</span>
+    <span class="k">pass</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">MagNavPy</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../data.html">Flight Path &amp; INS Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../maps.html">Magnetic Anomaly Maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../comp.html">Aeromagnetic Compensation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../nncomp.html">Neural Network-Based Model Diagrams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../nav.html">Navigation Algorithms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api_functions.html">API: Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api_structs.html">API: Structs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api_reference.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, MagNav.jl Authors & AI Porting Team.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

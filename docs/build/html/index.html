@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>MagNav.jl &#8212; MagNavPy 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=01f34227"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Flight Path &amp; INS Data" href="data.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="magnav-jl">
+<h1>MagNav.jl<a class="headerlink" href="#magnav-jl" title="Link to this heading">¶</a></h1>
+<p><a class="reference external" href="https://github.com/MIT-AI-Accelerator/MagNav.jl">MagNav.jl</a> contains a full suite of tools for airborne Magnetic anomaly Navigation (MagNav). The full public API is listed in the API Reference section.</p>
+<p>Key functionality of this package is shown on the following pages:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="data.html"><span class="doc">Flight Path &amp; INS Data</span></a></p></li>
+<li><p><a class="reference internal" href="maps.html"><span class="doc">Magnetic Anomaly Maps</span></a></p></li>
+<li><p><a class="reference internal" href="comp.html"><span class="doc">Aeromagnetic Compensation</span></a></p></li>
+<li><p><a class="reference internal" href="nav.html"><span class="doc">Navigation Algorithms</span></a></p></li>
+</ul>
+<p>There are also multiple example Pluto notebooks available that showcase the various functionalities.</p>
+<p>The package is tested with Julia:</p>
+<div class="highlight-julia notranslate"><div class="highlight"><pre><span></span><span class="nb">VERSION</span>
+</pre></div>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data.html">Flight Path &amp; INS Data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="data.html#load-flight-data">Load Flight Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data.html#create-flight-data">Create Flight Data</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="maps.html">Magnetic Anomaly Maps</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="maps.html#load-map-data">Load Map Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="maps.html#upward-continue-map">Upward Continue Map</a></li>
+<li class="toctree-l2"><a class="reference internal" href="maps.html#interpolate-map">Interpolate Map</a></li>
+<li class="toctree-l2"><a class="reference internal" href="maps.html#plot-map">Plot Map</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="comp.html">Aeromagnetic Compensation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="comp.html#tolles-lawson">Tolles-Lawson</a></li>
+<li class="toctree-l2"><a class="reference internal" href="comp.html#model-training-fitting">Model Training/Fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="comp.html#model-testing">Model Testing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="nncomp.html">Neural Network-Based Model Diagrams</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="nncomp.html#model-1">Model 1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nncomp.html#model-2">Model 2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nncomp.html#model-3">Model 3</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="nav.html">Navigation Algorithms</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="nav.html#magnav-filter-model">MagNav Filter Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nav.html#cramerrao-lower-bound">Cramér–Rao Lower Bound</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nav.html#extended-kalman-filter">Extended Kalman Filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nav.html#run-filter-with-additional-options">Run Filter (with additional options)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api_functions.html">API: Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_structs.html">API: Structs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api_structs.html#magnetic-anomaly-maps">Magnetic Anomaly Maps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_structs.html#vector-magnetometer">Vector Magnetometer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_structs.html#flight-paths">Flight Paths</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_structs.html#flight-data">Flight Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_structs.html#output-wrappers">Output Wrappers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_structs.html#real-time-ekf">Real-time EKF</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_structs.html#compensation-parameters">Compensation Parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#magnav-module">magnav Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#analysis-util-module">analysis_util Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#module-MagNavPy.src.compensation">compensation Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#module-MagNavPy.src.create_xyz">create_xyz Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#dcm-module">dcm Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#ekf-module">ekf Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#eval-filt-module">eval_filt Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#get-map-module">get_map Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#get-xyz-module">get_xyz Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#google-earth-module">google_earth Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#map-fft-module">map_fft Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#map-functions-module">map_functions Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#module-MagNavPy.src.model_functions">model_functions Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#mpf-module">mpf Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#nekf-module">nekf Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#rt-comp-main-module">rt_comp_main Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#tolles-lawson-module">tolles_lawson Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#xyz2h5-module">xyz2h5 Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#module-MagNavPy.src.plot_functions">plot_functions Module</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading">¶</a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">MagNavPy</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="data.html">Flight Path &amp; INS Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="maps.html">Magnetic Anomaly Maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="comp.html">Aeromagnetic Compensation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nncomp.html">Neural Network-Based Model Diagrams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="nav.html">Navigation Algorithms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_functions.html">API: Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_structs.html">API: Structs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="data.html" title="next chapter">Flight Path &amp; INS Data</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, MagNav.jl Authors & AI Porting Team.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
