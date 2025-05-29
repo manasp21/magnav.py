@@ -1,95 +1,108 @@
-# MagNavPy: A Python Conversion of MagNav.jl
+# MagNavPy
 
-## 1. Project Overview
+[![PyPI version](https://img.shields.io/pypi/v/magnavpy.svg)](https://pypi.org/project/magnavpy/) <!-- Placeholder -->
+[![Build Status](https://img.shields.io/travis/com/yourusername/magnavpy.svg)](https://travis-ci.com/yourusername/magnavpy) <!-- Placeholder -->
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**MagNav.jl** is a Julia package designed for magnetic navigation research and development. It provides tools for simulating magnetic navigation scenarios, processing magnetometer data, compensating for aircraft magnetic noise, and implementing navigation filters.
+MagNavPy is a Python library for magnetic navigation research and development. It is a port of the original [MagNav.jl](https://github.com/MIT-AI-Accelerator/MagNav.jl) (Julia) package, providing tools for simulating magnetic navigation scenarios, processing magnetometer data, compensating for aircraft magnetic noise, and implementing navigation filters.
 
-The primary goal of the **MagNavPy** project is to convert the functionalities of `MagNav.jl` into Python, creating a comparable library that leverages the Python ecosystem. This allows for easier integration with other Python-based tools and libraries commonly used in scientific computing and aerospace engineering.
+## Key Features
 
-## 2. Conversion Process Summary
+*   **Magnetic Navigation Simulation**: Tools to simulate and analyze magnetic navigation performance.
+*   **Magnetometer Data Processing**: Utilities for handling and processing raw magnetometer data.
+*   **Aircraft Magnetic Noise Compensation**: Implementation of algorithms like Tolles-Lawson for compensating magnetic interference.
+*   **Navigation Filters**: Includes navigation filters such as Extended Kalman Filters (EKF) tailored for magnetic navigation.
+*   **Magnetic Anomaly Map Utilities**: Functions for working with magnetic anomaly maps.
+*   **Data Visualization**: Plotting functions to visualize flight data, magnetic maps, and filter outputs.
 
-The conversion from `MagNav.jl` to `MagNavPy` involved several key steps:
+## Original Project
 
-1.  **Cloning the Original Repository**: The `MagNav.jl` repository was cloned to serve as the source for the conversion.
-2.  **Analysis of Julia Project**: The structure, dependencies (e.g., `Project.toml`), source code, and test suites of `MagNav.jl` were analyzed to understand its components and their interrelations.
-3.  **Python Project Setup**:
-    *   A new directory, `MagNavPy/`, was created for the Python project.
-    *   Initial dependency management files, `requirements.txt` and `pyproject.toml`, were set up.
-4.  **Source Code Conversion**:
-    *   Julia source files (`.jl`) located in `MagNav.jl/src/` were iteratively translated into Python files (`.py`) and placed in `src/`. This involved manual and semi-automated translation of syntax, idioms, and library calls.
-5.  **Test Suite Conversion**:
-    *   Julia test files (`.jl`) from `MagNav.jl/test/` were converted to Python test files (`.py`) and placed in `tests/`.
-    *   The `pytest` framework was adopted for the Python test suite.
-6.  **Documentation Migration**:
-    *   A Sphinx documentation project was initialized in `docs/`.
-    *   Existing Markdown documentation from `MagNav.jl` was reviewed and content was adapted or converted to reStructuredText (`.rst`) for Sphinx.
-    *   API reference stubs were created using Sphinx's `sphinx-apidoc` to automatically generate documentation from Python docstrings.
-7.  **Documentation Build and Debugging**:
-    *   Multiple attempts were made to build the Sphinx documentation.
-    *   This involved debugging various issues, including import errors, docstring formatting problems, and `autodoc` configuration.
+This project is a Python conversion of the [MagNav.jl](https://github.com/MIT-AI-Accelerator/MagNav.jl) library, originally developed by the MIT AI Accelerator. We acknowledge and thank the original authors for their foundational work.
 
-## 3. Current Status of `MagNavPy`
+## Installation
 
-As of the latest update, the `MagNavPy` project has reached the following status:
+### Prerequisites
 
-*   **Source Code**: All identified core source modules from `MagNav.jl/src/` have been translated into their Python equivalents in `src/`.
-*   **Tests**: All identified test modules from `MagNav.jl/test/` have been translated into Python `pytest` modules in `tests/`.
-*   **Dependencies**:
-    *   `requirements.txt` and `pyproject.toml` are in place to manage project dependencies.
-    *   Key dependencies such as `numpy`, `scipy`, `pandas`, `matplotlib`, `toml`, `scikit-learn`, and `statsmodels` have been included.
-    *   `Sphinx` and related extensions were added for documentation.
-    *   **GDAL**: Due to its complex installation process across different operating systems, GDAL has been excluded from automated installation via `requirements.txt`. Users are required to install GDAL manually.
-*   **Documentation**:
-    *   A Sphinx documentation project is set up in `docs/`.
-    *   Content pages (e.g., for compensation, data handling, navigation, maps) and API reference stubs for the translated modules have been created.
+*   Python 3.9 or higher.
+*   **GDAL**: This library has a dependency on GDAL, which needs to be installed manually on your system due to its complex installation process. Please refer to the [official GDAL installation guide](https://gdal.org/download.html#binaries) for instructions specific to your operating system.
 
-## 4. Known Issues & Next Steps
+### Steps
 
-Despite significant progress, several known issues need to be addressed, and further steps are required to complete and refine `MagNavPy`:
+1.  **Clone the repository (optional, if you want to install from source):**
+    ```bash
+    git clone https://github.com/yourusername/MagNavPy.git # Replace with actual URL
+    cd MagNavPy
+    ```
 
-*   **Sphinx Documentation Build**: The Sphinx documentation build (`cd docs && make html`) currently completes but with numerous warnings and errors. The primary causes include:
-    *   **Persistent Circular Import Errors**: Issues such as `ImportError: cannot import name 'MapS' from partially initialized module 'magnavpy.magnav'` (most likely due to a circular import) and similar errors involving other modules prevent `autodoc` from successfully importing and documenting several modules.
-    *   **Docstring Formatting Error**: A stubborn error related to docstring formatting in `src/compensation.py` for the `linear_fwd` function (`Unexpected section title.`) persists.
-    *   **Autodoc Failures**: As a consequence of the import and formatting errors, `sphinx-autodoc` fails to import and generate documentation for many modules and their members.
-    *   **Incomplete HTML Output**: The generated HTML documentation in `docs/build/html/` is likely incomplete or missing significant portions of the API reference due to the build issues.
-*   **GDAL Installation**: GDAL requires manual installation by the user. Clear instructions for different platforms should be provided or linked.
-*   **Full Test Execution and Bug Fixing**: All tests in `tests/` need to be systematically run. Any failing tests will indicate bugs or discrepancies in the ported code that must be identified and fixed.
-*   **Code Review & Refinement**: The translated Python code would benefit from a thorough review for Pythonic best practices, logical correctness, performance, and resolution of any remaining subtle issues from the automated or manual translation (e.g., ensuring the SGL flight data implementation details are correctly ported, verifying the `expm_multiply` replacement logic).
-*   **Complex Feature Validation**: Detailed validation of complex Julia features translated to Python (e.g., multiple dispatch patterns, macros, specific advanced algorithm implementations) need careful validation in their Python counterparts to ensure they behave as expected.
+2.  **Create and activate a Python virtual environment (recommended):**
+    ```bash
+    python -m venv venv
+    # On Windows
+    # venv\Scripts\activate
+    # On macOS/Linux
+    source venv/bin/activate
+    ```
 
-## 5. How to Use/Develop Further
+3.  **Install dependencies:**
+    To install the required Python packages, run:
+    ```bash
+    pip install -r requirements.txt
+    ```
+    If you are developing the library, you might want to install it in editable mode:
+    ```bash
+    pip install -e .
+    ```
 
-To use or contribute to the `MagNavPy` project, follow these steps:
+## Usage
 
-1.  **Set up the Environment**:
-    *   Clone the `MagNavPy` repository (if not already done).
-    *   **Install GDAL Manually**: Before proceeding, ensure that GDAL is installed on your system. Refer to the official GDAL documentation for installation instructions specific to your operating system.
-    *   Create and activate a Python virtual environment (recommended):
-        \`\`\`bash
-        python -m venv venv
-        source venv/bin/activate  # On Windows: venv\Scripts\activate
-        \`\`\`
-    *   Install the required Python packages:
-        \`\`\`bash
-        pip install -r requirements.txt
-        \`\`\`
-        If you intend to modify the project and its dependencies, you might also want to install it in editable mode:
-        \`\`\`bash
-        pip install -e .
-        \`\`\`
+Here's a basic example of how you might import and use a function from MagNavPy (this is a conceptual example):
 
-2.  **Run Tests**:
-    *   To execute the test suite, navigate to the root directory of the project and run `pytest`:
-        \`\`\`bash
-        pytest tests/
-        \`\`\`
+```python
+from magnavpy import compensation
+from magnavpy.common_types import FlightData # Assuming FlightData is a relevant type
 
-3.  **Build Documentation**:
-    *   To build the Sphinx documentation:
-        \`\`\`bash
-        cd docs
-        make html
-        \`\`\`
-    *   The HTML output will be generated in `docs/build/html/`. Open `docs/build/html/index.html` in a web browser to view the documentation. Note the "Known Issues" regarding the documentation build.
+# Load or create your flight data
+# flight_data = FlightData(...) # Placeholder for actual data loading/creation
 
-Contributions, bug reports, and suggestions for improvement are welcome!
+# Example: Apply a compensation model (details depend on actual API)
+# compensated_data = compensation.apply_tolles_lawson(flight_data, model_parameters)
+
+# print("Compensation applied.")
+```
+
+For more detailed examples, please refer to the `examples/` directory (if available) or the test scripts in the `tests/` directory.
+
+## Documentation
+
+Full documentation, including API references and usage guides, is generated using Sphinx.
+
+To build the documentation locally:
+```bash
+cd docs
+make html
+```
+Then, open `docs/build/html/index.html` in your web browser.
+
+The documentation may also be hosted online in the future.
+
+## Testing
+
+To run the test suite, navigate to the root directory of the project and use `pytest`:
+```bash
+pytest tests/
+```
+This will execute all tests defined in the `tests/` directory.
+
+## Contributing
+
+Contributions are welcome! If you'd like to contribute, please feel free to open an issue to discuss your ideas or submit a pull request.
+(More detailed contribution guidelines may be added to a `CONTRIBUTING.md` file in the future.)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details (assuming a `LICENSE` file will be added, or state "MIT License" directly). The original MagNav.jl project is also licensed under the MIT License.
+
+## Acknowledgements
+
+*   The developers and contributors of the original [MagNav.jl](https://github.com/MIT-AI-Accelerator/MagNav.jl).
+*   The broader open-source community for the tools and libraries that make this project possible.

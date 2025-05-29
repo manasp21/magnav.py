@@ -523,7 +523,7 @@ class EKF_RT:
 try:
     from .analysis_util import get_bpf, bpf_data, linreg, calc_crlb_pos, calc_crlb_vel, calc_crlb_att, calc_crlb_fogm, calc_crlb_map
     from .create_xyz import create_xyz0
-    from .tolles_lawson import create_tl_a, create_tl_coef
+    from .tolles_lawson import create_TL_A, create_tl_coef
     from .model_functions import create_model, create_P0 as create_p0, create_Qd as create_qd, get_Phi, get_H, get_h, get_f
     from .ekf import crlb, ekf
     from .get_map import get_map, ottawa_area_maps, namad, emag2, emm720, upward_fft, map_interpolate
@@ -547,7 +547,7 @@ except ImportError as e:
     def calc_crlb_fogm(*args, **kwargs): raise NotImplementedError("calc_crlb_fogm requires analysis_util module.")
     def calc_crlb_map(*args, **kwargs): raise NotImplementedError("calc_crlb_map requires analysis_util module.")
     def create_xyz0(*args, **kwargs): raise NotImplementedError("create_xyz0 requires create_xyz module.")
-    def create_tl_a(*args, **kwargs): raise NotImplementedError("create_tl_a requires tolles_lawson module.")
+    def create_TL_A(*args, **kwargs): raise NotImplementedError("create_TL_A requires tolles_lawson module.")
     def create_tl_coef(*args, **kwargs): raise NotImplementedError("create_tl_coef requires tolles_lawson module.")
     def create_model(*args, **kwargs): raise NotImplementedError("create_model requires model_functions module.")
     def create_p0(*args, **kwargs): raise NotImplementedError("create_p0 requires model_functions module.") # Case sensitive in real code

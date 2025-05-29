@@ -6,9 +6,9 @@ The following are key functions related to aeromagnetic compensation.
 Tolles-Lawson
 -------------
 
-.. autofunction:: magnavpy.tolles_lawson.create_tl_a
+.. autofunction:: magnavpy.tolles_lawson.create_TL_A
 
-.. autofunction:: magnavpy.tolles_lawson.create_tl_coef
+.. autofunction:: magnavpy.tolles_lawson.create_TL_coef
 
 Model Training/Fitting
 ----------------------

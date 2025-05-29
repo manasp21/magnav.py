@@ -705,3 +705,7 @@ if __name__ == '__main__':
 create_p0 = create_P0
 create_qd = create_Qd
 get_h = get_h_basic
+# Aliases for compatibility
+create_p0 = create_P0
+create_qd = create_Qd
+get_h = get_h_basic

@@ -515,6 +515,7 @@
     <span class="k">return</span> <span class="n">expm</span><span class="p">(</span><span class="n">F_matrix</span> <span class="o">*</span> <span class="n">dt</span><span class="p">)</span> <span class="c1"># Corrected variable name</span></div>
 
 
+
 <div class="viewcode-block" id="map_grad">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.model_functions.map_grad">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">map_grad</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">lon_rad</span><span class="p">,</span> <span class="n">alt_m</span><span class="p">,</span> <span class="n">delta_rad</span><span class="o">=</span><span class="mf">1.0e-8</span><span class="p">):</span>
@@ -785,6 +786,10 @@
 
     <span class="n">h_basic_test</span> <span class="o">=</span> <span class="n">get_h_basic</span><span class="p">(</span><span class="n">dummy_itp_mapS</span><span class="p">,</span> <span class="n">x_err_test</span><span class="p">,</span> <span class="n">deg2rad</span><span class="p">(</span><span class="mi">34</span><span class="p">),</span> <span class="n">deg2rad</span><span class="p">(</span><span class="o">-</span><span class="mi">118</span><span class="p">),</span> <span class="mi">1000</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;get_h_basic example: </span><span class="si">{</span><span class="n">h_basic_test</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">create_p0</span> <span class="o">=</span> <span class="n">create_P0</span>
+<span class="n">create_qd</span> <span class="o">=</span> <span class="n">create_Qd</span>
+<span class="n">get_h</span> <span class="o">=</span> <span class="n">get_h_basic</span>
+<span class="c1"># Aliases for compatibility</span>
 <span class="n">create_p0</span> <span class="o">=</span> <span class="n">create_P0</span>
 <span class="n">create_qd</span> <span class="o">=</span> <span class="n">create_Qd</span>
 <span class="n">get_h</span> <span class="o">=</span> <span class="n">get_h_basic</span>
