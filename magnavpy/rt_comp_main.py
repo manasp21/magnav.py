@@ -29,7 +29,8 @@ def get_years(year: int, day_of_year: int) -> float:
         print(f"Warning: Invalid date for get_years ({year}, {day_of_year}). Returning year as float.")
         return float(year)
 
-from .ekf import get_Phi as ekf_get_Phi, get_h as ekf_get_h, get_H as ekf_get_H
+from .ekf import get_Phi as ekf_get_Phi, get_H as ekf_get_H
+from .model_functions import get_h as ekf_get_h # Import get_h from model_functions
 from .tolles_lawson import create_TL_A, create_TL_coef
 
 # --- Tolles-Lawson EKF (from ekf_online.jl) ---

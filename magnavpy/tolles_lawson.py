@@ -9,8 +9,8 @@ from typing import List, Tuple, Union, Sequence, Literal, Optional, cast
 import logging
 
 # Assuming these are in analysis_util.py or similar as per user instructions
-from .analysis_util import get_bpf, bpf_data, linreg
-from .magnav import MagV
+from .signal_util import get_bpf_sos, bpf_data, linreg_matrix
+from .common_types import MagV
 
 logger = logging.getLogger(__name__)
 

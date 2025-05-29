@@ -4,8 +4,9 @@ import numpy as np
 # If get_cached_map is elsewhere, adjust import.
 from .magnav import FILTres, EKF_RT, INS, get_cached_map
 from .common_types import MapCache
-from .model_functions import get_Phi, get_H, create_P0, create_Qd, get_h
+from .model_functions import get_Phi, get_H, create_P0, create_Qd
 from .analysis_util import get_years
+from .model_functions import get_h # Explicitly import get_h from model_functions
 
 def ekf(
     lat, lon, alt, vn, ve, vd, fn, fe, fd, Cnb, meas, dt, itp_mapS,

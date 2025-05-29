@@ -7,6 +7,14 @@ import sys # For print statements to stderr, if uncommented (currently all comme
 from abc import ABC # For abstract base classes
 from dataclasses import dataclass, field
 
+@dataclass
+class MagV:
+    """Vector magnetometer measurement struct."""
+    x: np.ndarray  # 1D array x-direction magnetic field [nT]
+    y: np.ndarray  # 1D array y-direction magnetic field [nT]
+    z: np.ndarray  # 1D array z-direction magnetic field [nT]
+    t: np.ndarray  # 1D array total magnetic field [nT]
+
 # --- Data Structures (Map related classes) ---
 class Map(ABC):
     """Abstract type for a magnetic anomaly map."""

@@ -11,7 +11,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import List, Tuple, Callable, Dict, Any, Union # Any for some complex types initially
 from .common_types import (
-    Map, MapS, MapSd, MapS3D, MapV, MapCache, MAP_S_NULL
+    Map, MapS, MapSd, MapS3D, MapV, MapCache, MAP_S_NULL, MagV
 )
 from abc import ABC # This is only needed if Path or XYZ are defined here and extend ABC
 
@@ -175,14 +175,6 @@ def ottawa_area_maps_gxf_path(f: str = "") -> str:
     return p_base
 
 # --- Data Structures (Structs to Dataclasses) --- (Map related classes moved to common_types.py)
-
-@dataclass
-class MagV:
-    """Vector magnetometer measurement struct."""
-    x: np.ndarray  # 1D array x-direction magnetic field [nT]
-    y: np.ndarray  # 1D array y-direction magnetic field [nT]
-    z: np.ndarray  # 1D array z-direction magnetic field [nT]
-    t: np.ndarray  # 1D array total magnetic field [nT]
 
 class Path(ABC):
     """Abstract type for a flight path."""

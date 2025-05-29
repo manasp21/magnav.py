@@ -470,7 +470,43 @@
             <span class="o">**</span><span class="n">pinson_kwargs</span><span class="p">):</span> 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get Pinson matrix exponential (state transition matrix Phi).</span>
-<span class="sd">    **pinson_kwargs are passed to get_pinson (e.g. k1, k2, k3).</span>
+
+<span class="sd">    :param nx: number of states</span>
+<span class="sd">    :type nx: int</span>
+<span class="sd">    :param lat_rad: latitude [rad]</span>
+<span class="sd">    :type lat_rad: float</span>
+<span class="sd">    :param vn: north velocity [m/s]</span>
+<span class="sd">    :type vn: float</span>
+<span class="sd">    :param ve: east velocity [m/s]</span>
+<span class="sd">    :type ve: float</span>
+<span class="sd">    :param vd: down velocity [m/s]</span>
+<span class="sd">    :type vd: float</span>
+<span class="sd">    :param fn: north specific force [m/s^2]</span>
+<span class="sd">    :type fn: float</span>
+<span class="sd">    :param fe: east specific force [m/s^2]</span>
+<span class="sd">    :type fe: float</span>
+<span class="sd">    :param fd: down specific force [m/s^2]</span>
+<span class="sd">    :type fd: float</span>
+<span class="sd">    :param Cnb: 3x3 direction cosine matrix (body to navigation)</span>
+<span class="sd">    :type Cnb: numpy.ndarray</span>
+<span class="sd">    :param baro_tau: barometer correlation time [s]</span>
+<span class="sd">    :type baro_tau: float</span>
+<span class="sd">    :param acc_tau: accelerometer correlation time [s]</span>
+<span class="sd">    :type acc_tau: float</span>
+<span class="sd">    :param gyro_tau: gyroscope correlation time [s]</span>
+<span class="sd">    :type gyro_tau: float</span>
+<span class="sd">    :param fogm_tau: FOGM catch-all correlation time [s]</span>
+<span class="sd">    :type fogm_tau: float</span>
+<span class="sd">    :param dt: time step [s]</span>
+<span class="sd">    :type dt: float</span>
+<span class="sd">    :param vec_states: if true, include vector magnetometer states</span>
+<span class="sd">    :type vec_states: bool</span>
+<span class="sd">    :param fogm_state: if true, include FOGM catch-all bias state</span>
+<span class="sd">    :type fogm_state: bool</span>
+<span class="sd">    :param pinson_kwargs: additional keyword arguments passed to get_pinson (e.g. k1, k2, k3)</span>
+<span class="sd">    :type pinson_kwargs: dict</span>
+<span class="sd">    :returns: state transition matrix Phi (NumPy array)</span>
+<span class="sd">    :rtype: numpy.ndarray</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">F_matrix</span> <span class="o">=</span> <span class="n">get_pinson</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">vn</span><span class="p">,</span> <span class="n">ve</span><span class="p">,</span> <span class="n">vd</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">fe</span><span class="p">,</span> <span class="n">fd</span><span class="p">,</span> <span class="n">Cnb</span><span class="p">,</span>
                    <span class="n">baro_tau</span><span class="o">=</span><span class="n">baro_tau</span><span class="p">,</span> <span class="n">acc_tau</span><span class="o">=</span><span class="n">acc_tau</span><span class="p">,</span> <span class="n">gyro_tau</span><span class="o">=</span><span class="n">gyro_tau</span><span class="p">,</span>
@@ -749,6 +785,9 @@
 
     <span class="n">h_basic_test</span> <span class="o">=</span> <span class="n">get_h_basic</span><span class="p">(</span><span class="n">dummy_itp_mapS</span><span class="p">,</span> <span class="n">x_err_test</span><span class="p">,</span> <span class="n">deg2rad</span><span class="p">(</span><span class="mi">34</span><span class="p">),</span> <span class="n">deg2rad</span><span class="p">(</span><span class="o">-</span><span class="mi">118</span><span class="p">),</span> <span class="mi">1000</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;get_h_basic example: </span><span class="si">{</span><span class="n">h_basic_test</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">create_p0</span> <span class="o">=</span> <span class="n">create_P0</span>
+<span class="n">create_qd</span> <span class="o">=</span> <span class="n">create_Qd</span>
+<span class="n">get_h</span> <span class="o">=</span> <span class="n">get_h_basic</span>
 </pre></div>
 
           </div>
