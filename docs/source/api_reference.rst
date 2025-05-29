@@ -4,7 +4,7 @@ API Reference
 magnav Module
 -------------
 
-.. automodule:: MagNavPy.src.magnav
+.. automodule:: magnavpy.magnav
    :members:
    :undoc-members:
    :show-inheritance:
@@ -12,7 +12,7 @@ magnav Module
 analysis_util Module
 --------------------
 
-.. automodule:: MagNavPy.src.analysis_util
+.. automodule:: magnavpy.analysis_util
    :members:
    :undoc-members:
    :show-inheritance:
@@ -20,7 +20,7 @@ analysis_util Module
 compensation Module
 -------------------
 
-.. automodule:: MagNavPy.src.compensation
+.. automodule:: magnavpy.compensation
    :members:
    :undoc-members:
    :show-inheritance:
@@ -28,7 +28,7 @@ compensation Module
 create_xyz Module
 -----------------
 
-.. automodule:: MagNavPy.src.create_xyz
+.. automodule:: magnavpy.create_xyz
    :members:
    :undoc-members:
    :show-inheritance:
@@ -36,7 +36,7 @@ create_xyz Module
 dcm Module
 ----------
 
-.. automodule:: MagNavPy.src.dcm
+.. automodule:: magnavpy.dcm
    :members:
    :undoc-members:
    :show-inheritance:
@@ -44,7 +44,7 @@ dcm Module
 ekf Module
 ----------
 
-.. automodule:: MagNavPy.src.ekf
+.. automodule:: magnavpy.ekf
    :members:
    :undoc-members:
    :show-inheritance:
@@ -52,7 +52,7 @@ ekf Module
 eval_filt Module
 ----------------
 
-.. automodule:: MagNavPy.src.eval_filt
+.. automodule:: magnavpy.eval_filt
    :members:
    :undoc-members:
    :show-inheritance:
@@ -60,7 +60,7 @@ eval_filt Module
 get_map Module
 --------------
 
-.. automodule:: MagNavPy.src.get_map
+.. automodule:: magnavpy.get_map
    :members:
    :undoc-members:
    :show-inheritance:
@@ -68,7 +68,7 @@ get_map Module
 get_xyz Module
 --------------
 
-.. automodule:: MagNavPy.src.get_xyz
+.. automodule:: magnavpy.get_xyz
    :members:
    :undoc-members:
    :show-inheritance:
@@ -76,7 +76,7 @@ get_xyz Module
 google_earth Module
 -------------------
 
-.. automodule:: MagNavPy.src.google_earth
+.. automodule:: magnavpy.google_earth
    :members:
    :undoc-members:
    :show-inheritance:
@@ -84,7 +84,7 @@ google_earth Module
 map_fft Module
 --------------
 
-.. automodule:: MagNavPy.src.map_fft
+.. automodule:: magnavpy.map_fft
    :members:
    :undoc-members:
    :show-inheritance:
@@ -92,7 +92,7 @@ map_fft Module
 map_functions Module
 --------------------
 
-.. automodule:: MagNavPy.src.map_functions
+.. automodule:: magnavpy.map_functions
    :members:
    :undoc-members:
    :show-inheritance:
@@ -100,7 +100,7 @@ map_functions Module
 model_functions Module
 ----------------------
 
-.. automodule:: MagNavPy.src.model_functions
+.. automodule:: magnavpy.model_functions
    :members:
    :undoc-members:
    :show-inheritance:
@@ -108,7 +108,7 @@ model_functions Module
 mpf Module
 ----------
 
-.. automodule:: MagNavPy.src.mpf
+.. automodule:: magnavpy.mpf
    :members:
    :undoc-members:
    :show-inheritance:
@@ -116,7 +116,7 @@ mpf Module
 nekf Module
 -----------
 
-.. automodule:: MagNavPy.src.nekf
+.. automodule:: magnavpy.nekf
    :members:
    :undoc-members:
    :show-inheritance:
@@ -124,7 +124,7 @@ nekf Module
 rt_comp_main Module
 -------------------
 
-.. automodule:: MagNavPy.src.rt_comp_main
+.. automodule:: magnavpy.rt_comp_main
    :members:
    :undoc-members:
    :show-inheritance:
@@ -132,7 +132,7 @@ rt_comp_main Module
 tolles_lawson Module
 --------------------
 
-.. automodule:: MagNavPy.src.tolles_lawson
+.. automodule:: magnavpy.tolles_lawson
    :members:
    :undoc-members:
    :show-inheritance:
@@ -140,7 +140,7 @@ tolles_lawson Module
 xyz2h5 Module
 -------------
 
-.. automodule:: MagNavPy.src.xyz2h5
+.. automodule:: magnavpy.xyz2h5
    :members:
    :undoc-members:
    :show-inheritance:
@@ -148,7 +148,7 @@ xyz2h5 Module
 plot_functions Module
 ---------------------
 
-.. automodule:: MagNavPy.src.plot_functions
+.. automodule:: magnavpy.plot_functions
    :members:
    :undoc-members:
    :show-inheritance:

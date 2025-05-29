@@ -7,16 +7,16 @@ In the Python version, these functions would typically be documented using Sphin
 
 .. code-block:: rst
 
-   .. autofunction:: MagNavPy.src.module_name.function_name
+   .. autofunction:: magnavpy.module_name.function_name
 
-Replace ``module_name.function_name`` with the actual path to the function within the ``MagNavPy.src`` package.
+Replace ``module_name.function_name`` with the actual path to the function within the ``magnavpy`` package.
 You might list several such directives here for all public functions.
 
 For a more comprehensive approach, if all functions are within a specific module or submodule, you could use:
 
 .. code-block:: rst
 
-   .. automodule:: MagNavPy.src.some_module
+   .. automodule:: magnavpy.some_module
       :members:
       :undoc-members:
       :show-inheritance:

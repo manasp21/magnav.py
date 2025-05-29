@@ -6,89 +6,89 @@ The following is a full listing of the custom structs (classes in Python) within
 Magnetic Anomaly Maps
 ---------------------
 
-.. autoclass:: MagNavPy.src.map_module.Map
+.. autoclass:: magnavpy.map_module.Map
    :members:
 
-.. autoclass:: MagNavPy.src.map_module.MapS
+.. autoclass:: magnavpy.map_module.MapS
    :members:
 
-.. autoclass:: MagNavPy.src.map_module.MapSd
+.. autoclass:: magnavpy.map_module.MapSd
    :members:
 
-.. autoclass:: MagNavPy.src.map_module.MapS3D
+.. autoclass:: magnavpy.map_module.MapS3D
    :members:
 
-.. autoclass:: MagNavPy.src.map_module.MapV
+.. autoclass:: magnavpy.map_module.MapV
    :members:
 
-.. autoclass:: MagNavPy.src.map_module.MapCache
+.. autoclass:: magnavpy.map_module.MapCache
    :members:
 
 Vector Magnetometer
 -------------------
 
-.. autoclass:: MagNavPy.src.magnav.MagV
+.. autoclass:: magnavpy.magnav.MagV
    :members:
 
 Flight Paths
 ------------
 
-.. autoclass:: MagNavPy.src.navigation.Path
+.. autoclass:: magnavpy.navigation.Path
    :members:
 
-.. autoclass:: MagNavPy.src.navigation.Traj
+.. autoclass:: magnavpy.navigation.Traj
    :members:
 
-.. autoclass:: MagNavPy.src.navigation.INS
+.. autoclass:: magnavpy.navigation.INS
    :members:
 
 Flight Data
 -----------
 
-.. autoclass:: MagNavPy.src.data_types.XYZ
+.. autoclass:: magnavpy.data_types.XYZ
    :members:
 
-.. autoclass:: MagNavPy.src.data_types.XYZ0
+.. autoclass:: magnavpy.data_types.XYZ0
    :members:
 
-.. autoclass:: MagNavPy.src.data_types.XYZ1
+.. autoclass:: magnavpy.data_types.XYZ1
    :members:
 
-.. autoclass:: MagNavPy.src.data_types.XYZ20
+.. autoclass:: magnavpy.data_types.XYZ20
    :members:
 
-.. autoclass:: MagNavPy.src.data_types.XYZ21
+.. autoclass:: magnavpy.data_types.XYZ21
    :members:
 
 Output Wrappers
 ---------------
 
-.. autoclass:: MagNavPy.src.output_types.FILTres
+.. autoclass:: magnavpy.output_types.FILTres
    :members:
 
-.. autoclass:: MagNavPy.src.output_types.CRLBout
+.. autoclass:: magnavpy.output_types.CRLBout
    :members:
 
-.. autoclass:: MagNavPy.src.output_types.INSout
+.. autoclass:: magnavpy.output_types.INSout
    :members:
 
-.. autoclass:: MagNavPy.src.output_types.FILTout
+.. autoclass:: magnavpy.output_types.FILTout
    :members:
 
 Real-time EKF
 -------------
 
-.. autoclass:: MagNavPy.src.ekf.EKF_RT
+.. autoclass:: magnavpy.ekf.EKF_RT
    :members:
 
 Compensation Parameters
 -----------------------
 
-.. autoclass:: MagNavPy.src.compensation.CompParams
+.. autoclass:: magnavpy.compensation.CompParams
    :members:
 
-.. autoclass:: MagNavPy.src.compensation.LinCompParams
+.. autoclass:: magnavpy.compensation.LinCompParams
    :members:
 
-.. autoclass:: MagNavPy.src.compensation.NNCompParams
+.. autoclass:: magnavpy.compensation.NNCompParams
    :members:
