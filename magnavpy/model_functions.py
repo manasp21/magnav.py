@@ -62,36 +62,24 @@ def create_P0(lat1_rad=deg2rad(45),
     """
     Create initial covariance matrix P0.
 
-    :param lat1_rad: initial approximate latitude [rad]
-    :type lat1_rad: float
-    :param init_pos_sigma: initial position uncertainty [m]
-    :type init_pos_sigma: float
-    :param init_alt_sigma: initial altitude uncertainty [m]
-    :type init_alt_sigma: float
-    :param init_vel_sigma: initial velocity uncertainty [m/s]
-    :type init_vel_sigma: float
-    :param init_att_sigma_rad: initial attitude uncertainty [rad]
-    :type init_att_sigma_rad: float
-    :param ha_sigma: barometer aiding altitude bias [m]
-    :type ha_sigma: float
-    :param a_hat_sigma: barometer aiding vertical accel bias [m/s^2]
-    :type a_hat_sigma: float
-    :param acc_sigma: accelerometer bias [m/s^2]
-    :type acc_sigma: float
-    :param gyro_sigma: gyroscope bias [rad/s]
-    :type gyro_sigma: float
-    :param fogm_sigma: FOGM catch-all bias [nT]
-    :type fogm_sigma: float
-    :param vec_sigma: vector magnetometer noise std dev
-    :type vec_sigma: float
-    :param vec_states: if true, include vector magnetometer states
-    :type vec_states: bool
-    :param fogm_state: if true, include FOGM catch-all bias state
-    :type fogm_state: bool
-    :param P0_TL: initial Tolles-Lawson covariance matrix (NumPy array)
-    :type P0_TL: Optional[numpy.ndarray]
-    :returns: initial covariance matrix (NumPy array)
-    :rtype: numpy.ndarray
+    Args:
+        lat1_rad (float): initial approximate latitude [rad]
+        init_pos_sigma (float): initial position uncertainty [m]
+        init_alt_sigma (float): initial altitude uncertainty [m]
+        init_vel_sigma (float): initial velocity uncertainty [m/s]
+        init_att_sigma_rad (float): initial attitude uncertainty [rad]
+        ha_sigma (float): barometer aiding altitude bias [m]
+        a_hat_sigma (float): barometer aiding vertical accel bias [m/s^2]
+        acc_sigma (float): accelerometer bias [m/s^2]
+        gyro_sigma (float): gyroscope bias [rad/s]
+        fogm_sigma (float): FOGM catch-all bias [nT]
+        vec_sigma (float): vector magnetometer noise std dev
+        vec_states (bool): if true, include vector magnetometer states
+        fogm_state (bool): if true, include FOGM catch-all bias state
+        P0_TL (Optional[numpy.ndarray]): initial Tolles-Lawson covariance matrix (NumPy array)
+
+    Returns:
+        numpy.ndarray: initial covariance matrix (NumPy array)
     """
     if P0_TL is None:
         P0_TL = np.array([])
@@ -154,38 +142,25 @@ def create_Qd(dt=0.1,
     """
     Create the discrete time process/system noise matrix Qd.
 
-    :param dt: time step [s]
-    :type dt: float
-    :param VRW_sigma: velocity random walk standard deviation
-    :type VRW_sigma: float
-    :param ARW_sigma: angle random walk standard deviation
-    :type ARW_sigma: float
-    :param baro_sigma: barometer noise standard deviation
-    :type baro_sigma: float
-    :param acc_sigma: accelerometer noise standard deviation
-    :type acc_sigma: float
-    :param gyro_sigma: gyroscope noise standard deviation
-    :type gyro_sigma: float
-    :param fogm_sigma: FOGM catch-all bias standard deviation
-    :type fogm_sigma: float
-    :param vec_sigma: vector magnetometer noise standard deviation
-    :type vec_sigma: float
-    :param TL_sigma: Tolles-Lawson covariance matrix (NumPy array)
-    :type TL_sigma: Optional[numpy.ndarray]
-    :param baro_tau: barometer correlation time [s]
-    :type baro_tau: float
-    :param acc_tau: accelerometer correlation time [s]
-    :type acc_tau: float
-    :param gyro_tau: gyroscope correlation time [s]
-    :type gyro_tau: float
-    :param fogm_tau: FOGM catch-all correlation time [s]
-    :type fogm_tau: float
-    :param vec_states: if true, include vector magnetometer states
-    :type vec_states: bool
-    :param fogm_state: if true, include FOGM catch-all bias state
-    :type fogm_state: bool
-    :returns: discrete time process/system noise matrix Qd (NumPy array)
-    :rtype: numpy.ndarray
+    Args:
+        dt (float): time step [s]
+        VRW_sigma (float): velocity random walk standard deviation
+        ARW_sigma (float): angle random walk standard deviation
+        baro_sigma (float): barometer noise standard deviation
+        acc_sigma (float): accelerometer noise standard deviation
+        gyro_sigma (float): gyroscope noise standard deviation
+        fogm_sigma (float): FOGM catch-all bias standard deviation
+        vec_sigma (float): vector magnetometer noise standard deviation
+        TL_sigma (Optional[numpy.ndarray]): Tolles-Lawson covariance matrix (NumPy array)
+        baro_tau (float): barometer correlation time [s]
+        acc_tau (float): accelerometer correlation time [s]
+        gyro_tau (float): gyroscope correlation time [s]
+        fogm_tau (float): FOGM catch-all correlation time [s]
+        vec_states (bool): if true, include vector magnetometer states
+        fogm_state (bool): if true, include FOGM catch-all bias state
+
+    Returns:
+        numpy.ndarray: discrete time process/system noise matrix Qd (NumPy array)
     """
     if TL_sigma is None:
         TL_sigma = np.array([])

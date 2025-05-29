@@ -4,13 +4,73 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 import sys # For print statements to stderr, if uncommented (currently all commented out)
 
-# This import is the critical point. If it causes a new circular import,
-# then MapS (and likely other Map related types) also need to be moved here.
-from .magnav import MapS
+from abc import ABC # For abstract base classes
+from dataclasses import dataclass, field
+
+# --- Data Structures (Map related classes) ---
+class Map(ABC):
+    """Abstract type for a magnetic anomaly map."""
+    info: str       # map information
+    lat: np.ndarray # latitude [rad]
+    lon: np.ndarray # longitude [rad]
+    alt: np.ndarray # altitude [m]
+    map: np.ndarray # magnetic anomaly map [nT]
+
+@dataclass
+class MapS(Map):
+    """Scalar magnetic anomaly map struct."""
+    info: str
+    lat: np.ndarray
+    lon: np.ndarray
+    alt: np.ndarray
+    map: np.ndarray
+    xx: np.ndarray = field(default_factory=lambda: np.array([])) # longitude coordinates [rad]
+    yy: np.ndarray = field(default_factory=lambda: np.array([])) # latitude coordinates [rad]
+
+@dataclass
+class MapSd(MapS):
+    """Scalar magnetic anomaly map struct with derivative information."""
+    info: str
+    lat: np.ndarray
+    lon: np.ndarray
+    alt: np.ndarray
+    map: np.ndarray
+    xx: np.ndarray = field(default_factory=lambda: np.array([]))
+    yy: np.ndarray = field(default_factory=lambda: np.array([]))
+    dmap_dx: np.ndarray = field(default_factory=lambda: np.array([])) # derivative in x-direction
+    dmap_dy: np.ndarray = field(default_factory=lambda: np.array([])) # derivative in y-direction
+    dmap_dz: np.ndarray = field(default_factory=lambda: np.array([])) # derivative in z-direction
+
+@dataclass
+class MapS3D(MapS):
+    """3D scalar magnetic anomaly map struct."""
+    info: str
+    lat: np.ndarray
+    lon: np.ndarray
+    alt: np.ndarray
+    map: np.ndarray
+    xx: np.ndarray = field(default_factory=lambda: np.array([]))
+    yy: np.ndarray = field(default_factory=lambda: np.array([]))
+    zz: np.ndarray = field(default_factory=lambda: np.array([])) # altitude coordinates [m]
+
+@dataclass
+class MapV(Map):
+    """Vector magnetic anomaly map struct."""
+    info: str
+    lat: np.ndarray
+    lon: np.ndarray
+    alt: np.ndarray
+    map: np.ndarray
+    x: np.ndarray = field(default_factory=lambda: np.array([])) # x-direction magnetic anomaly [nT]
+    y: np.ndarray = field(default_factory=lambda: np.array([])) # y-direction magnetic anomaly [nT]
+    z: np.ndarray = field(default_factory=lambda: np.array([])) # z-direction magnetic anomaly [nT]
+
+# Null map constant
+MAP_S_NULL = MapS(info="null", lat=np.array([]), lon=np.array([]), alt=np.array([]), map=np.array([]))
 
 class MapCache:
     """Map cache struct, mutable."""
-    def __init__(self, maps: List[MapS], fallback: MapS = None, dz: Union[int, float] = 100):
+    def __init__(self, maps: List[MapS], fallback: MapS = MAP_S_NULL, dz: Union[int, float] = 100):
         if not isinstance(maps, list):
             raise TypeError("Input 'maps' must be a list.")
 
@@ -23,7 +83,7 @@ class MapCache:
             ],
             key=lambda m: m.alt
         )
-        self.fallback_map = fallback if isinstance(fallback, MapS) else None
+        self.fallback_map = fallback if isinstance(fallback, MapS) else MAP_S_NULL
         self.dz = dz
 
         self.interpolators = []
@@ -61,7 +121,3 @@ class MapCache:
                 self.interpolators.append(None)
                 # map_info = getattr(m_obj, 'info', 'N/A')
                 # print(f"Warning: Map '{map_info}' missing map, yy, or xx data for interpolator. Skipping.", file=sys.stderr)
-
-# Note: If a __call__ method or other methods for MapCache exist in magnav.py for this class,
-# they MUST be moved here as well. This operation is based on the __init__ part
-# identified from the file snippet and list_code_definition_names.

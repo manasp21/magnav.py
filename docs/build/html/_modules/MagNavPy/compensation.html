@@ -1371,16 +1371,16 @@
 <span class="sd">    1. linear_fwd(x_norm, y_bias, y_scale, model_tuple)</span>
 <span class="sd">    2. linear_fwd(x_raw, data_norms_tuple, model_tuple)</span>
 
-<span class="sd">    Args (depending on signature):</span>
-<span class="sd">        x_in: N x Nf data matrix (either normalized or raw)</span>
-<span class="sd">        data_norms_or_y_bias: Either data_norms tuple (x_bias, x_scale, y_bias, y_scale)</span>
-<span class="sd">                                  or y_bias directly.</span>
-<span class="sd">        </span>
-<span class="sd">        model_or_y_scale: Either the model tuple (coeffs, bias_val) or y_scale directly.</span>
-<span class="sd">        model_if_normalized: (optional) The model tuple, used if the first signature is matched.</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        y_hat: length-N prediction vector</span>
+<span class="sd">    :param x_in: N x Nf data matrix (either normalized or raw)</span>
+<span class="sd">    :type x_in: numpy.ndarray</span>
+<span class="sd">    :param data_norms_or_y_bias: Either data_norms tuple (x_bias, x_scale, y_bias, y_scale) or y_bias directly.</span>
+<span class="sd">    :type data_norms_or_y_bias: Union[Tuple, float, numpy.ndarray]</span>
+<span class="sd">    :param model_or_y_scale: Either the model tuple (coeffs, bias_val) or y_scale directly.</span>
+<span class="sd">    :type model_or_y_scale: Union[Tuple[numpy.ndarray, float], float, numpy.ndarray]</span>
+<span class="sd">    :param model_if_normalized: The model tuple, used if the first signature is matched.</span>
+<span class="sd">    :type model_if_normalized: Optional[Tuple[numpy.ndarray, float]]</span>
+<span class="sd">    :returns: length-N prediction vector</span>
+<span class="sd">    :rtype: numpy.ndarray</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">x_processed</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
     <span class="n">y_bias_eff</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span>

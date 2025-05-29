@@ -514,22 +514,20 @@ err: length-N mean-corrected (per line) error</p>
 This function handles two call signatures from Julia via dispatch:
 1. linear_fwd(x_norm, y_bias, y_scale, model_tuple)
 2. linear_fwd(x_raw, data_norms_tuple, model_tuple)</p>
-<dl>
-<dt>Args (depending on signature):</dt><dd><p>x_in: N x Nf data matrix (either normalized or raw)
-data_norms_or_y_bias: Either data_norms tuple (x_bias, x_scale, y_bias, y_scale)</p>
-<blockquote>
-<div><p>or y_bias directly.</p>
-</div></blockquote>
-<p>model_or_y_scale: Either the model tuple (coeffs, bias_val) or y_scale directly.
-model_if_normalized: (optional) The model tuple, used if the first signature is matched.</p>
-</dd>
-</dl>
 <dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>length-N prediction vector</p>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x_in</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><em>numpy.ndarray</em></a>) – N x Nf data matrix (either normalized or raw)</p></li>
+<li><p><strong>data_norms_or_y_bias</strong> (<em>Union</em><em>[</em><em>Tuple</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><em>numpy.ndarray</em></a><em>]</em>) – Either data_norms tuple (x_bias, x_scale, y_bias, y_scale) or y_bias directly.</p></li>
+<li><p><strong>model_or_y_scale</strong> (<em>Union</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><em>numpy.ndarray</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><em>numpy.ndarray</em></a><em>]</em>) – Either the model tuple (coeffs, bias_val) or y_scale directly.</p></li>
+<li><p><strong>model_if_normalized</strong> (<em>Optional</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><em>numpy.ndarray</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>]</em><em>]</em>) – The model tuple, used if the first signature is matched.</p></li>
+</ul>
 </dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>y_hat</p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>length-N prediction vector</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1226,27 +1224,27 @@ minor asymmetries from floating point errors.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>lat1_rad</strong> – initial approximate latitude [rad]</p></li>
-<li><p><strong>init_pos_sigma</strong> – initial position uncertainty [m]</p></li>
-<li><p><strong>init_alt_sigma</strong> – initial altitude uncertainty [m]</p></li>
-<li><p><strong>init_vel_sigma</strong> – initial velocity uncertainty [m/s]</p></li>
-<li><p><strong>init_att_sigma_rad</strong> – initial attitude uncertainty [rad]</p></li>
-<li><p><strong>ha_sigma</strong> – barometer aiding altitude bias [m]</p></li>
-<li><p><strong>a_hat_sigma</strong> – barometer aiding vertical accel bias [m/s^2]</p></li>
-<li><p><strong>acc_sigma</strong> – accelerometer bias [m/s^2]</p></li>
-<li><p><strong>gyro_sigma</strong> – gyroscope bias [rad/s]</p></li>
-<li><p><strong>fogm_sigma</strong> – FOGM catch-all bias [nT]</p></li>
-<li><p><strong>vec_sigma</strong> – vector magnetometer noise std dev</p></li>
-<li><p><strong>vec_states</strong> – if true, include vector magnetometer states</p></li>
-<li><p><strong>fogm_state</strong> – if true, include FOGM catch-all bias state</p></li>
-<li><p><strong>P0_TL</strong> – initial Tolles-Lawson covariance matrix (NumPy array)</p></li>
+<li><p><strong>lat1_rad</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – initial approximate latitude [rad]</p></li>
+<li><p><strong>init_pos_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – initial position uncertainty [m]</p></li>
+<li><p><strong>init_alt_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – initial altitude uncertainty [m]</p></li>
+<li><p><strong>init_vel_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – initial velocity uncertainty [m/s]</p></li>
+<li><p><strong>init_att_sigma_rad</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – initial attitude uncertainty [rad]</p></li>
+<li><p><strong>ha_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – barometer aiding altitude bias [m]</p></li>
+<li><p><strong>a_hat_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – barometer aiding vertical accel bias [m/s^2]</p></li>
+<li><p><strong>acc_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – accelerometer bias [m/s^2]</p></li>
+<li><p><strong>gyro_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – gyroscope bias [rad/s]</p></li>
+<li><p><strong>fogm_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – FOGM catch-all bias [nT]</p></li>
+<li><p><strong>vec_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – vector magnetometer noise std dev</p></li>
+<li><p><strong>vec_states</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a>) – if true, include vector magnetometer states</p></li>
+<li><p><strong>fogm_state</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a>) – if true, include FOGM catch-all bias state</p></li>
+<li><p><strong>P0_TL</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><em>numpy.ndarray</em></a><em>]</em>) – initial Tolles-Lawson covariance matrix (NumPy array)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>initial covariance matrix (NumPy array)</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>P0</p>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)">numpy.ndarray</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -1255,6 +1253,33 @@ minor asymmetries from floating point errors.</p>
 <dt class="sig sig-object py" id="magnavpy.model_functions.create_Qd">
 <span class="sig-prename descclassname"><span class="pre">magnavpy.model_functions.</span></span><span class="sig-name descname"><span class="pre">create_Qd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">VRW_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.000238</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ARW_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5.81e-07</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baro_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acc_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.000245</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gyro_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">7.27e-09</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fogm_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vec_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">TL_sigma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baro_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acc_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gyro_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fogm_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vec_states</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fogm_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><span class="pre">bool</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/magnavpy/model_functions.html#create_Qd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#magnavpy.model_functions.create_Qd" title="Link to this definition">¶</a></dt>
 <dd><p>Create the discrete time process/system noise matrix Qd.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dt</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – time step [s]</p></li>
+<li><p><strong>VRW_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – velocity random walk standard deviation</p></li>
+<li><p><strong>ARW_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – angle random walk standard deviation</p></li>
+<li><p><strong>baro_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – barometer noise standard deviation</p></li>
+<li><p><strong>acc_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – accelerometer noise standard deviation</p></li>
+<li><p><strong>gyro_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – gyroscope noise standard deviation</p></li>
+<li><p><strong>fogm_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – FOGM catch-all bias standard deviation</p></li>
+<li><p><strong>vec_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – vector magnetometer noise standard deviation</p></li>
+<li><p><strong>TL_sigma</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)"><em>numpy.ndarray</em></a><em>]</em>) – Tolles-Lawson covariance matrix (NumPy array)</p></li>
+<li><p><strong>baro_tau</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – barometer correlation time [s]</p></li>
+<li><p><strong>acc_tau</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – accelerometer correlation time [s]</p></li>
+<li><p><strong>gyro_tau</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – gyroscope correlation time [s]</p></li>
+<li><p><strong>fogm_tau</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – FOGM catch-all correlation time [s]</p></li>
+<li><p><strong>vec_states</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a>) – if true, include vector magnetometer states</p></li>
+<li><p><strong>fogm_state</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a>) – if true, include FOGM catch-all bias state</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>discrete time process/system noise matrix Qd (NumPy array)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v2.2)">numpy.ndarray</a></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
