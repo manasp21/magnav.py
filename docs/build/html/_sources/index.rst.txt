@@ -3,10 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-MagNav.jl
-=========
+MagNavPy
+========
 
-`MagNav.jl <https://github.com/MIT-AI-Accelerator/MagNav.jl>`_ contains a full suite of tools for airborne Magnetic anomaly Navigation (MagNav). The full public API is listed in the API Reference section.
+`MagNavPy <https://github.com/manasp21/magnav.py>`_ contains a full suite of tools for airborne Magnetic anomaly Navigation (MagNav). This project is a Python port of the original `MagNav.jl <https://github.com/MIT-AI-Accelerator/MagNav.jl>`_ by the original MagNav.jl authors, ported to Python by Manas Pandey. The full public API is listed in the API Reference section.
 
 Key functionality of this package is shown on the following pages:
 
@@ -15,13 +15,7 @@ Key functionality of this package is shown on the following pages:
 * :doc:`comp`
 * :doc:`nav`
 
-There are also multiple example Pluto notebooks available that showcase the various functionalities.
-
-The package is tested with Julia:
-
-.. code-block:: julia
-
-   VERSION
+The package is tested with Python.
 
 .. toctree::
    :maxdepth: 2
