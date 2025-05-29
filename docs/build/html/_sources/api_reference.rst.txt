@@ -36,7 +36,7 @@ create_xyz Module
 dcm Module
 ----------
 
-.. automodule:: magnavpy.dcm
+.. automodule:: magnavpy.dcm_util
    :members:
    :undoc-members:
    :show-inheritance:
@@ -52,7 +52,7 @@ ekf Module
 eval_filt Module
 ----------------
 
-.. automodule:: magnavpy.eval_filt
+.. .. automodule:: magnavpy.eval_filt
    :members:
    :undoc-members:
    :show-inheritance:
@@ -60,7 +60,7 @@ eval_filt Module
 get_map Module
 --------------
 
-.. automodule:: magnavpy.get_map
+.. automodule:: magnavpy.map_utils
    :members:
    :undoc-members:
    :show-inheritance:
@@ -68,7 +68,7 @@ get_map Module
 get_xyz Module
 --------------
 
-.. automodule:: magnavpy.get_xyz
+.. automodule:: magnavpy.create_xyz
    :members:
    :undoc-members:
    :show-inheritance:
@@ -76,15 +76,15 @@ get_xyz Module
 google_earth Module
 -------------------
 
-.. automodule:: magnavpy.google_earth
-   :members:
+.. .. automodule:: magnavpy.google_earth
+..    :members:
    :undoc-members:
    :show-inheritance:
 
 map_fft Module
 --------------
 
-.. automodule:: magnavpy.map_fft
+.. automodule:: magnavpy.map_utils
    :members:
    :undoc-members:
    :show-inheritance:
@@ -92,7 +92,7 @@ map_fft Module
 map_functions Module
 --------------------
 
-.. automodule:: magnavpy.map_functions
+.. automodule:: magnavpy.map_utils
    :members:
    :undoc-members:
    :show-inheritance:
@@ -108,18 +108,18 @@ model_functions Module
 mpf Module
 ----------
 
-.. automodule:: magnavpy.mpf
-   :members:
+# .. automodule:: magnavpy.mpf
+#    :members:
    :undoc-members:
    :show-inheritance:
 
-nekf Module
------------
+.. nekf Module
+.. -----------
 
-.. automodule:: magnavpy.nekf
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. .. automodule:: magnavpy.nekf
+..    :members:
+..    :undoc-members:
+..    :show-inheritance:
 
 rt_comp_main Module
 -------------------
@@ -140,8 +140,8 @@ tolles_lawson Module
 xyz2h5 Module
 -------------
 
-.. automodule:: magnavpy.xyz2h5
-   :members:
+# .. automodule:: magnavpy.xyz2h5
+#    :members:
    :undoc-members:
    :show-inheritance:
 

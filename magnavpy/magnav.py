@@ -34,6 +34,17 @@ from .tolles_lawson import create_TL_A
 from .dcm_util import dcm2euler, euler2dcm # New import for dcm functions
 from .fdm_util import fdm # New import for fdm function
 
+try:
+    from .model_functions import get_f
+except ImportError:
+    print("Warning: Could not import get_f from .model_functions. Defining placeholder.", file=sys.stderr)
+    def get_f(*args, **kwargs):
+        """
+        Placeholder for the get_f function.
+        This function is not yet fully implemented and indicates an import issue from model_functions.
+        """
+        raise NotImplementedError("get_f could not be imported from model_functions and is not fully implemented here.")
+
 # Matplotlib
 import matplotlib.pyplot as plt
 
@@ -521,34 +532,37 @@ class EKF_RT:
 # --- Helper functions for access / general utilities ---
 
 try:
-    from .analysis_util import get_bpf, bpf_data, linreg, calc_crlb_pos, calc_crlb_vel, calc_crlb_att, calc_crlb_fogm, calc_crlb_map
+    from .signal_util import get_bpf_sos
+    from .analysis_util import bpf_data
+    from .ekf import calc_crlb_pos, calc_crlb_vel, calc_crlb_att, calc_crlb_fogm, calc_crlb_map
+    from .signal_util import linreg_matrix
     from .create_xyz import create_xyz0
-    from .tolles_lawson import create_TL_A, create_tl_coef
+    from .tolles_lawson import create_TL_A, create_TL_coef
     from .model_functions import create_model, create_P0 as create_p0, create_Qd as create_qd, get_Phi, get_H, get_h, get_f
     from .ekf import crlb, ekf
-    from .get_map import get_map, ottawa_area_maps, namad, emag2, emm720, upward_fft, map_interpolate
+    from .map_utils import get_map, ottawa_area_maps, namad, emag2, emm720, upward_fft, map_interpolate # Changed from .get_map
     from .plot_functions import plot_mag
     # NOTE: These imports are not directly used in the current version of magnav.py as per
     # the existing logic and might be part of an unused "data_loader" internal Julia module.
     # We define placeholders so Sphinx doesn't complain about missing references later.
-    from .get_xyz import get_xyz0, get_xyz20, get_XYZ, sgl_2020_train, sgl_2021_train
-    from .google_earth import create_kml
+    from .create_xyz import create_xyz0, get_xyz20, get_XYZ, sgl_2020_train, sgl_2021_train
+    # from .google_earth import create_kml
 except ImportError as e:
     print(f"Warning: Could not import MagNavPy sub-modules. Some functions might be unavailable: {e}", file=sys.stderr)
     # Define placeholder functions/classes so code that calls them doesn't error immediately
     # during Sphinx autodoc processing. These are minimal and will likely cause runtime errors.
 
-    def get_bpf(*args, **kwargs): raise NotImplementedError("get_bpf requires analysis_util module.")
+    def get_bpf_sos(*args, **kwargs): raise NotImplementedError("get_bpf_sos requires signal_util module.")
     def bpf_data(*args, **kwargs): raise NotImplementedError("bpf_data requires analysis_util module.")
-    def linreg(*args, **kwargs): raise NotImplementedError("linreg requires analysis_util module.")
-    def calc_crlb_pos(*args, **kwargs): raise NotImplementedError("calc_crlb_pos requires analysis_util module.")
-    def calc_crlb_vel(*args, **kwargs): raise NotImplementedError("calc_crlb_vel requires analysis_util module.")
-    def calc_crlb_att(*args, **kwargs): raise NotImplementedError("calc_crlb_att requires analysis_util module.")
-    def calc_crlb_fogm(*args, **kwargs): raise NotImplementedError("calc_crlb_fogm requires analysis_util module.")
-    def calc_crlb_map(*args, **kwargs): raise NotImplementedError("calc_crlb_map requires analysis_util module.")
+    def linreg_matrix(*args, **kwargs): raise NotImplementedError("linreg_matrix requires signal_util module.")
+    def calc_crlb_pos(*args, **kwargs): raise NotImplementedError("calc_crlb_pos requires ekf module.")
+    def calc_crlb_vel(*args, **kwargs): raise NotImplementedError("calc_crlb_vel requires ekf module.")
+    def calc_crlb_att(*args, **kwargs): raise NotImplementedError("calc_crlb_att requires ekf module.")
+    def calc_crlb_fogm(*args, **kwargs): raise NotImplementedError("calc_crlb_fogm requires ekf module.")
+    def calc_crlb_map(*args, **kwargs): raise NotImplementedError("calc_crlb_map requires ekf module.")
     def create_xyz0(*args, **kwargs): raise NotImplementedError("create_xyz0 requires create_xyz module.")
     def create_TL_A(*args, **kwargs): raise NotImplementedError("create_TL_A requires tolles_lawson module.")
-    def create_tl_coef(*args, **kwargs): raise NotImplementedError("create_tl_coef requires tolles_lawson module.")
+    def create_TL_coef(*args, **kwargs): raise NotImplementedError("create_TL_coef requires tolles_lawson module.")
     def create_model(*args, **kwargs): raise NotImplementedError("create_model requires model_functions module.")
     def create_p0(*args, **kwargs): raise NotImplementedError("create_p0 requires model_functions module.") # Case sensitive in real code
     def create_qd(*args, **kwargs): raise NotImplementedError("create_qd requires model_functions module.") # Case sensitive in real code
@@ -558,19 +572,21 @@ except ImportError as e:
     def get_f(*args, **kwargs): raise NotImplementedError("get_f requires model_functions module.")
     def crlb(*args, **kwargs): raise NotImplementedError("crlb requires ekf module.")
     def ekf(*args, **kwargs): raise NotImplementedError("ekf requires ekf module.")
-    def get_map(*args, **kwargs): raise NotImplementedError("get_map requires get_map module.")
-    def ottawa_area_maps(*args, **kwargs): raise NotImplementedError("ottawa_area_maps requires get_map module.")
-    def namad(*args, **kwargs): raise NotImplementedError("namad requires get_map module.")
-    def emag2(*args, **kwargs): raise NotImplementedError("emag2 requires get_map module.")
-    def emm720(*args, **kwargs): raise NotImplementedError("emm720 requires get_map module.")
-    def upward_fft(*args, **kwargs): raise NotImplementedError("upward_fft requires get_map module.")
-    def map_interpolate(*args, **kwargs): raise NotImplementedError("map_interpolate requires get_map module.")
+    # The following placeholders for get_map and related functions might still be defined if
+    # the import from .map_utils fails for some reason, but the primary source is now map_utils.
+    def get_map(*args, **kwargs): raise NotImplementedError("get_map requires map_utils module (formerly get_map module).")
+    def ottawa_area_maps(*args, **kwargs): raise NotImplementedError("ottawa_area_maps requires map_utils module.")
+    def namad(*args, **kwargs): raise NotImplementedError("namad requires map_utils module.")
+    def emag2(*args, **kwargs): raise NotImplementedError("emag2 requires map_utils module.")
+    def emm720(*args, **kwargs): raise NotImplementedError("emm720 requires map_utils module.")
+    def upward_fft(*args, **kwargs): raise NotImplementedError("upward_fft requires map_utils module.")
+    def map_interpolate(*args, **kwargs): raise NotImplementedError("map_interpolate requires map_utils module.")
     def plot_mag(*args, **kwargs): raise NotImplementedError("plot_mag requires plot_functions module.")
-    def get_xyz0(*args, **kwargs): raise NotImplementedError("get_xyz0 requires get_xyz module.")
-    def get_xyz20(*args, **kwargs): raise NotImplementedError("get_xyz20 requires get_xyz module.")
-    def get_XYZ(*args, **kwargs): raise NotImplementedError("get_XYZ requires get_xyz module.")
-    def sgl_2020_train(*args, **kwargs): raise NotImplementedError("sgl_2020_train requires get_xyz module.")
-    def sgl_2021_train(*args, **kwargs): raise NotImplementedError("sgl_2021_train requires get_xyz module.")
+    def get_xyz0(*args, **kwargs): raise NotImplementedError("create_xyz0 requires create_xyz module.") # Note: Original was get_xyz0, create_xyz0 is the actual function name
+    def get_xyz20(*args, **kwargs): raise NotImplementedError("get_xyz20 requires create_xyz module.")
+    def get_XYZ(*args, **kwargs): raise NotImplementedError("get_XYZ requires create_xyz module.")
+    def sgl_2020_train(*args, **kwargs): raise NotImplementedError("sgl_2020_train requires create_xyz module.")
+    def sgl_2021_train(*args, **kwargs): raise NotImplementedError("sgl_2021_train requires create_xyz module.")
     def create_kml(*args, **kwargs): raise NotImplementedError("create_kml requires google_earth module.")
 
 # Constants as defined in magnav.jl for gravity and Earth's rotation based on coordinate system setup details
@@ -580,21 +596,7 @@ except ImportError as e:
 r_earth = R_EARTH
 omega_earth = OMEGA_EARTH
 
-def get_cached_map(maps: Union[List[MapS], MapS], fallback: MapS = MAP_S_NULL, dz: Union[int, float] = 100) -> MapCache:
-    """
-    Retrieves or creates a cached map object.
-
-    Args:
-        maps: A list of `MapS` objects or a single `MapS` object to use as the base map(s).
-        fallback: An optional `MapS` object to use as a fallback if no suitable map is found in `maps`.
-                 Defaults to `MAP_S_NULL`.
-        dz: The altitude discretization for the cache [m].
-
-    Returns:
-        A `MapCache` object containing the interpolated maps.
-    """
-    maps_list = [maps] if isinstance(maps, MapS) else maps
-    return MapCache(maps_list, fallback, dz)
+# get_cached_map function moved to common_types.py
 
 def run_filt(ins: INS, xyz: Union[XYZ0, XYZ1, XYZ20, XYZ21], filter_params: Any,
              mag_map: MapS = MAP_S_NULL, temp_params: TempParams = None) -> FILTres:

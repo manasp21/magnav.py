@@ -14,13 +14,15 @@ from typing import List, Tuple, Callable, Dict, Any, Union, Optional
 
 from .signal_util import linreg_matrix, get_bpf_sos, bpf_data, bpf_data_inplace
 from .tolles_lawson import create_TL_A
+from .map_utils import get_map_val, get_map # Import get_map_val and get_map from map_utils
+from .nav_utils import get_step # Import get_step from nav_utils
 from .magnav import (
     # create_TL_A, # Removed as it's now imported from .tolles_lawson
     R_EARTH, E_EARTH, NUM_MAG_MAX, SILENT_DEBUG, XYZ, MapS,
     Traj, INS, XYZ0, XYZ1, XYZ20, XYZ21, # Specific XYZ types
     LinCompParams, NNCompParams, TempParams, # Parameter structs
     # Functions that were in MagNav.jl and are assumed to be in magnav.py or other modules
-    get_map_val, get_map, get_step,
+    # get_map, get_step, # Moved to map_utils and nav_utils respectively
     # For type hinting if needed, though specific XYZ types are better
 )
 from .common_types import MagV # Import MagV from common_types
@@ -619,11 +621,11 @@ def get_y(xyz: XYZ,
     """
     Get y target vector.
     y_type:
-        'a': anomaly field #1 (compensated tail stinger)
-        'b': anomaly field #2 (interpolated map)
-        'c': aircraft field #1 (uncomp_cabin - map)
-        'd': aircraft field #2 (uncomp_cabin - comp_tail)
-        'e': BPF'd total field (BPF uncomp_cabin)
+    'a': anomaly field #1 (compensated tail stinger)
+    'b': anomaly field #2 (interpolated map)
+    'c': aircraft field #1 (uncomp_cabin - map)
+    'd': aircraft field #2 (uncomp_cabin - comp_tail)
+    'e': BPF'd total field (BPF uncomp_cabin)
     """
     if ind is None:
         ind = np.ones(xyz.traj.N, dtype=bool)

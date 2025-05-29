@@ -67,6 +67,17 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dcm_util</span><span class="w"> </span><span class="kn">import</span> <span class="n">dcm2euler</span><span class="p">,</span> <span class="n">euler2dcm</span> <span class="c1"># New import for dcm functions</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.fdm_util</span><span class="w"> </span><span class="kn">import</span> <span class="n">fdm</span> <span class="c1"># New import for fdm function</span>
 
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.model_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_f</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Could not import get_f from .model_functions. Defining placeholder.&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_f</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Placeholder for the get_f function.</span>
+<span class="sd">        This function is not yet fully implemented and indicates an import issue from model_functions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_f could not be imported from model_functions and is not fully implemented here.&quot;</span><span class="p">)</span>
+
 <span class="c1"># Matplotlib</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 
@@ -614,7 +625,7 @@
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]))</span>
 
 <div class="viewcode-block" id="EKF_RT">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.EKF_RT">[docs]</a>
+<a class="viewcode-back" href="../../api_structs.html#magnavpy.magnav.EKF_RT">[docs]</a>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">EKF_RT</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Real-time (RT) extended Kalman filter (EKF) struct, mutable.&quot;&quot;&quot;</span>
@@ -626,159 +637,62 @@
 <span class="c1"># --- Helper functions for access / general utilities ---</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">.analysis_util</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_bpf</span><span class="p">,</span> <span class="n">bpf_data</span><span class="p">,</span> <span class="n">linreg</span><span class="p">,</span> <span class="n">calc_crlb_pos</span><span class="p">,</span> <span class="n">calc_crlb_vel</span><span class="p">,</span> <span class="n">calc_crlb_att</span><span class="p">,</span> <span class="n">calc_crlb_fogm</span><span class="p">,</span> <span class="n">calc_crlb_map</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.signal_util</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_bpf_sos</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.analysis_util</span><span class="w"> </span><span class="kn">import</span> <span class="n">bpf_data</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.ekf</span><span class="w"> </span><span class="kn">import</span> <span class="n">calc_crlb_pos</span><span class="p">,</span> <span class="n">calc_crlb_vel</span><span class="p">,</span> <span class="n">calc_crlb_att</span><span class="p">,</span> <span class="n">calc_crlb_fogm</span><span class="p">,</span> <span class="n">calc_crlb_map</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.signal_util</span><span class="w"> </span><span class="kn">import</span> <span class="n">linreg_matrix</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">.create_xyz</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_xyz0</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">.tolles_lawson</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_TL_A</span><span class="p">,</span> <span class="n">create_tl_coef</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.tolles_lawson</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_TL_A</span><span class="p">,</span> <span class="n">create_TL_coef</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">.model_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_model</span><span class="p">,</span> <span class="n">create_P0</span> <span class="k">as</span> <span class="n">create_p0</span><span class="p">,</span> <span class="n">create_Qd</span> <span class="k">as</span> <span class="n">create_qd</span><span class="p">,</span> <span class="n">get_Phi</span><span class="p">,</span> <span class="n">get_H</span><span class="p">,</span> <span class="n">get_h</span><span class="p">,</span> <span class="n">get_f</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">.ekf</span><span class="w"> </span><span class="kn">import</span> <span class="n">crlb</span><span class="p">,</span> <span class="n">ekf</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">.get_map</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_map</span><span class="p">,</span> <span class="n">ottawa_area_maps</span><span class="p">,</span> <span class="n">namad</span><span class="p">,</span> <span class="n">emag2</span><span class="p">,</span> <span class="n">emm720</span><span class="p">,</span> <span class="n">upward_fft</span><span class="p">,</span> <span class="n">map_interpolate</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.map_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_map</span><span class="p">,</span> <span class="n">ottawa_area_maps</span><span class="p">,</span> <span class="n">namad</span><span class="p">,</span> <span class="n">emag2</span><span class="p">,</span> <span class="n">emm720</span><span class="p">,</span> <span class="n">upward_fft</span><span class="p">,</span> <span class="n">map_interpolate</span> <span class="c1"># Changed from .get_map</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">.plot_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_mag</span>
     <span class="c1"># NOTE: These imports are not directly used in the current version of magnav.py as per</span>
     <span class="c1"># the existing logic and might be part of an unused &quot;data_loader&quot; internal Julia module.</span>
     <span class="c1"># We define placeholders so Sphinx doesn&#39;t complain about missing references later.</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">.get_xyz</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_xyz0</span><span class="p">,</span> <span class="n">get_xyz20</span><span class="p">,</span> <span class="n">get_XYZ</span><span class="p">,</span> <span class="n">sgl_2020_train</span><span class="p">,</span> <span class="n">sgl_2021_train</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">.google_earth</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_kml</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.create_xyz</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_xyz0</span><span class="p">,</span> <span class="n">get_xyz20</span><span class="p">,</span> <span class="n">get_XYZ</span><span class="p">,</span> <span class="n">sgl_2020_train</span><span class="p">,</span> <span class="n">sgl_2021_train</span>
+    <span class="c1"># from .google_earth import create_kml</span>
 <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Could not import MagNavPy sub-modules. Some functions might be unavailable: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
     <span class="c1"># Define placeholder functions/classes so code that calls them doesn&#39;t error immediately</span>
     <span class="c1"># during Sphinx autodoc processing. These are minimal and will likely cause runtime errors.</span>
 
-<div class="viewcode-block" id="get_bpf">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.get_bpf">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_bpf</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_bpf requires analysis_util module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="bpf_data">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.bpf_data">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">bpf_data</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;bpf_data requires analysis_util module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="linreg">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.linreg">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">linreg</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;linreg requires analysis_util module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="calc_crlb_pos">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.calc_crlb_pos">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_pos</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;calc_crlb_pos requires analysis_util module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="calc_crlb_vel">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.calc_crlb_vel">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_vel</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;calc_crlb_vel requires analysis_util module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="calc_crlb_att">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.calc_crlb_att">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_att</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;calc_crlb_att requires analysis_util module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="calc_crlb_fogm">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.calc_crlb_fogm">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_fogm</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;calc_crlb_fogm requires analysis_util module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="calc_crlb_map">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.calc_crlb_map">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_map</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;calc_crlb_map requires analysis_util module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="create_xyz0">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.create_xyz0">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">create_xyz0</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_xyz0 requires create_xyz module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="create_TL_A">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.create_TL_A">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">create_TL_A</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_TL_A requires tolles_lawson module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="create_tl_coef">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.create_tl_coef">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">create_tl_coef</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_tl_coef requires tolles_lawson module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="create_model">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.create_model">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">create_model</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_model requires model_functions module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="create_p0">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.create_p0">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">create_p0</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_p0 requires model_functions module.&quot;</span><span class="p">)</span> <span class="c1"># Case sensitive in real code</span></div>
-
-<div class="viewcode-block" id="create_qd">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.create_qd">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">create_qd</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_qd requires model_functions module.&quot;</span><span class="p">)</span> <span class="c1"># Case sensitive in real code</span></div>
-
-<div class="viewcode-block" id="get_Phi">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.get_Phi">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_Phi</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_Phi requires model_functions module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="get_H">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.get_H">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_H</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_H requires model_functions module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="get_h">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.get_h">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_h</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_h requires model_functions module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="get_f">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.get_f">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_f</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_f requires model_functions module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="crlb">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.crlb">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">crlb</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;crlb requires ekf module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="ekf">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.ekf">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">ekf</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;ekf requires ekf module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="get_map">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.get_map">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_map</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_map requires get_map module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="ottawa_area_maps">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.ottawa_area_maps">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">ottawa_area_maps</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;ottawa_area_maps requires get_map module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="namad">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.namad">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">namad</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;namad requires get_map module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="emag2">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.emag2">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">emag2</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;emag2 requires get_map module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="emm720">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.emm720">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">emm720</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;emm720 requires get_map module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="upward_fft">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.upward_fft">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">upward_fft</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;upward_fft requires get_map module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="map_interpolate">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.map_interpolate">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">map_interpolate</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;map_interpolate requires get_map module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="plot_mag">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.plot_mag">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">plot_mag</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;plot_mag requires plot_functions module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="get_xyz0">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.get_xyz0">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_xyz0</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_xyz0 requires get_xyz module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="get_xyz20">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.get_xyz20">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_xyz20</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_xyz20 requires get_xyz module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="get_XYZ">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.get_XYZ">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_XYZ</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_XYZ requires get_xyz module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="sgl_2020_train">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.sgl_2020_train">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">sgl_2020_train</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;sgl_2020_train requires get_xyz module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="sgl_2021_train">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.sgl_2021_train">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">sgl_2021_train</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;sgl_2021_train requires get_xyz module.&quot;</span><span class="p">)</span></div>
-
-<div class="viewcode-block" id="create_kml">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.create_kml">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">create_kml</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_kml requires google_earth module.&quot;</span><span class="p">)</span></div>
-
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_bpf_sos</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_bpf_sos requires signal_util module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">bpf_data</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;bpf_data requires analysis_util module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">linreg_matrix</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;linreg_matrix requires signal_util module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_pos</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;calc_crlb_pos requires ekf module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_vel</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;calc_crlb_vel requires ekf module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_att</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;calc_crlb_att requires ekf module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_fogm</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;calc_crlb_fogm requires ekf module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_map</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;calc_crlb_map requires ekf module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_xyz0</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_xyz0 requires create_xyz module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_TL_A</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_TL_A requires tolles_lawson module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_TL_coef</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_TL_coef requires tolles_lawson module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_model</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_model requires model_functions module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_p0</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_p0 requires model_functions module.&quot;</span><span class="p">)</span> <span class="c1"># Case sensitive in real code</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_qd</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_qd requires model_functions module.&quot;</span><span class="p">)</span> <span class="c1"># Case sensitive in real code</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_Phi</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_Phi requires model_functions module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_H</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_H requires model_functions module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_h</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_h requires model_functions module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_f</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_f requires model_functions module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">crlb</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;crlb requires ekf module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ekf</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;ekf requires ekf module.&quot;</span><span class="p">)</span>
+    <span class="c1"># The following placeholders for get_map and related functions might still be defined if</span>
+    <span class="c1"># the import from .map_utils fails for some reason, but the primary source is now map_utils.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_map</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_map requires map_utils module (formerly get_map module).&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ottawa_area_maps</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;ottawa_area_maps requires map_utils module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">namad</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;namad requires map_utils module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">emag2</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;emag2 requires map_utils module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">emm720</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;emm720 requires map_utils module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">upward_fft</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;upward_fft requires map_utils module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">map_interpolate</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;map_interpolate requires map_utils module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_mag</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;plot_mag requires plot_functions module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_xyz0</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_xyz0 requires create_xyz module.&quot;</span><span class="p">)</span> <span class="c1"># Note: Original was get_xyz0, create_xyz0 is the actual function name</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_xyz20</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_xyz20 requires create_xyz module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_XYZ</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_XYZ requires create_xyz module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sgl_2020_train</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;sgl_2020_train requires create_xyz module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sgl_2021_train</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;sgl_2021_train requires create_xyz module.&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_kml</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span> <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;create_kml requires google_earth module.&quot;</span><span class="p">)</span>
 
 <span class="c1"># Constants as defined in magnav.jl for gravity and Earth&#39;s rotation based on coordinate system setup details</span>
 <span class="c1"># This should also account for the difference if from Julia&#39;s GeoData or other packages</span>
@@ -787,24 +701,7 @@
 <span class="n">r_earth</span> <span class="o">=</span> <span class="n">R_EARTH</span>
 <span class="n">omega_earth</span> <span class="o">=</span> <span class="n">OMEGA_EARTH</span>
 
-<div class="viewcode-block" id="get_cached_map">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.get_cached_map">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">get_cached_map</span><span class="p">(</span><span class="n">maps</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">MapS</span><span class="p">],</span> <span class="n">MapS</span><span class="p">],</span> <span class="n">fallback</span><span class="p">:</span> <span class="n">MapS</span> <span class="o">=</span> <span class="n">MAP_S_NULL</span><span class="p">,</span> <span class="n">dz</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">100</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MapCache</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Retrieves or creates a cached map object.</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        maps: A list of `MapS` objects or a single `MapS` object to use as the base map(s).</span>
-<span class="sd">        fallback: An optional `MapS` object to use as a fallback if no suitable map is found in `maps`.</span>
-<span class="sd">                 Defaults to `MAP_S_NULL`.</span>
-<span class="sd">        dz: The altitude discretization for the cache [m].</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        A `MapCache` object containing the interpolated maps.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">maps_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">maps</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">maps</span><span class="p">,</span> <span class="n">MapS</span><span class="p">)</span> <span class="k">else</span> <span class="n">maps</span>
-    <span class="k">return</span> <span class="n">MapCache</span><span class="p">(</span><span class="n">maps_list</span><span class="p">,</span> <span class="n">fallback</span><span class="p">,</span> <span class="n">dz</span><span class="p">)</span></div>
-
+<span class="c1"># get_cached_map function moved to common_types.py</span>
 
 <div class="viewcode-block" id="run_filt">
 <a class="viewcode-back" href="../../nav.html#magnavpy.magnav.run_filt">[docs]</a>

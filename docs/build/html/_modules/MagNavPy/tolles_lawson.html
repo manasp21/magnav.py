@@ -227,7 +227,7 @@
         <span class="k">return</span> <span class="n">A</span>
 
 <div class="viewcode-block" id="create_TL_A">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.tolles_lawson.create_TL_A">[docs]</a>
+<a class="viewcode-back" href="../../comp.html#magnavpy.tolles_lawson.create_TL_A">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">create_TL_A</span><span class="p">(</span><span class="n">flux_or_Bx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">MagV</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
                 <span class="n">By</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                 <span class="n">Bz</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -287,7 +287,7 @@
     <span class="k">if</span> <span class="p">((</span><span class="n">pass1</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">pass1</span> <span class="o">&lt;</span> <span class="n">fs</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">))</span> <span class="ow">or</span> \
        <span class="p">((</span><span class="n">pass2</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">pass2</span> <span class="o">&lt;</span> <span class="n">fs</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)):</span>
         <span class="n">perform_filter</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="n">bpf_coeffs</span> <span class="o">=</span> <span class="n">get_bpf</span><span class="p">(</span><span class="n">pass1</span><span class="o">=</span><span class="n">pass1</span><span class="p">,</span> <span class="n">pass2</span><span class="o">=</span><span class="n">pass2</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">pole</span><span class="o">=</span><span class="n">pole</span><span class="p">)</span>
+        <span class="n">bpf_coeffs</span> <span class="o">=</span> <span class="n">get_bpf_sos</span><span class="p">(</span><span class="n">pass1</span><span class="o">=</span><span class="n">pass1</span><span class="p">,</span> <span class="n">pass2</span><span class="o">=</span><span class="n">pass2</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">pole</span><span class="o">=</span><span class="n">pole</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Not filtering (or trimming) Tolles-Lawson data as pass frequencies are out of range.&quot;</span><span class="p">)</span>
 
@@ -302,8 +302,8 @@
     <span class="n">B_to_use</span> <span class="o">=</span> <span class="n">B_scalar</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
     <span class="k">if</span> <span class="n">perform_filter</span> <span class="ow">and</span> <span class="n">bpf_coeffs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">A_filt</span> <span class="o">=</span> <span class="n">bpf_data</span><span class="p">(</span><span class="n">A_to_use</span><span class="p">,</span> <span class="n">bpf</span><span class="o">=</span><span class="n">bpf_coeffs</span><span class="p">)</span> <span class="c1"># Assuming bpf_data handles 2D A</span>
-        <span class="n">B_filt</span> <span class="o">=</span> <span class="n">bpf_data</span><span class="p">(</span><span class="n">B_to_use</span><span class="p">,</span> <span class="n">bpf</span><span class="o">=</span><span class="n">bpf_coeffs</span><span class="p">)</span> 
+        <span class="n">A_filt</span> <span class="o">=</span> <span class="n">bpf_data</span><span class="p">(</span><span class="n">A_to_use</span><span class="p">,</span> <span class="n">sos</span><span class="o">=</span><span class="n">bpf_coeffs</span><span class="p">)</span> <span class="c1"># Assuming bpf_data handles 2D A</span>
+        <span class="n">B_filt</span> <span class="o">=</span> <span class="n">bpf_data</span><span class="p">(</span><span class="n">B_to_use</span><span class="p">,</span> <span class="n">sos</span><span class="o">=</span><span class="n">bpf_coeffs</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="n">trim</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">A_filt</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">trim</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">B_filt</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">trim</span> <span class="p">:</span>
@@ -317,7 +317,7 @@
             <span class="n">A_to_use</span> <span class="o">=</span> <span class="n">A_filt</span>
             <span class="n">B_to_use</span> <span class="o">=</span> <span class="n">B_filt</span>
     
-    <span class="n">coef</span> <span class="o">=</span> <span class="n">linreg</span><span class="p">(</span><span class="n">B_to_use</span><span class="p">,</span> <span class="n">A_to_use</span><span class="p">,</span> <span class="n">lambda_val</span><span class="o">=</span><span class="n">lambda_val</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+    <span class="n">coef</span> <span class="o">=</span> <span class="n">linreg_matrix</span><span class="p">(</span><span class="n">B_to_use</span><span class="p">,</span> <span class="n">A_to_use</span><span class="p">,</span> <span class="n">lambda_ridge</span><span class="o">=</span><span class="n">lambda_val</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
     <span class="k">if</span> <span class="n">return_var</span><span class="p">:</span>
         <span class="n">B_comp_error</span> <span class="o">=</span> <span class="n">B_to_use</span> <span class="o">-</span> <span class="p">(</span><span class="n">A_to_use</span> <span class="o">@</span> <span class="n">coef</span><span class="p">)</span>
@@ -328,7 +328,7 @@
         <span class="k">return</span> <span class="n">coef</span>
 
 <div class="viewcode-block" id="create_TL_coef">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.tolles_lawson.create_TL_coef">[docs]</a>
+<a class="viewcode-back" href="../../comp.html#magnavpy.tolles_lawson.create_TL_coef">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">create_TL_coef</span><span class="p">(</span><span class="n">flux_or_Bx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">MagV</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
                    <span class="n">arg2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
                    <span class="n">arg3</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>

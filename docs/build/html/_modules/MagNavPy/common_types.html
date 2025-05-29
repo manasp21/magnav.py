@@ -165,6 +165,21 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">interpolators</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
                 <span class="c1"># map_info = getattr(m_obj, &#39;info&#39;, &#39;N/A&#39;)</span>
                 <span class="c1"># print(f&quot;Warning: Map &#39;{map_info}&#39; missing map, yy, or xx data for interpolator. Skipping.&quot;, file=sys.stderr)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_cached_map</span><span class="p">(</span><span class="n">maps</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">MapS</span><span class="p">],</span> <span class="n">MapS</span><span class="p">],</span> <span class="n">fallback</span><span class="p">:</span> <span class="n">MapS</span> <span class="o">=</span> <span class="n">MAP_S_NULL</span><span class="p">,</span> <span class="n">dz</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">100</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MapCache</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieves or creates a cached map object.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        maps: A list of `MapS` objects or a single `MapS` object to use as the base map(s).</span>
+<span class="sd">        fallback: An optional `MapS` object to use as a fallback if no suitable map is found in `maps`.</span>
+<span class="sd">                 Defaults to `MAP_S_NULL`.</span>
+<span class="sd">        dz: The altitude discretization for the cache [m].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A `MapCache` object containing the interpolated maps.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">maps_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">maps</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">maps</span><span class="p">,</span> <span class="n">MapS</span><span class="p">)</span> <span class="k">else</span> <span class="n">maps</span>
+    <span class="k">return</span> <span class="n">MapCache</span><span class="p">(</span><span class="n">maps_list</span><span class="p">,</span> <span class="n">fallback</span><span class="p">,</span> <span class="n">dz</span><span class="p">)</span>
 </pre></div>
 
           </div>

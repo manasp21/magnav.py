@@ -6,22 +6,22 @@ The following is a full listing of the custom structs (classes in Python) within
 Magnetic Anomaly Maps
 ---------------------
 
-.. autoclass:: magnavpy.map_module.Map
+.. autoclass:: magnavpy.common_types.Map
    :members:
 
-.. autoclass:: magnavpy.map_module.MapS
+.. autoclass:: magnavpy.common_types.MapS
    :members:
 
-.. autoclass:: magnavpy.map_module.MapSd
+.. autoclass:: magnavpy.common_types.MapSd
    :members:
 
-.. autoclass:: magnavpy.map_module.MapS3D
+.. autoclass:: magnavpy.common_types.MapS3D
    :members:
 
-.. autoclass:: magnavpy.map_module.MapV
+.. autoclass:: magnavpy.common_types.MapV
    :members:
 
-.. autoclass:: magnavpy.map_module.MapCache
+.. autoclass:: magnavpy.common_types.MapCache
    :members:
 
 Vector Magnetometer
@@ -33,46 +33,46 @@ Vector Magnetometer
 Flight Paths
 ------------
 
-.. autoclass:: magnavpy.navigation.Path
+.. autoclass:: magnavpy.magnav.Path
    :members:
 
-.. autoclass:: magnavpy.navigation.Traj
+.. autoclass:: magnavpy.magnav.Traj
    :members:
 
-.. autoclass:: magnavpy.navigation.INS
+.. autoclass:: magnavpy.magnav.INS
    :members:
 
 Flight Data
 -----------
 
-.. autoclass:: magnavpy.data_types.XYZ
+.. autoclass:: magnavpy.magnav.XYZ
    :members:
 
-.. autoclass:: magnavpy.data_types.XYZ0
+.. autoclass:: magnavpy.magnav.XYZ0
    :members:
 
-.. autoclass:: magnavpy.data_types.XYZ1
+.. autoclass:: magnavpy.magnav.XYZ1
    :members:
 
-.. autoclass:: magnavpy.data_types.XYZ20
+.. autoclass:: magnavpy.magnav.XYZ20
    :members:
 
-.. autoclass:: magnavpy.data_types.XYZ21
+.. autoclass:: magnavpy.magnav.XYZ21
    :members:
 
 Output Wrappers
 ---------------
 
-.. autoclass:: magnavpy.output_types.FILTres
+.. autoclass:: magnavpy.magnav.FILTres
    :members:
 
-.. autoclass:: magnavpy.output_types.CRLBout
+.. autoclass:: magnavpy.magnav.CRLBout
    :members:
 
-.. autoclass:: magnavpy.output_types.INSout
+.. autoclass:: magnavpy.magnav.INSout
    :members:
 
-.. autoclass:: magnavpy.output_types.FILTout
+.. autoclass:: magnavpy.magnav.FILTout
    :members:
 
 Real-time EKF

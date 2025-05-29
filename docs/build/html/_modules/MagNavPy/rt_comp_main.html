@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>magnavpy.rt_comp_main &#8212; MagNavPy 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for magnavpy.rt_comp_main</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.magnav</span><span class="w"> </span><span class="kn">import</span> <span class="n">INS</span><span class="p">,</span> <span class="n">MagV</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.common_types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MapCache</span><span class="p">,</span> <span class="n">get_cached_map</span>
+
+<div class="viewcode-block" id="FILTres">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.rt_comp_main.FILTres">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FILTres</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Filter results structure.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x_out</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">P_out</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">r_out</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">success_flag</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x_out</span> <span class="o">=</span> <span class="n">x_out</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">P_out</span> <span class="o">=</span> <span class="n">P_out</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">r_out</span> <span class="o">=</span> <span class="n">r_out</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">success_flag</span> <span class="o">=</span> <span class="n">success_flag</span></div>
+
+
+<div class="viewcode-block" id="get_years">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.rt_comp_main.get_years">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_years</span><span class="p">(</span><span class="n">year</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">day_of_year</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Converts year and day of year to decimal year.</span>
+<span class="sd">    A more precise implementation might be needed depending on IGRF requirements.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">start_of_year</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">target_date</span> <span class="o">=</span> <span class="n">start_of_year</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">day_of_year</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">year_start_timestamp</span> <span class="o">=</span> <span class="n">start_of_year</span><span class="o">.</span><span class="n">timestamp</span><span class="p">()</span>
+        <span class="n">year_end_timestamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="n">year</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">timestamp</span><span class="p">()</span>
+        <span class="n">target_timestamp</span> <span class="o">=</span> <span class="n">target_date</span><span class="o">.</span><span class="n">timestamp</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">year_end_timestamp</span> <span class="o">-</span> <span class="n">year_start_timestamp</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># Avoid division by zero for invalid year</span>
+            <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">year</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">year</span> <span class="o">+</span> <span class="p">(</span><span class="n">target_timestamp</span> <span class="o">-</span> <span class="n">year_start_timestamp</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">year_end_timestamp</span> <span class="o">-</span> <span class="n">year_start_timestamp</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span> <span class="c1"># Handle invalid date/day_of_year</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Invalid date for get_years (</span><span class="si">{</span><span class="n">year</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">day_of_year</span><span class="si">}</span><span class="s2">). Returning year as float.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">year</span><span class="p">)</span></div>
+
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.ekf</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_Phi</span> <span class="k">as</span> <span class="n">ekf_get_Phi</span><span class="p">,</span> <span class="n">get_H</span> <span class="k">as</span> <span class="n">ekf_get_H</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.model_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_h</span> <span class="k">as</span> <span class="n">ekf_get_h</span> <span class="c1"># Import get_h from model_functions</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.tolles_lawson</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_TL_A</span><span class="p">,</span> <span class="n">create_TL_coef</span>
+
+<span class="c1"># --- Tolles-Lawson EKF (from ekf_online.jl) ---</span>
+<div class="viewcode-block" id="ekf_online_tl">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.rt_comp_main.ekf_online_tl">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ekf_online_tl</span><span class="p">(</span>
+    <span class="n">lat</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">lon</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">alt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">vn</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ve</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">vd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">fn</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">Cnb</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">meas</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">Bx</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">By</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Bz</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">itp_mapS</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+    <span class="n">x0_TL</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">P0</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">Qd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">R</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="n">baro_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span>
+    <span class="n">acc_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span>
+    <span class="n">gyro_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span>
+    <span class="n">fogm_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">600.0</span><span class="p">,</span>
+    <span class="n">date</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">get_years</span><span class="p">(</span><span class="mi">2020</span><span class="p">,</span> <span class="mi">185</span><span class="p">),</span>
+    <span class="n">core</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">terms</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;permanent&#39;</span><span class="p">,</span> <span class="s1">&#39;induced&#39;</span><span class="p">,</span> <span class="s1">&#39;eddy&#39;</span><span class="p">,</span> <span class="s1">&#39;bias&#39;</span><span class="p">],</span>
+    <span class="n">Bt_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50000.0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FILTres</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extended Kalman filter (EKF) with online learning of Tolles-Lawson coefficients.&quot;&quot;&quot;</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span>
+    <span class="n">ny</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">meas</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">meas</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">meas</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">nx</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">nx_TL</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x0_TL</span><span class="p">)</span>
+    
+    <span class="c1"># State vector structure assumption:</span>
+    <span class="c1"># [18 INS error states (pos, vel, att, acc_bias, gyro_bias, alt_baro_fogm_bias),</span>
+    <span class="c1">#  nx_TL Tolles-Lawson coefficients,</span>
+    <span class="c1">#  nx_vec vector magnetometer model states (e.g., 3 for Bx,By,Bz if modeled, or 0),</span>
+    <span class="c1">#  1 scalar magnetometer bias state]</span>
+    <span class="c1"># The Julia code `nx_vec = nx - 18 - nx_TL` implies the scalar bias is not part of the 18.</span>
+    <span class="c1"># Let&#39;s assume 18 INS states, then TL, then vec_mag, then 1 scalar_mag_bias.</span>
+    <span class="c1"># So, nx = 18 (INS) + nx_TL + nx_vec + 1 (scalar_bias).</span>
+    <span class="c1"># nx_vec = nx - 18 - nx_TL - 1</span>
+    <span class="c1"># The Julia code `nx_vec == 3 &amp;&amp; (x[end-3:end-1] = ...)` and H construction for vec_mag</span>
+    <span class="c1"># suggests vec_mag states are just before scalar_bias.</span>
+    <span class="c1"># If nx_vec is for Bx,By,Bz *values* as states (unusual), their derivatives HBx,HBy,HBz are complex.</span>
+    <span class="c1"># For now, assume nx_vec = 0 as it simplifies H matrix construction significantly,</span>
+    <span class="c1"># unless the HBx,HBy,HBz terms are critical and well-defined.</span>
+    <span class="c1"># The prompt did not specify vector magnetometer calibration as a primary goal for rt_comp_main.</span>
+    <span class="c1"># Let&#39;s assume nx_vec = 0 for this translation, meaning no explicit vector mag states in EKF.</span>
+    <span class="c1"># If vec_mag states are needed, the H matrix and state definition need careful handling.</span>
+    <span class="n">nx_vec</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1"># Simplification: No explicit vector magnetometer states in this EKF version.</span>
+    
+    <span class="c1"># Recalculate nx if nx_vec is forced to 0, or ensure P0 matches this assumption.</span>
+    <span class="c1"># If P0 implies nx_vec &gt; 0, this simplification will mismatch.</span>
+    <span class="c1"># For now, proceed with nx from P0 and see how H is built.</span>
+    <span class="c1"># The Julia H construction has branches for nx_vec.</span>
+    
+    <span class="c1"># Indices for state vector parts:</span>
+    <span class="n">ins_states_end_idx</span> <span class="o">=</span> <span class="mi">18</span>
+    <span class="n">tl_coeffs_start_idx</span> <span class="o">=</span> <span class="n">ins_states_end_idx</span>
+    <span class="n">tl_coeffs_end_idx</span> <span class="o">=</span> <span class="n">tl_coeffs_start_idx</span> <span class="o">+</span> <span class="n">nx_TL</span>
+    <span class="c1"># If nx_vec &gt; 0:</span>
+    <span class="c1"># vec_mag_states_start_idx = tl_coeffs_end_idx</span>
+    <span class="c1"># vec_mag_states_end_idx = vec_mag_states_start_idx + nx_vec</span>
+    <span class="c1"># scalar_bias_idx = vec_mag_states_end_idx</span>
+    <span class="c1"># else (nx_vec == 0):</span>
+    <span class="n">scalar_bias_idx</span> <span class="o">=</span> <span class="n">tl_coeffs_end_idx</span>
+
+    <span class="k">if</span> <span class="n">nx</span> <span class="o">!=</span> <span class="n">scalar_bias_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># Check consistency</span>
+        <span class="c1"># This implies P0 might be sized for nx_vec &gt; 0.</span>
+        <span class="c1"># For this translation, we will follow the Julia H-matrix construction logic.</span>
+        <span class="c1"># The original nx_vec = nx - 18 - nx_TL (from Julia)</span>
+        <span class="c1"># If this is used, then scalar_bias_idx is nx-1.</span>
+        <span class="n">_original_julia_nx_vec</span> <span class="o">=</span> <span class="n">nx</span> <span class="o">-</span> <span class="mi">18</span> <span class="o">-</span> <span class="n">nx_TL</span> <span class="c1"># This is number of states between TL and scalar bias</span>
+        <span class="k">if</span> <span class="n">_original_julia_nx_vec</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;P0 size </span><span class="si">{</span><span class="n">nx</span><span class="si">}</span><span class="s2"> is too small for 18 INS states and </span><span class="si">{</span><span class="n">nx_TL</span><span class="si">}</span><span class="s2"> TL states.&quot;</span><span class="p">)</span>
+        <span class="n">nx_vec</span> <span class="o">=</span> <span class="n">_original_julia_nx_vec</span> <span class="c1"># Use the one implied by P0 size.</span>
+
+    <span class="n">x_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nx</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">P0</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">P_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nx</span><span class="p">,</span> <span class="n">nx</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">P0</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">r_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">ny</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">P0</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">P0</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">P</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="n">A_tl_design_matrix</span> <span class="o">=</span> <span class="n">create_TL_A</span><span class="p">(</span><span class="n">Bx</span><span class="p">,</span> <span class="n">By</span><span class="p">,</span> <span class="n">Bz</span><span class="p">,</span> <span class="n">Bt_input</span><span class="o">=</span><span class="n">meas</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">terms</span><span class="o">=</span><span class="n">terms</span><span class="p">,</span> <span class="n">Bt_scale</span><span class="o">=</span><span class="n">Bt_scale</span><span class="p">)</span>
+    <span class="n">x</span><span class="p">[</span><span class="n">tl_coeffs_start_idx</span><span class="p">:</span><span class="n">tl_coeffs_end_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">x0_TL</span>
+
+    <span class="n">vec_states_present_in_model</span> <span class="o">=</span> <span class="p">(</span><span class="n">nx_vec</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="n">current_itp_mapS</span> <span class="o">=</span> <span class="n">itp_mapS</span> <span class="c1"># Assuming itp_mapS is a callable. Map_Cache logic simplified.</span>
+
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+        <span class="c1"># Overwrite vector magnetometer &quot;states&quot; if modeled (original Julia logic)</span>
+        <span class="k">if</span> <span class="n">vec_states_present_in_model</span> <span class="ow">and</span> <span class="n">nx_vec</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span> <span class="c1"># Specific case from Julia</span>
+            <span class="c1"># These states are just before the scalar bias state.</span>
+            <span class="n">vec_mag_actual_states_start_idx</span> <span class="o">=</span> <span class="n">tl_coeffs_end_idx</span>
+            <span class="n">x</span><span class="p">[</span><span class="n">vec_mag_actual_states_start_idx</span> <span class="p">:</span> <span class="n">vec_mag_actual_states_start_idx</span> <span class="o">+</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">Bx</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">By</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">Bz</span><span class="p">[</span><span class="n">t</span><span class="p">]]</span>
+
+        <span class="n">phi_matrix</span> <span class="o">=</span> <span class="n">ekf_get_Phi</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">vn</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">ve</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">vd</span><span class="p">[</span><span class="n">t</span><span class="p">],</span>
+                                 <span class="n">fn</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fe</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fd</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">Cnb</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">t</span><span class="p">],</span>
+                                 <span class="n">baro_tau</span><span class="p">,</span> <span class="n">acc_tau</span><span class="p">,</span> <span class="n">gyro_tau</span><span class="p">,</span> <span class="n">fogm_tau</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span>
+                                 <span class="n">vec_states</span><span class="o">=</span><span class="n">vec_states_present_in_model</span><span class="p">)</span> <span class="c1"># Pass based on P0 sizing</span>
+
+        <span class="n">x_TL_current</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">tl_coeffs_start_idx</span><span class="p">:</span><span class="n">tl_coeffs_end_idx</span><span class="p">]</span>
+        <span class="n">tl_compensation_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">A_tl_design_matrix</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="p">:],</span> <span class="n">x_TL_current</span><span class="p">)</span>
+        
+        <span class="c1"># get_h should use relevant INS error states from x and scalar_bias_state x[scalar_bias_idx]</span>
+        <span class="c1"># Or, get_h is only for map, and H explicitly includes scalar_bias_idx derivative.</span>
+        <span class="c1"># The Julia `get_h` is called with full `x`.</span>
+        <span class="c1"># Predicted measurement h(x_k|k-1)</span>
+        <span class="c1"># h_pred = tl_compensation_val + map_contribution + scalar_bias_val</span>
+        <span class="c1"># Let&#39;s assume ekf_get_h provides map contribution based on INS states in x,</span>
+        <span class="c1"># AND includes the scalar bias state x[scalar_bias_idx] if H is built for it.</span>
+        <span class="c1"># The Julia residual: meas - (A&#39;*x_TL + get_h(map, x_ins_errors_and_bias, ...))</span>
+        <span class="n">h_map_and_bias_val</span> <span class="o">=</span> <span class="n">ekf_get_h</span><span class="p">(</span><span class="n">current_itp_mapS</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span><span class="p">)</span>
+        <span class="n">h_pred</span> <span class="o">=</span> <span class="n">tl_compensation_val</span> <span class="o">+</span> <span class="n">h_map_and_bias_val</span>
+        <span class="n">resid</span> <span class="o">=</span> <span class="n">meas</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">h_pred</span>
+
+        <span class="c1"># Measurement Jacobian H</span>
+        <span class="n">H_map_derivs_and_bias_deriv</span> <span class="o">=</span> <span class="n">ekf_get_H</span><span class="p">(</span><span class="n">current_itp_mapS</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span><span class="p">)</span><span class="o">.</span><span class="n">T</span> <span class="c1"># Expect row vector</span>
+        
+        <span class="n">H_row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">P0</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="c1"># Derivatives for first 2 INS states (lat_err, lon_err)</span>
+        <span class="n">H_row</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">H_map_derivs_and_bias_deriv</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> 
+        <span class="c1"># Assuming remaining INS states (up to 18) have zero direct derivative for map part,</span>
+        <span class="c1"># or are covered by H_map_derivs_and_bias_deriv if it&#39;s longer.</span>
+        <span class="c1"># The Julia H construction is specific: [Hll[1:2]; zeros; A_tl; (HBxyz); 1]</span>
+        <span class="c1"># This implies H_map_derivs_and_bias_deriv[0,0:2] for dMap/dPos_xy</span>
+        <span class="c1"># And H_map_derivs_and_bias_deriv[0, scalar_bias_idx_within_map_derivs] for dMapPart/dBias</span>
+        
+        <span class="c1"># Derivatives for TL coefficients</span>
+        <span class="n">H_row</span><span class="p">[</span><span class="n">tl_coeffs_start_idx</span><span class="p">:</span><span class="n">tl_coeffs_end_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">A_tl_design_matrix</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="p">:]</span>
+
+        <span class="k">if</span> <span class="n">vec_states_present_in_model</span> <span class="ow">and</span> <span class="n">nx_vec</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="c1"># Derivatives wrt Bx, By, Bz &quot;states&quot; - these are complex and model-specific</span>
+            <span class="c1"># TODO: Implement HBx, HBy, HBz from Julia code if this path is taken.</span>
+            <span class="c1"># This requires exact mapping of A_tl_design_matrix columns and x_TL_current elements.</span>
+            <span class="c1"># For now, placeholder zeros.</span>
+            <span class="n">vec_mag_actual_states_start_idx</span> <span class="o">=</span> <span class="n">tl_coeffs_end_idx</span>
+            <span class="c1"># H_row[vec_mag_actual_states_start_idx : vec_mag_actual_states_start_idx + 3] = [HBx_val, HBy_val, HBz_val]</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: HBx, HBy, HBz for TL EKF not implemented, using zeros.&quot;</span><span class="p">)</span>
+            <span class="k">pass</span> <span class="c1"># Keep as zeros for now</span>
+
+        <span class="c1"># Derivative for scalar bias state (is it part of h_map_and_bias_val&#39;s Jacobian or separate?)</span>
+        <span class="c1"># Julia H1 ends with &#39;1&#39;, implying d(total_model)/d(scalar_bias_state) = 1.</span>
+        <span class="c1"># This scalar_bias_state is x[scalar_bias_idx].</span>
+        <span class="n">H_row</span><span class="p">[</span><span class="n">scalar_bias_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> 
+        
+        <span class="n">H</span> <span class="o">=</span> <span class="n">H_row</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># ny=1</span>
+        <span class="k">if</span> <span class="n">ny</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span> <span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">H_row</span><span class="p">,</span> <span class="p">(</span><span class="n">ny</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="n">S_val</span> <span class="o">=</span> <span class="n">H</span> <span class="o">@</span> <span class="n">P</span> <span class="o">@</span> <span class="n">H</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">R</span>
+        <span class="k">if</span> <span class="n">ny</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">R</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">S_val</span> <span class="o">=</span> <span class="n">S_val</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="n">K_gain</span> <span class="o">=</span> <span class="p">(</span><span class="n">P</span> <span class="o">@</span> <span class="n">H</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">/</span> <span class="n">S_val</span> <span class="k">if</span> <span class="n">ny</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="n">P</span> <span class="o">@</span> <span class="n">H</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">S_val</span><span class="p">)</span>
+        
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="p">(</span><span class="n">K_gain</span> <span class="o">@</span> <span class="n">resid</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">ny</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="k">if</span> <span class="n">ny</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">x</span> <span class="o">+</span> <span class="p">(</span><span class="n">K_gain</span> <span class="o">*</span> <span class="n">resid</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">nx</span><span class="p">)</span> <span class="o">-</span> <span class="n">K_gain</span> <span class="o">@</span> <span class="n">H</span><span class="p">)</span> <span class="o">@</span> <span class="n">P</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">P</span> <span class="o">+</span> <span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+        <span class="n">x_out</span><span class="p">[:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">P_out</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">P</span>
+        <span class="n">r_out</span><span class="p">[:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">resid</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+        <span class="n">x</span> <span class="o">=</span> <span class="n">phi_matrix</span> <span class="o">@</span> <span class="n">x</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">phi_matrix</span> <span class="o">@</span> <span class="n">P</span> <span class="o">@</span> <span class="n">phi_matrix</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">Qd</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">P</span> <span class="o">+</span> <span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">FILTres</span><span class="p">(</span><span class="n">x_out</span><span class="p">,</span> <span class="n">P_out</span><span class="p">,</span> <span class="n">r_out</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ekf_online_tl_ins">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.rt_comp_main.ekf_online_tl_ins">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ekf_online_tl_ins</span><span class="p">(</span>
+    <span class="n">ins</span><span class="p">:</span> <span class="n">INS</span><span class="p">,</span> <span class="n">meas</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">flux</span><span class="p">:</span> <span class="n">MagV</span><span class="p">,</span> <span class="n">itp_mapS</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+    <span class="n">x0_TL</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">P0</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Qd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">R</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="o">**</span><span class="n">kwargs</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FILTres</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Wrapper for ekf_online_tl using INS and MagV structs.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">ekf_online_tl</span><span class="p">(</span>
+        <span class="n">ins</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">alt</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">vn</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">ve</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">vd</span><span class="p">,</span>
+        <span class="n">ins</span><span class="o">.</span><span class="n">fn</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">fe</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">fd</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">Cnb</span><span class="p">,</span> <span class="n">meas</span><span class="p">,</span>
+        <span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">flux</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">flux</span><span class="o">.</span><span class="n">z</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="n">itp_mapS</span><span class="p">,</span> <span class="n">x0_TL</span><span class="p">,</span> <span class="n">P0</span><span class="p">,</span> <span class="n">Qd</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ekf_online_tl_setup">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.rt_comp_main.ekf_online_tl_setup">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ekf_online_tl_setup</span><span class="p">(</span>
+    <span class="n">flux</span><span class="p">:</span> <span class="n">MagV</span><span class="p">,</span> <span class="n">meas</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ind</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">ridge_param</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.025</span><span class="p">,</span> <span class="c1"># Renamed from λ</span>
+    <span class="n">terms</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;permanent&#39;</span><span class="p">,</span> <span class="s1">&#39;induced&#39;</span><span class="p">,</span> <span class="s1">&#39;eddy&#39;</span><span class="p">,</span> <span class="s1">&#39;bias&#39;</span><span class="p">],</span>
+    <span class="n">pass1</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span> <span class="n">pass2</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.9</span><span class="p">,</span> <span class="n">fs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+    <span class="n">pole</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span> <span class="n">trim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span> <span class="n">N_sigma_points</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="c1"># Renamed from N_sigma</span>
+    <span class="n">Bt_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50000.0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Setup for EKF with online Tolles-Lawson learning.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">ind</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">meas</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    
+    <span class="n">flux_x_ind</span><span class="p">,</span> <span class="n">flux_y_ind</span><span class="p">,</span> <span class="n">flux_z_ind</span> <span class="o">=</span> <span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span> <span class="n">flux</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">ind</span><span class="p">],</span> <span class="n">flux</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+    <span class="n">meas_ind</span> <span class="o">=</span> <span class="n">meas</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+    <span class="n">Bt_for_setup</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">flux_x_ind</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">flux_y_ind</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">flux_z_ind</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="n">x0_TL</span><span class="p">,</span> <span class="n">y_var</span> <span class="o">=</span> <span class="n">create_TL_coef</span><span class="p">(</span>
+        <span class="n">flux</span><span class="p">,</span> <span class="n">meas</span><span class="p">,</span> <span class="n">ind</span><span class="p">,</span> <span class="n">Bt_input</span><span class="o">=</span><span class="n">Bt_for_setup</span><span class="p">,</span> <span class="n">ridge_param</span><span class="o">=</span><span class="n">ridge_param</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="n">terms</span><span class="p">,</span>
+        <span class="n">pass1</span><span class="o">=</span><span class="n">pass1</span><span class="p">,</span> <span class="n">pass2</span><span class="o">=</span><span class="n">pass2</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">pole</span><span class="o">=</span><span class="n">pole</span><span class="p">,</span> <span class="n">trim</span><span class="o">=</span><span class="n">trim</span><span class="p">,</span>
+        <span class="n">Bt_scale</span><span class="o">=</span><span class="n">Bt_scale</span><span class="p">,</span> <span class="n">return_var</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+
+    <span class="n">A_matrix_setup</span> <span class="o">=</span> <span class="n">create_TL_A</span><span class="p">(</span>
+        <span class="n">flux_x_ind</span><span class="p">,</span> <span class="n">flux_y_ind</span><span class="p">,</span> <span class="n">flux_z_ind</span><span class="p">,</span> <span class="n">Bt_input</span><span class="o">=</span><span class="n">Bt_for_setup</span><span class="p">,</span>
+        <span class="n">terms</span><span class="o">=</span><span class="n">terms</span><span class="p">,</span> <span class="n">Bt_scale</span><span class="o">=</span><span class="n">Bt_scale</span>
+    <span class="p">)</span>
+    
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">A_matrix_setup</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">A_matrix_setup</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span> <span class="c1"># Underdetermined</span>
+             <span class="n">P0_TL_inv</span> <span class="o">=</span> <span class="n">A_matrix_setup</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">A_matrix_setup</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">A_matrix_setup</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="mf">1e-6</span> <span class="c1"># Regularize</span>
+             <span class="n">P0_TL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">P0_TL_inv</span><span class="p">)</span> <span class="o">*</span> <span class="n">y_var</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">P0_TL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">A_matrix_setup</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">A_matrix_setup</span><span class="p">)</span> <span class="o">*</span> <span class="n">y_var</span>
+    <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Singular matrix in P0_TL calculation, using pseudo-inverse.&quot;</span><span class="p">)</span>
+        <span class="n">P0_TL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">A_matrix_setup</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">A_matrix_setup</span><span class="p">)</span> <span class="o">*</span> <span class="n">y_var</span>
+    <span class="n">P0_TL</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">P0_TL</span> <span class="o">+</span> <span class="n">P0_TL</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="c1"># Ensure symmetry</span>
+
+    <span class="n">N_ind_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span>
+    <span class="n">N_for_sigma_calc</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">N_ind_true</span> <span class="o">-</span> <span class="nb">max</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">trim</span><span class="p">,</span> <span class="mi">50</span><span class="p">),</span> <span class="n">N_sigma_points</span><span class="p">)</span>
+    
+    <span class="n">true_indices_original</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">ind</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">N_min_data_points</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="k">if</span> <span class="n">N_for_sigma_calc</span> <span class="o">&lt;</span> <span class="n">N_min_data_points</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Not enough data points (</span><span class="si">{</span><span class="n">N_for_sigma_calc</span><span class="si">}</span><span class="s2">) for robust TL_sigma. Using fallback.&quot;</span><span class="p">)</span>
+        <span class="n">TL_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x0_TL</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.1</span> <span class="o">+</span> <span class="mf">1e-6</span> <span class="c1"># Fallback</span>
+        <span class="k">return</span> <span class="n">x0_TL</span><span class="p">,</span> <span class="n">P0_TL</span><span class="p">,</span> <span class="n">TL_sigma</span>
+
+    <span class="n">coef_set</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">x0_TL</span><span class="p">),</span> <span class="n">N_for_sigma_calc</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x0_TL</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="c1"># Sliding window logic from Julia: inds[i : end+i-N]</span>
+    <span class="c1"># Window length = N_ind_true - N_for_sigma_calc</span>
+    <span class="n">window_len</span> <span class="o">=</span> <span class="n">N_ind_true</span> <span class="o">-</span> <span class="n">N_for_sigma_calc</span> <span class="o">+</span><span class="mi">1</span> <span class="c1"># +1 to make it inclusive of N_for_sigma_calc iterations</span>
+    <span class="k">if</span> <span class="n">window_len</span> <span class="o">&lt;=</span><span class="mi">0</span><span class="p">:</span> <span class="n">window_len</span> <span class="o">=</span> <span class="n">N_min_data_points</span> <span class="c1"># ensure positive</span>
+    <span class="n">window_len</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">window_len</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">trim</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span> <span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># ensure min length for create_TL_coef</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_for_sigma_calc</span><span class="p">):</span>
+        <span class="n">start_original_idx</span> <span class="o">=</span> <span class="n">true_indices_original</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="c1"># Define a segment of data for this iteration</span>
+        <span class="c1"># The Julia slice `inds[i:end+i-N]` is tricky.</span>
+        <span class="c1"># A simpler approach: use N_for_sigma_calc distinct (or overlapping) blocks.</span>
+        <span class="c1"># For now, let&#39;s use windows of a fixed reasonable size.</span>
+        <span class="n">current_segment_true_indices</span> <span class="o">=</span> <span class="n">true_indices_original</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="nb">min</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">window_len</span><span class="p">,</span> <span class="n">N_ind_true</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">current_segment_true_indices</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">max</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">trim</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span> <span class="o">+</span><span class="mi">1</span> <span class="p">:</span> <span class="k">continue</span> <span class="c1"># Skip if too small</span>
+
+        <span class="n">ind_for_iter</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">meas</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">ind_for_iter</span><span class="p">[</span><span class="n">current_segment_true_indices</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+        
+        <span class="n">flux_x_iter</span><span class="p">,</span> <span class="n">flux_y_iter</span><span class="p">,</span> <span class="n">flux_z_iter</span> <span class="o">=</span> <span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">ind_for_iter</span><span class="p">],</span> <span class="n">flux</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">ind_for_iter</span><span class="p">],</span> <span class="n">flux</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="n">ind_for_iter</span><span class="p">]</span>
+        <span class="n">Bt_for_iter</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">flux_x_iter</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">flux_y_iter</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">flux_z_iter</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">coef_set</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">_</span> <span class="o">=</span> <span class="n">create_TL_coef</span><span class="p">(</span>
+            <span class="n">flux</span><span class="p">,</span> <span class="n">meas</span><span class="p">,</span> <span class="n">ind_for_iter</span><span class="p">,</span> <span class="n">Bt_input</span><span class="o">=</span><span class="n">Bt_for_iter</span><span class="p">,</span> <span class="n">ridge_param</span><span class="o">=</span><span class="n">ridge_param</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="n">terms</span><span class="p">,</span>
+            <span class="n">pass1</span><span class="o">=</span><span class="n">pass1</span><span class="p">,</span> <span class="n">pass2</span><span class="o">=</span><span class="n">pass2</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">pole</span><span class="o">=</span><span class="n">pole</span><span class="p">,</span> <span class="n">trim</span><span class="o">=</span><span class="n">trim</span><span class="p">,</span>
+            <span class="n">Bt_scale</span><span class="o">=</span><span class="n">Bt_scale</span><span class="p">,</span> <span class="n">return_var</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+    
+    <span class="n">valid_cols</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">coef_set</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># Check for columns that got computed</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">valid_cols</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">TL_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">coef_set</span><span class="p">[:,</span> <span class="n">valid_cols</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">valid_cols</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">TL_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">coef_set</span><span class="p">[:,</span> <span class="n">valid_cols</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span> <span class="o">*</span> <span class="mf">0.1</span> <span class="o">+</span> <span class="mf">1e-6</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">TL_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">x0_TL</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.1</span> <span class="o">+</span> <span class="mf">1e-6</span>
+    <span class="n">TL_sigma</span><span class="p">[</span><span class="n">TL_sigma</span> <span class="o">&lt;</span> <span class="mf">1e-6</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-6</span>
+    <span class="k">return</span> <span class="n">x0_TL</span><span class="p">,</span> <span class="n">P0_TL</span><span class="p">,</span> <span class="n">TL_sigma</span></div>
+
+
+<span class="c1"># Assuming these are defined in magnav.py or will be.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.magnav</span><span class="w"> </span><span class="kn">import</span> <span class="n">INS</span><span class="p">,</span> <span class="n">MagV</span> <span class="c1"># EKF_RT might be FILTres or similar</span>
+
+<span class="c1"># --- Placeholder/Helper Definitions ---</span>
+
+<span class="c1"># Removed placeholder Map_Cache class and get_cached_map function.</span>
+<span class="c1"># These are now imported from .common_types</span>
+
+
+<span class="c1"># --- NN Model Interaction Placeholders (CRITICAL: Implement these based on your NN library) ---</span>
+<span class="c1"># from .model_functions import ( # For NN EKF - these are critical placeholders</span>
+<span class="c1">#     destructure_nn_model,</span>
+<span class="c1">#     reconstruct_nn_from_vector_and_predict, # Combines reconstruction and prediction</span>
+<span class="c1">#     get_nn_output_and_param_gradients # Gets NN output and d(output)/d(params)</span>
+<span class="c1"># )</span>
+
+<div class="viewcode-block" id="destructure_nn_model">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.rt_comp_main.destructure_nn_model">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">destructure_nn_model</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">Any</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    CRITICAL PLACEHOLDER: Extracts NN parameters as a vector and returns a reconstruction function.</span>
+<span class="sd">    This is highly library-specific (e.g., PyTorch: torch.nn.utils.parameters_to_vector).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;CRITICAL WARNING: Using placeholder for destructure_nn_model.&quot;</span><span class="p">)</span>
+    <span class="c1"># Example for a simple PyTorch model (conceptual)</span>
+    <span class="c1"># if isinstance(model, torch.nn.Module):</span>
+    <span class="c1">#     params_list = [p.data.cpu().numpy().flatten() for p in model.parameters()]</span>
+    <span class="c1">#     params_vector = np.concatenate(params_list) if params_list else np.array([])</span>
+    <span class="c1">#     </span>
+    <span class="c1">#     def reconstruct_function(p_vec: np.ndarray) -&gt; Any:</span>
+    <span class="c1">#         temp_model = copy.deepcopy(model) # Important to not modify original shared model</span>
+    <span class="c1">#         # torch.nn.utils.vector_to_parameters(torch.from_numpy(p_vec), temp_model.parameters())</span>
+    <span class="c1">#         print(&quot;CRITICAL WARNING: Placeholder reconstruct_function for NN model called.&quot;)</span>
+    <span class="c1">#         return temp_model # This model should now have weights from p_vec</span>
+    <span class="c1">#     return params_vector, reconstruct_function</span>
+    
+    <span class="c1"># Fallback dummy implementation</span>
+    <span class="n">num_dummy_params</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Guess or derive if possible</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s1">&#39;_dummy_num_params&#39;</span><span class="p">):</span> <span class="n">num_dummy_params</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">_dummy_num_params</span>
+    
+    <span class="n">dummy_params_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">num_dummy_params</span><span class="p">)</span> 
+    <span class="k">def</span><span class="w"> </span><span class="nf">dummy_reconstruct</span><span class="p">(</span><span class="n">p_vec</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="c1"># This should return a model instance configured with p_vec</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CRITICAL WARNING: Dummy NN reconstruct called with p_vec shape </span><span class="si">{</span><span class="n">p_vec</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1"># model_new = copy.deepcopy(model) # Create new instance</span>
+        <span class="c1"># model_new._dummy_params = p_vec # Store params for dummy prediction/grad</span>
+        <span class="c1"># model_new._dummy_num_params = len(p_vec)</span>
+        <span class="c1"># return model_new</span>
+        <span class="c1"># For simplicity, assume the model passed can be updated or used with external params</span>
+        <span class="c1"># This is a major simplification.</span>
+        <span class="k">return</span> <span class="n">model</span> <span class="c1"># Returning original, assuming it can be used with external params by other funcs</span>
+        
+    <span class="k">return</span> <span class="n">dummy_params_vector</span><span class="p">,</span> <span class="n">dummy_reconstruct</span></div>
+
+
+<div class="viewcode-block" id="get_nn_output_and_param_gradients">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.rt_comp_main.get_nn_output_and_param_gradients">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_nn_output_and_param_gradients</span><span class="p">(</span>
+    <span class="n">nn_model_instance_for_grad</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="c1"># This should be the model instance with current EKF state params</span>
+    <span class="n">input_data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="c1"># current_params_vector: np.ndarray # Params might be part of nn_model_instance_for_grad</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    CRITICAL PLACEHOLDER: Computes NN output and gradients of output w.r.t. parameters.</span>
+<span class="sd">    Returns (output_scalar_normalized, gradients_vector_wrt_params).</span>
+<span class="sd">    `input_data` is a single sample (1D array for features).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CRITICAL WARNING: Using placeholder for get_nn_output_and_param_gradients.&quot;</span><span class="p">)</span>
+    <span class="c1"># Example for PyTorch (conceptual)</span>
+    <span class="c1"># input_tensor = torch.tensor(input_data, dtype=torch.float32).unsqueeze(0) # Add batch dim</span>
+    <span class="c1"># nn_model_instance_for_grad.zero_grad()</span>
+    <span class="c1"># output_tensor = nn_model_instance_for_grad(input_tensor)</span>
+    <span class="c1"># output_scalar_normalized = output_tensor.item()</span>
+    <span class="c1"># # To get gradients w.r.t. parameters, sum output if multiple outputs, then backward.</span>
+    <span class="c1"># output_tensor.sum().backward() </span>
+    <span class="c1"># grads_list = [p.grad.data.cpu().numpy().flatten() for p in nn_model_instance_for_grad.parameters() if p.grad is not None]</span>
+    <span class="c1"># gradients_vector = np.concatenate(grads_list) if grads_list else np.array([])</span>
+    <span class="c1"># return output_scalar_normalized, gradients_vector</span>
+
+    <span class="c1"># Fallback dummy implementation</span>
+    <span class="n">dummy_output_normalized</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">input_data</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.05</span> <span class="c1"># Dummy prediction</span>
+    <span class="n">num_params</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">nn_model_instance_for_grad</span><span class="p">,</span> <span class="s1">&#39;_dummy_num_params&#39;</span><span class="p">):</span>
+        <span class="n">num_params</span> <span class="o">=</span> <span class="n">nn_model_instance_for_grad</span><span class="o">.</span><span class="n">_dummy_num_params</span>
+    <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">nn_model_instance_for_grad</span><span class="p">,</span> <span class="s1">&#39;_dummy_params&#39;</span><span class="p">):</span>
+        <span class="n">num_params</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">nn_model_instance_for_grad</span><span class="o">.</span><span class="n">_dummy_params</span><span class="p">)</span>
+
+    <span class="n">dummy_gradients_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">num_params</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.01</span> <span class="k">if</span> <span class="n">num_params</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+    <span class="k">return</span> <span class="n">dummy_output_normalized</span><span class="p">,</span> <span class="n">dummy_gradients_vector</span></div>
+
+
+<span class="c1"># --- Neural Network EKF (from ekf_online_nn.jl) ---</span>
+<div class="viewcode-block" id="ekf_online_nn">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.rt_comp_main.ekf_online_nn">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ekf_online_nn</span><span class="p">(</span>
+    <span class="n">lat</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">lon</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">alt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">vn</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ve</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">vd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">fn</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">Cnb</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">meas</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">itp_mapS</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span>
+    <span class="n">x_nn_inputs</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">nn_model</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">y_norms</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
+    <span class="n">P0</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Qd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">R</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="n">baro_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span> <span class="n">acc_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span> <span class="n">gyro_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span>
+    <span class="n">fogm_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">600.0</span><span class="p">,</span> <span class="n">date</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">get_years</span><span class="p">(</span><span class="mi">2020</span><span class="p">,</span> <span class="mi">185</span><span class="p">),</span> <span class="n">core</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FILTres</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extended Kalman filter (EKF) with online learning of neural network weights.&quot;&quot;&quot;</span>
+    <span class="n">y_bias</span><span class="p">,</span> <span class="n">y_scale</span> <span class="o">=</span> <span class="n">y_norms</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span>
+    <span class="n">ny</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">meas</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">meas</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">meas</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">nx</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    
+    <span class="n">w0_nn_vec</span><span class="p">,</span> <span class="n">reconstruct_nn_fn</span> <span class="o">=</span> <span class="n">destructure_nn_model</span><span class="p">(</span><span class="n">nn_model</span><span class="p">)</span> <span class="c1"># CRITICAL PLACEHOLDER</span>
+    <span class="n">nx_nn</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">w0_nn_vec</span><span class="p">)</span>
+
+    <span class="c1"># State vector: [18 INS_errors, nx_nn NN_params, 1 scalar_mag_bias]</span>
+    <span class="n">ins_states_end_idx</span> <span class="o">=</span> <span class="mi">18</span>
+    <span class="n">nn_params_start_idx</span> <span class="o">=</span> <span class="n">ins_states_end_idx</span>
+    <span class="n">nn_params_end_idx</span> <span class="o">=</span> <span class="n">nn_params_start_idx</span> <span class="o">+</span> <span class="n">nx_nn</span>
+    <span class="n">scalar_bias_idx</span> <span class="o">=</span> <span class="n">nn_params_end_idx</span>
+    
+    <span class="k">if</span> <span class="n">nx</span> <span class="o">!=</span> <span class="n">scalar_bias_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;P0 dimension </span><span class="si">{</span><span class="n">nx</span><span class="si">}</span><span class="s2"> mismatch with expected </span><span class="si">{</span><span class="n">scalar_bias_idx</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2"> states (18 INS, </span><span class="si">{</span><span class="n">nx_nn</span><span class="si">}</span><span class="s2"> NN, 1 Bias).&quot;</span><span class="p">)</span>
+
+    <span class="n">x_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nx</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">P0</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">P_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nx</span><span class="p">,</span> <span class="n">nx</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">P0</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">r_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">ny</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">P0</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">P0</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">x</span><span class="p">[</span><span class="n">nn_params_start_idx</span><span class="p">:</span><span class="n">nn_params_end_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">w0_nn_vec</span>
+    <span class="n">P</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">current_itp_mapS</span> <span class="o">=</span> <span class="n">itp_mapS</span>
+
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+        <span class="n">phi_matrix</span> <span class="o">=</span> <span class="n">ekf_get_Phi</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">vn</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">ve</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">vd</span><span class="p">[</span><span class="n">t</span><span class="p">],</span>
+                                 <span class="n">fn</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fe</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fd</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">Cnb</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">t</span><span class="p">],</span>
+                                 <span class="n">baro_tau</span><span class="p">,</span> <span class="n">acc_tau</span><span class="p">,</span> <span class="n">gyro_tau</span><span class="p">,</span> <span class="n">fogm_tau</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span>
+                                 <span class="n">vec_states</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># Assuming NN params handled by Qd/Phi structure</span>
+
+        <span class="n">current_nn_params_vec</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">nn_params_start_idx</span><span class="p">:</span><span class="n">nn_params_end_idx</span><span class="p">]</span>
+        
+        <span class="c1"># Reconstruct model for this step (CRITICAL: reconstruct_nn_fn must work)</span>
+        <span class="c1"># This model instance is used for prediction and gradient calculation.</span>
+        <span class="n">nn_model_step_instance</span> <span class="o">=</span> <span class="n">reconstruct_nn_fn</span><span class="p">(</span><span class="n">current_nn_params_vec</span><span class="p">)</span>
+        
+        <span class="n">nn_output_normalized</span><span class="p">,</span> <span class="n">nn_param_grads_unscaled</span> <span class="o">=</span> <span class="n">get_nn_output_and_param_gradients</span><span class="p">(</span>
+            <span class="n">nn_model_step_instance</span><span class="p">,</span> <span class="n">x_nn_inputs</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="p">)</span> <span class="c1"># CRITICAL PLACEHOLDER</span>
+
+        <span class="n">nn_output_denormalized</span> <span class="o">=</span> <span class="n">nn_output_normalized</span> <span class="o">*</span> <span class="n">y_scale</span> <span class="o">+</span> <span class="n">y_bias</span>
+        <span class="n">map_h_val</span> <span class="o">=</span> <span class="n">ekf_get_h</span><span class="p">(</span><span class="n">current_itp_mapS</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span><span class="p">)</span>
+        <span class="n">h_pred</span> <span class="o">=</span> <span class="n">nn_output_denormalized</span> <span class="o">+</span> <span class="n">map_h_val</span>
+        <span class="n">resid</span> <span class="o">=</span> <span class="n">meas</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">h_pred</span>
+
+        <span class="n">H_map_derivs_and_bias_deriv</span> <span class="o">=</span> <span class="n">ekf_get_H</span><span class="p">(</span><span class="n">current_itp_mapS</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">H_row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">P0</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="n">H_row</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">H_map_derivs_and_bias_deriv</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span> <span class="c1"># dMap/dPos_xy</span>
+        <span class="c1"># Zeros for other INS states (indices 2 to 17, assuming H_map covers only pos_xy for direct impact here)</span>
+        
+        <span class="n">H_row</span><span class="p">[</span><span class="n">nn_params_start_idx</span><span class="p">:</span><span class="n">nn_params_end_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">nn_param_grads_unscaled</span> <span class="o">*</span> <span class="n">y_scale</span>
+        <span class="n">H_row</span><span class="p">[</span><span class="n">scalar_bias_idx</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="c1"># d(Total)/d(ScalarBiasState)</span>
+
+        <span class="n">H</span> <span class="o">=</span> <span class="n">H_row</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ny</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span> <span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">H_row</span><span class="p">,</span> <span class="p">(</span><span class="n">ny</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+        <span class="n">S_val</span> <span class="o">=</span> <span class="n">H</span> <span class="o">@</span> <span class="n">P</span> <span class="o">@</span> <span class="n">H</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">R</span>
+        <span class="k">if</span> <span class="n">ny</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">R</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="n">S_val</span> <span class="o">=</span> <span class="n">S_val</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="n">K_gain</span> <span class="o">=</span> <span class="p">(</span><span class="n">P</span> <span class="o">@</span> <span class="n">H</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">/</span> <span class="n">S_val</span> <span class="k">if</span> <span class="n">ny</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="n">P</span> <span class="o">@</span> <span class="n">H</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">S_val</span><span class="p">)</span>
+        
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="p">(</span><span class="n">K_gain</span> <span class="o">@</span> <span class="n">resid</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">ny</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="k">if</span> <span class="n">ny</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">x</span> <span class="o">+</span> <span class="p">(</span><span class="n">K_gain</span> <span class="o">*</span> <span class="n">resid</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">nx</span><span class="p">)</span> <span class="o">-</span> <span class="n">K_gain</span> <span class="o">@</span> <span class="n">H</span><span class="p">)</span> <span class="o">@</span> <span class="n">P</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">P</span> <span class="o">+</span> <span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+        <span class="n">x_out</span><span class="p">[:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">P_out</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">P</span>
+        <span class="n">r_out</span><span class="p">[:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">resid</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+        <span class="n">x</span> <span class="o">=</span> <span class="n">phi_matrix</span> <span class="o">@</span> <span class="n">x</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">phi_matrix</span> <span class="o">@</span> <span class="n">P</span> <span class="o">@</span> <span class="n">phi_matrix</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">Qd</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">P</span> <span class="o">+</span> <span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        
+    <span class="k">return</span> <span class="n">FILTres</span><span class="p">(</span><span class="n">x_out</span><span class="p">,</span> <span class="n">P_out</span><span class="p">,</span> <span class="n">r_out</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ekf_online_nn_ins">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.rt_comp_main.ekf_online_nn_ins">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ekf_online_nn_ins</span><span class="p">(</span>
+    <span class="n">ins</span><span class="p">:</span> <span class="n">INS</span><span class="p">,</span> <span class="n">meas</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">itp_mapS</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">x_nn_inputs</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">nn_model</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">y_norms</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">P0</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Qd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">R</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
+    <span class="o">**</span><span class="n">kwargs</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FILTres</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Wrapper for ekf_online_nn using INS struct.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">ekf_online_nn</span><span class="p">(</span>
+        <span class="n">ins</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">alt</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">vn</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">ve</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">vd</span><span class="p">,</span>
+        <span class="n">ins</span><span class="o">.</span><span class="n">fn</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">fe</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">fd</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">Cnb</span><span class="p">,</span> <span class="n">meas</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="n">itp_mapS</span><span class="p">,</span>
+        <span class="n">x_nn_inputs</span><span class="p">,</span> <span class="n">nn_model</span><span class="p">,</span> <span class="n">y_norms</span><span class="p">,</span> <span class="n">P0</span><span class="p">,</span> <span class="n">Qd</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ekf_online_nn_setup">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.rt_comp_main.ekf_online_nn_setup">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ekf_online_nn_setup</span><span class="p">(</span>
+    <span class="n">x_features</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">y_target</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">nn_model_initial</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+    <span class="n">y_norms</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span> <span class="n">N_sigma_points</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Setup for EKF NN. Estimates initial NN param covariance (P0_nn) and std dev (nn_sigma).</span>
+<span class="sd">    CRITICAL: Relies on working NN interaction placeholders.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">N_sigma_min</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="k">if</span> <span class="n">N_sigma_points</span> <span class="o">&lt;</span> <span class="n">N_sigma_min</span><span class="p">:</span> <span class="n">N_sigma_points</span> <span class="o">=</span> <span class="n">N_sigma_min</span>
+    
+    <span class="n">y_bias</span><span class="p">,</span> <span class="n">y_scale</span> <span class="o">=</span> <span class="n">y_norms</span>
+    <span class="n">w_nn_vec_current</span><span class="p">,</span> <span class="n">reconstruct_fn</span> <span class="o">=</span> <span class="n">destructure_nn_model</span><span class="p">(</span><span class="n">nn_model_initial</span><span class="p">)</span> <span class="c1"># CRITICAL</span>
+    <span class="n">num_nn_params</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">w_nn_vec_current</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">num_nn_params</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: NN model has no parameters. Returning empty P0_nn, nn_sigma.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+
+    <span class="n">w_nn_store</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_nn_params</span><span class="p">,</span> <span class="n">N_sigma_points</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">w_nn_vec_current</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">P_rls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">num_nn_params</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">w_nn_vec_current</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="c1"># RLS covariance</span>
+
+    <span class="n">num_samples</span> <span class="o">=</span> <span class="n">x_features</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">N_sigma_points</span> <span class="o">&gt;</span> <span class="n">num_samples</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: N_sigma_points (</span><span class="si">{</span><span class="n">N_sigma_points</span><span class="si">}</span><span class="s2">) &gt; num_samples (</span><span class="si">{</span><span class="n">num_samples</span><span class="si">}</span><span class="s2">). Using num_samples.&quot;</span><span class="p">)</span>
+        <span class="n">N_sigma_points</span> <span class="o">=</span> <span class="n">num_samples</span>
+        <span class="n">w_nn_store</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_nn_params</span><span class="p">,</span> <span class="n">N_sigma_points</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">w_nn_vec_current</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">N_sigma_points</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># Cannot proceed</span>
+        <span class="n">P0_nn_fallback</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">num_nn_params</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e-2</span> <span class="c1"># Small default covariance</span>
+        <span class="n">nn_sigma_fallback</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_nn_params</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.1</span>
+        <span class="k">return</span> <span class="n">P0_nn_fallback</span><span class="p">,</span> <span class="n">nn_sigma_fallback</span>
+
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_sigma_points</span><span class="p">):</span>
+        <span class="n">h_rls</span> <span class="o">=</span> <span class="n">w_nn_vec_current</span> <span class="c1"># Specific RLS formulation from Julia</span>
+        <span class="n">S_rls_inv</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">h_rls</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">P_rls</span> <span class="o">@</span> <span class="n">h_rls</span><span class="p">)</span>
+        <span class="n">K_rls</span> <span class="o">=</span> <span class="p">(</span><span class="n">P_rls</span> <span class="o">@</span> <span class="n">h_rls</span><span class="p">)</span> <span class="o">*</span> <span class="n">S_rls_inv</span>
+        <span class="n">P_rls</span> <span class="o">=</span> <span class="n">P_rls</span> <span class="o">-</span> <span class="p">(</span><span class="n">K_rls</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="o">@</span> <span class="n">h_rls</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">@</span> <span class="n">P_rls</span><span class="p">)</span> <span class="c1"># Ensure outer product</span>
+        <span class="n">P_rls</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">P_rls</span> <span class="o">+</span> <span class="n">P_rls</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+        <span class="n">m_for_pred</span> <span class="o">=</span> <span class="n">reconstruct_fn</span><span class="p">(</span><span class="n">w_nn_vec_current</span><span class="p">)</span> <span class="c1"># CRITICAL</span>
+        
+        <span class="c1"># nn_pred_norm_val = m_for_pred(x_features[i,:]).item() # Assuming scalar output</span>
+        <span class="c1"># This needs to use the get_nn_output_and_param_gradients or similar robust way</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">nn_pred_norm_val</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">get_nn_output_and_param_gradients</span><span class="p">(</span><span class="n">m_for_pred</span><span class="p">,</span> <span class="n">x_features</span><span class="p">[</span><span class="n">i</span><span class="p">,:])</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error during NN prediction in setup: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. Using dummy value.&quot;</span><span class="p">)</span>
+             <span class="n">nn_pred_norm_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x_features</span><span class="p">[</span><span class="n">i</span><span class="p">,:])</span> <span class="o">*</span> <span class="mf">0.05</span>
+
+
+        <span class="n">error_signal_denorm</span> <span class="o">=</span> <span class="n">y_target</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">nn_pred_norm_val</span> <span class="o">*</span> <span class="n">y_scale</span> <span class="o">+</span> <span class="n">y_bias</span><span class="p">)</span>
+        <span class="n">error_signal_norm</span> <span class="o">=</span> <span class="n">error_signal_denorm</span> <span class="o">/</span> <span class="n">y_scale</span>
+        
+        <span class="n">w_nn_vec_current</span> <span class="o">=</span> <span class="n">w_nn_vec_current</span> <span class="o">+</span> <span class="n">K_rls</span> <span class="o">*</span> <span class="n">error_signal_norm</span>
+        <span class="n">w_nn_store</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">w_nn_vec_current</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+    <span class="n">P0_nn</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">P_rls</span><span class="p">)</span>
+    <span class="n">P0_nn</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">P0_nn</span> <span class="o">+</span> <span class="n">P0_nn</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">N_sigma_points</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">diffs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">w_nn_store</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">w_nn_store</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">diffs</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">:</span>
+            <span class="n">nn_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">diffs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># only one point stored effectively</span>
+            <span class="n">nn_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">w_nn_store</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="mf">0.1</span> <span class="o">+</span> <span class="mf">1e-6</span> <span class="k">if</span> <span class="n">N_sigma_points</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">w0_nn_vec</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.1</span> <span class="o">+</span> <span class="mf">1e-6</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">nn_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">w0_nn_vec</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.1</span> <span class="o">+</span> <span class="mf">1e-6</span>
+    
+    <span class="n">nn_sigma</span><span class="p">[</span><span class="n">nn_sigma</span> <span class="o">&lt;</span> <span class="mf">1e-6</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-6</span>
+    <span class="k">return</span> <span class="n">P0_nn</span><span class="p">,</span> <span class="n">nn_sigma</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">MagNavPy</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../data.html">Flight Path &amp; INS Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maps.html">Magnetic Anomaly Maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../comp.html">Aeromagnetic Compensation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../nncomp.html">Neural Network-Based Model Diagrams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../nav.html">Navigation Algorithms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_functions.html">API: Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_structs.html">API: Structs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_reference.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, MagNav.jl Authors & AI Porting Team.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

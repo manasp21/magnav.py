@@ -248,7 +248,7 @@ def _create_TL_coef_components(Bx: np.ndarray, By: np.ndarray, Bz: np.ndarray, B
     if ((pass1 > 0) and (pass1 < fs / 2.0)) or \
        ((pass2 > 0) and (pass2 < fs / 2.0)):
         perform_filter = True
-        bpf_coeffs = get_bpf(pass1=pass1, pass2=pass2, fs=fs, pole=pole)
+        bpf_coeffs = get_bpf_sos(pass1=pass1, pass2=pass2, fs=fs, pole=pole)
     else:
         logger.info("Not filtering (or trimming) Tolles-Lawson data as pass frequencies are out of range.")
 
@@ -263,8 +263,8 @@ def _create_TL_coef_components(Bx: np.ndarray, By: np.ndarray, Bz: np.ndarray, B
     B_to_use = B_scalar.copy()
 
     if perform_filter and bpf_coeffs is not None:
-        A_filt = bpf_data(A_to_use, bpf=bpf_coeffs) # Assuming bpf_data handles 2D A
-        B_filt = bpf_data(B_to_use, bpf=bpf_coeffs) 
+        A_filt = bpf_data(A_to_use, sos=bpf_coeffs) # Assuming bpf_data handles 2D A
+        B_filt = bpf_data(B_to_use, sos=bpf_coeffs)
         
         if trim > 0:
             if len(A_filt) > 2 * trim and len(B_filt) > 2 * trim :
@@ -278,7 +278,7 @@ def _create_TL_coef_components(Bx: np.ndarray, By: np.ndarray, Bz: np.ndarray, B
             A_to_use = A_filt
             B_to_use = B_filt
     
-    coef = linreg(B_to_use, A_to_use, lambda_val=lambda_val).flatten()
+    coef = linreg_matrix(B_to_use, A_to_use, lambda_ridge=lambda_val).flatten()
 
     if return_var:
         B_comp_error = B_to_use - (A_to_use @ coef)

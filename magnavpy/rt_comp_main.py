@@ -1,6 +1,8 @@
 import numpy as np
 import copy
 from typing import Any, Callable, List, Tuple, Optional, Union
+from .magnav import INS, MagV
+from .common_types import MapCache, get_cached_map
 
 class FILTres:
     """Filter results structure."""
@@ -307,28 +309,8 @@ from .magnav import INS, MagV # EKF_RT might be FILTres or similar
 
 # --- Placeholder/Helper Definitions ---
 
-class Map_Cache:
-    """Placeholder for map caching functionality."""
-    def __init__(self):
-        # In a real implementation, this would hold cached map data and interpolation objects.
-        pass
-
-def get_cached_map(map_cache: Optional[Map_Cache], lat: float, lon: float, alt: float, silent: bool = True) -> Callable:
-    """
-    Placeholder for getting a map interpolation function from a cache.
-    This needs a proper implementation based on how map data is stored and interpolated.
-    """
-    # This is a simplified placeholder. It should return a callable similar to itp_mapS.
-    print("Warning: Using placeholder get_cached_map. Map caching not implemented.")
-    def dummy_interpolator(lat_query, lon_query, alt_query=None):
-        # Returns a dummy scalar value.
-        return 0.0
-    if map_cache:
-        # Actual logic to retrieve/interpolate from cache would go here.
-        pass
-    # This function should return an interpolator function.
-    # For now, this will likely cause issues if map_cache is actually used.
-    return dummy_interpolator
+# Removed placeholder Map_Cache class and get_cached_map function.
+# These are now imported from .common_types
 
 
 # --- NN Model Interaction Placeholders (CRITICAL: Implement these based on your NN library) ---

@@ -129,3 +129,18 @@ class MapCache:
                 self.interpolators.append(None)
                 # map_info = getattr(m_obj, 'info', 'N/A')
                 # print(f"Warning: Map '{map_info}' missing map, yy, or xx data for interpolator. Skipping.", file=sys.stderr)
+def get_cached_map(maps: Union[List[MapS], MapS], fallback: MapS = MAP_S_NULL, dz: Union[int, float] = 100) -> MapCache:
+    """
+    Retrieves or creates a cached map object.
+
+    Args:
+        maps: A list of `MapS` objects or a single `MapS` object to use as the base map(s).
+        fallback: An optional `MapS` object to use as a fallback if no suitable map is found in `maps`.
+                 Defaults to `MAP_S_NULL`.
+        dz: The altitude discretization for the cache [m].
+
+    Returns:
+        A `MapCache` object containing the interpolated maps.
+    """
+    maps_list = [maps] if isinstance(maps, MapS) else maps
+    return MapCache(maps_list, fallback, dz)

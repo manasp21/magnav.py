@@ -2,10 +2,11 @@ import numpy as np
 
 # Assuming FILTres, EKF_RT, INS, Map_Cache, get_cached_map are defined/imported in .magnav
 # If get_cached_map is elsewhere, adjust import.
-from .magnav import FILTres, EKF_RT, INS, get_cached_map
+from .magnav import FILTres, EKF_RT, INS
+from .common_types import get_cached_map
 from .common_types import MapCache
 from .model_functions import get_Phi, get_H, create_P0, create_Qd
-from .analysis_util import get_years
+from .core_utils import get_years
 from .model_functions import get_h # Explicitly import get_h from model_functions
 
 def ekf(
@@ -328,3 +329,26 @@ def process_ekf_rt_step_ins(
         map_alt=map_alt,
         dt_fallback=ins.dt # dt from INS struct if ekf_rt.t is not initialized
     )
+def crlb(*args, **kwargs):
+    """Placeholder for Cramer-Rao Lower Bound calculation."""
+    pass
+
+def calc_crlb_pos(*args, **kwargs):
+    """Placeholder for CRLB position calculation."""
+    pass
+
+def calc_crlb_vel(*args, **kwargs):
+    """Placeholder for CRLB velocity calculation."""
+    pass
+
+def calc_crlb_att(*args, **kwargs):
+    """Placeholder for CRLB attitude calculation."""
+    pass
+
+def calc_crlb_fogm(*args, **kwargs):
+    """Placeholder for CRLB FOGM calculation."""
+    pass
+
+def calc_crlb_map(*args, **kwargs):
+    """Placeholder for CRLB map calculation."""
+    pass

@@ -47,6 +47,7 @@
 
 <span class="c1"># Attempt to import from project modules</span>
 <span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.map_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_map_val</span> <span class="c1"># Added import</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">.magnav</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span><span class="n">XYZ0</span><span class="p">,</span> <span class="n">Traj</span><span class="p">,</span> <span class="n">INS</span><span class="p">,</span> <span class="n">MagV</span><span class="p">,</span> <span class="n">MapS</span><span class="p">,</span> <span class="n">MapSd</span><span class="p">,</span> <span class="n">MapS3D</span><span class="p">,</span> <span class="n">MapV</span><span class="p">,</span>
                            <span class="n">BaseMap</span><span class="p">,</span> <span class="c1"># Assuming BaseMap is a common base for MapS, MapSd, etc.</span>
                            <span class="n">Path</span><span class="p">)</span> <span class="c1"># Path = Union[Traj, INS] or a base class</span>
@@ -55,7 +56,7 @@
         <span class="n">de2dlon</span><span class="p">,</span> <span class="n">fdm</span><span class="p">,</span> <span class="n">utm_zone_from_latlon</span><span class="p">,</span> <span class="n">transform_lla_to_utm</span><span class="p">,</span> <span class="c1"># Assumed geospatial helpers</span>
         <span class="n">create_dcm_from_vel</span><span class="p">,</span> <span class="n">dcm2euler</span><span class="p">,</span> <span class="n">euler2dcm</span><span class="p">,</span> <span class="c1"># Attitude helpers</span>
         <span class="n">create_ins_model_matrices</span><span class="p">,</span> <span class="n">get_phi_matrix</span><span class="p">,</span> <span class="n">correct_cnb_matrix</span><span class="p">,</span> <span class="c1"># INS helpers</span>
-        <span class="n">upward_fft_map</span><span class="p">,</span> <span class="n">get_map_params</span><span class="p">,</span> <span class="n">fill_map_gaps</span><span class="p">,</span> <span class="n">trim_map</span><span class="p">,</span> <span class="n">get_map_value_at_coords</span><span class="p">,</span> <span class="c1"># Map helpers</span>
+        <span class="n">upward_fft_map</span><span class="p">,</span> <span class="n">get_map_params</span><span class="p">,</span> <span class="n">fill_map_gaps</span><span class="p">,</span> <span class="n">trim_map</span><span class="p">,</span> <span class="c1"># get_map_value_at_coords removed</span>
         <span class="n">generate_fogm_noise</span><span class="p">,</span> <span class="n">create_tolles_lawson_A_matrix</span><span class="p">,</span> <span class="c1"># Noise &amp; TL helpers</span>
         <span class="n">get_igrf_magnetic_field</span><span class="p">,</span> <span class="c1"># IGRF helper</span>
         <span class="n">apply_band_pass_filter</span><span class="p">,</span> <span class="n">get_band_pass_filter_coeffs</span><span class="p">,</span> <span class="c1"># Filter helpers</span>
@@ -205,12 +206,9 @@
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.create_xyz.trim_map">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">trim_map</span><span class="p">(</span><span class="n">map_s</span><span class="p">):</span> <span class="k">return</span> <span class="n">map_s</span></div>
 
-<div class="viewcode-block" id="get_map_value_at_coords">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.create_xyz.get_map_value_at_coords">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_map_value_at_coords</span><span class="p">(</span><span class="n">map_s</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">alt</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">return_itp</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">return_itp</span><span class="p">:</span> <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lat</span><span class="p">)),</span> <span class="kc">None</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">lat</span><span class="p">))</span></div>
-
+    <span class="c1"># def get_map_value_at_coords(map_s, lat, lon, alt, alpha=200, return_itp=False):</span>
+    <span class="c1">#     if return_itp: return np.zeros(len(lat)), None</span>
+    <span class="c1">#     return np.zeros(len(lat))</span>
 <div class="viewcode-block" id="generate_fogm_noise">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.create_xyz.generate_fogm_noise">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">generate_fogm_noise</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">N</span><span class="p">):</span> <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="o">*</span> <span class="n">sigma</span></div>
@@ -870,7 +868,7 @@
     <span class="c1"># Get map values along trajectory</span>
     <span class="c1"># get_map_value_at_coords from analysis_util</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">silent</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Info: getting scalar map values (upward/downward continuation if needed).&quot;</span><span class="p">)</span>
-    <span class="n">map_values_scalar</span> <span class="o">=</span> <span class="n">get_map_value_at_coords</span><span class="p">(</span><span class="n">mapS_processed</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">lon_rad</span><span class="p">,</span> <span class="n">alt_val</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+    <span class="n">map_values_scalar</span> <span class="o">=</span> <span class="n">get_map_val</span><span class="p">(</span><span class="n">mapS_processed</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">lon_rad</span><span class="p">,</span> <span class="n">alt_val</span><span class="p">)</span>
 
     <span class="c1"># Add FOGM &amp; white noise</span>
     <span class="c1"># generate_fogm_noise from analysis_util</span>
@@ -1026,7 +1024,7 @@
     <span class="c1"># get_map_value_at_coords for MapV should return a tuple of 3 arrays or similar</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">silent</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Info: getting vector map values (upward/downward continuation if needed).&quot;</span><span class="p">)</span>
     <span class="c1"># Assuming get_map_value_at_coords for MapV returns tuple (Bx_nav, By_nav, Bz_nav)</span>
-    <span class="n">map_values_vector_nav</span> <span class="o">=</span> <span class="n">get_map_value_at_coords</span><span class="p">(</span><span class="n">mapV_actual</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">lon_rad</span><span class="p">,</span> <span class="n">alt_val</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+    <span class="n">map_values_vector_nav</span> <span class="o">=</span> <span class="n">get_map_val</span><span class="p">(</span><span class="n">mapV_actual</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">lon_rad</span><span class="p">,</span> <span class="n">alt_val</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">map_values_vector_nav</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">map_values_vector_nav</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;get_map_value_at_coords for MapV did not return 3 vector components.&quot;</span><span class="p">)</span>
     <span class="n">Bx_nav</span><span class="p">,</span> <span class="n">By_nav</span><span class="p">,</span> <span class="n">Bz_nav</span> <span class="o">=</span> <span class="n">map_values_vector_nav</span>
@@ -1215,9 +1213,9 @@
 
     <span class="c1"># Get scalar map values and interpolation object for the original trajectory subset</span>
     <span class="c1"># get_map_value_at_coords from analysis_util</span>
-    <span class="n">map_val_orig</span><span class="p">,</span> <span class="n">itp_mapS_obj</span> <span class="o">=</span> <span class="n">get_map_value_at_coords</span><span class="p">(</span>
+    <span class="n">map_val_orig</span><span class="p">,</span> <span class="n">itp_mapS_obj</span> <span class="o">=</span> <span class="n">get_map_val</span><span class="p">(</span>
         <span class="n">mapS</span><span class="p">,</span> <span class="n">traj_subset</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span> <span class="n">traj_subset</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">traj_subset</span><span class="o">.</span><span class="n">alt</span><span class="p">),</span>
-        <span class="n">alpha</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span> <span class="n">return_itp</span><span class="o">=</span><span class="kc">True</span>
+        <span class="n">return_interpolator</span><span class="o">=</span><span class="kc">True</span>
     <span class="p">)</span>
     <span class="k">if</span> <span class="n">itp_mapS_obj</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Could not get map interpolator object.&quot;</span><span class="p">)</span>
@@ -1378,6 +1376,33 @@
     <span class="n">xyz_disp</span><span class="o">.</span><span class="n">mag_1_c</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">+=</span> <span class="n">delta_map_val_scalar</span>
     
     <span class="k">return</span> <span class="n">xyz_disp</span></div>
+
+<div class="viewcode-block" id="get_xyz20">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.create_xyz.get_xyz20">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_xyz20</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for get_xyz20.&quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_xyz20 is not yet implemented.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_XYZ">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.create_xyz.get_XYZ">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_XYZ</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for get_XYZ.&quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_XYZ is not yet implemented.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="sgl_2020_train">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.create_xyz.sgl_2020_train">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sgl_2020_train</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for sgl_2020_train.&quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;sgl_2020_train is not yet implemented.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="sgl_2021_train">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.create_xyz.sgl_2021_train">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sgl_2021_train</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for sgl_2021_train.&quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;sgl_2021_train is not yet implemented.&quot;</span><span class="p">)</span></div>
 
 </pre></div>
 

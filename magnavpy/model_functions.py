@@ -33,10 +33,15 @@ except ImportError:
 
 
 try:
-    from .analysis_util import get_years, dlat2dn, dn2dlat, de2dlon
+    from .core_utils import get_years
 except ImportError:
-    print("Warning: Could not import from .analysis_util. Defining placeholders.")
+    print("Warning: Could not import get_years from .core_utils. Defining placeholder.")
     def get_years(year, day_of_year): return year + (day_of_year -1) / 365.25 # Simplified
+
+try:
+    from .analysis_util import dlat2dn, dn2dlat, de2dlon
+except ImportError:
+    print("Warning: Could not import dlat2dn, dn2dlat, de2dlon from .analysis_util. Defining placeholders.")
     def dlat2dn(dlat_rad, lat_rad): return dlat_rad * r_earth # Simplified
     def dn2dlat(dn_m, lat_rad): return dn_m / r_earth # Simplified
     def de2dlon(de_m, lat_rad): return de_m / (r_earth * math.cos(lat_rad)) # Simplified
@@ -709,3 +714,9 @@ get_h = get_h_basic
 create_p0 = create_P0
 create_qd = create_Qd
 get_h = get_h_basic
+def get_f(*args, **kwargs):
+    """
+    Placeholder for the get_f function.
+    This function is not yet fully implemented.
+    """
+    raise NotImplementedError("get_f is not fully implemented yet.")

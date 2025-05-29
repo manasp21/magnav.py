@@ -19,6 +19,8 @@ from sklearn.cross_decomposition import PLSRegression # For plsr_fit
 # --- Placeholder/Stub Definitions ---
 # These would typically be imported from other modules or defined in detail.
 
+from .map_utils import get_map_val # Added import
+
 SILENT_DEBUG = False # Global debug flag, similar to silent_debug in Julia
 
 class Chain(nn.Sequential): # Alias for torch.nn.Sequential for closer naming
@@ -1043,10 +1045,10 @@ def get_y(xyz: XYZ, ind: np.ndarray, map_val: Any, **kwargs) -> np.ndarray:
     return y_data.astype(np.float32)
 
 
-def get_map_val(mapS: Any, traj: np.ndarray, ind: np.ndarray, alpha: float = 200) -> Union[np.ndarray, int]:
-    """Placeholder for getting map values along a trajectory."""
-    if ind is None or ind.size == 0: return -1
-    return np.random.rand(len(ind)).astype(np.float32) * 50000 # Dummy map values
+# def get_map_val(mapS: Any, traj: np.ndarray, ind: np.ndarray, alpha: float = 200) -> Union[np.ndarray, int]:
+#     """Placeholder for getting map values along a trajectory."""
+#     if ind is None or ind.size == 0: return -1
+#     return np.random.rand(len(ind)).astype(np.float32) * 50000 # Dummy map values
 
 def get_bpf(fs: float = 10.0, pass1: float = 0.1, pass2: float = 0.9) -> Optional[Tuple[np.ndarray, np.ndarray]]:
     """Gets bandpass filter coefficients using scipy.signal.butter."""

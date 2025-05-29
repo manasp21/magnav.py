@@ -14,6 +14,7 @@ from copy import deepcopy
 
 # Attempt to import from project modules
 try:
+    from .map_utils import get_map_val # Added import
     from .magnav import (XYZ0, Traj, INS, MagV, MapS, MapSd, MapS3D, MapV,
                            BaseMap, # Assuming BaseMap is a common base for MapS, MapSd, etc.
                            Path) # Path = Union[Traj, INS] or a base class
@@ -22,7 +23,7 @@ try:
         de2dlon, fdm, utm_zone_from_latlon, transform_lla_to_utm, # Assumed geospatial helpers
         create_dcm_from_vel, dcm2euler, euler2dcm, # Attitude helpers
         create_ins_model_matrices, get_phi_matrix, correct_cnb_matrix, # INS helpers
-        upward_fft_map, get_map_params, fill_map_gaps, trim_map, get_map_value_at_coords, # Map helpers
+        upward_fft_map, get_map_params, fill_map_gaps, trim_map, # get_map_value_at_coords removed
         generate_fogm_noise, create_tolles_lawson_A_matrix, # Noise & TL helpers
         get_igrf_magnetic_field, # IGRF helper
         apply_band_pass_filter, get_band_pass_filter_coeffs, # Filter helpers
@@ -85,9 +86,9 @@ except ImportError:
     def get_map_params(map_s): return (None,None,None,None) # ind0,ind1,_,_
     def fill_map_gaps(map_s): return map_s
     def trim_map(map_s): return map_s
-    def get_map_value_at_coords(map_s, lat, lon, alt, alpha=200, return_itp=False):
-        if return_itp: return np.zeros(len(lat)), None
-        return np.zeros(len(lat))
+    # def get_map_value_at_coords(map_s, lat, lon, alt, alpha=200, return_itp=False):
+    #     if return_itp: return np.zeros(len(lat)), None
+    #     return np.zeros(len(lat))
     def generate_fogm_noise(sigma, tau, dt, N): return np.random.randn(N) * sigma
     def create_tolles_lawson_A_matrix(Bx,By,Bz,terms=None): return np.zeros((len(Bx), 18)) # Dummy
     def get_igrf_magnetic_field(xyz, ind=None, frame='body', norm_igrf=False, check_xyz=True):
@@ -709,7 +710,7 @@ def create_mag_c(
     # Get map values along trajectory
     # get_map_value_at_coords from analysis_util
     if not silent: print("Info: getting scalar map values (upward/downward continuation if needed).")
-    map_values_scalar = get_map_value_at_coords(mapS_processed, lat_rad, lon_rad, alt_val, alpha=200)
+    map_values_scalar = get_map_val(mapS_processed, lat_rad, lon_rad, alt_val)
 
     # Add FOGM & white noise
     # generate_fogm_noise from analysis_util
@@ -859,7 +860,7 @@ def create_flux(
     # get_map_value_at_coords for MapV should return a tuple of 3 arrays or similar
     if not silent: print("Info: getting vector map values (upward/downward continuation if needed).")
     # Assuming get_map_value_at_coords for MapV returns tuple (Bx_nav, By_nav, Bz_nav)
-    map_values_vector_nav = get_map_value_at_coords(mapV_actual, lat_rad, lon_rad, alt_val, alpha=200)
+    map_values_vector_nav = get_map_val(mapV_actual, lat_rad, lon_rad, alt_val)
     if not (isinstance(map_values_vector_nav, tuple) and len(map_values_vector_nav) == 3):
         raise ValueError("get_map_value_at_coords for MapV did not return 3 vector components.")
     Bx_nav, By_nav, Bz_nav = map_values_vector_nav
@@ -1039,9 +1040,9 @@ def create_informed_xyz(
 
     # Get scalar map values and interpolation object for the original trajectory subset
     # get_map_value_at_coords from analysis_util
-    map_val_orig, itp_mapS_obj = get_map_value_at_coords(
+    map_val_orig, itp_mapS_obj = get_map_val(
         mapS, traj_subset.lat, traj_subset.lon, np.median(traj_subset.alt),
-        alpha=200, return_itp=True
+        return_interpolator=True
     )
     if itp_mapS_obj is None:
         raise RuntimeError("Could not get map interpolator object.")
@@ -1202,3 +1203,18 @@ def create_informed_xyz(
     xyz_disp.mag_1_c[ind] += delta_map_val_scalar
     
     return xyz_disp
+def get_xyz20(*args, **kwargs):
+    """Placeholder for get_xyz20."""
+    raise NotImplementedError("get_xyz20 is not yet implemented.")
+
+def get_XYZ(*args, **kwargs):
+    """Placeholder for get_XYZ."""
+    raise NotImplementedError("get_XYZ is not yet implemented.")
+
+def sgl_2020_train(*args, **kwargs):
+    """Placeholder for sgl_2020_train."""
+    raise NotImplementedError("sgl_2020_train is not yet implemented.")
+
+def sgl_2021_train(*args, **kwargs):
+    """Placeholder for sgl_2021_train."""
+    raise NotImplementedError("sgl_2021_train is not yet implemented.")

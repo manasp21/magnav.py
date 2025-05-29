@@ -132,9 +132,63 @@ States (errors) are 0-indexed:
 </section>
 <section id="cramerrao-lower-bound">
 <h2>Cramér–Rao Lower Bound<a class="headerlink" href="#cramerrao-lower-bound" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="magnavpy.ekf.crlb">
+<span class="sig-prename descclassname"><span class="pre">magnavpy.ekf.</span></span><span class="sig-name descname"><span class="pre">crlb</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/magnavpy/ekf.html#crlb"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#magnavpy.ekf.crlb" title="Link to this definition">¶</a></dt>
+<dd><p>Placeholder for Cramer-Rao Lower Bound calculation.</p>
+</dd></dl>
+
 </section>
 <section id="extended-kalman-filter">
 <h2>Extended Kalman Filter<a class="headerlink" href="#extended-kalman-filter" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="magnavpy.ekf.ekf">
+<span class="sig-prename descclassname"><span class="pre">magnavpy.ekf.</span></span><span class="sig-name descname"><span class="pre">ekf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ve</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fn</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Cnb</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">itp_mapS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Qd</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">R</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baro_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acc_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gyro_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fogm_tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">600.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">core</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">der_mapS</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map_alt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/magnavpy/ekf.html#ekf"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#magnavpy.ekf.ekf" title="Link to this definition">¶</a></dt>
+<dd><p>Extended Kalman filter (EKF) for airborne magnetic anomaly navigation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lat</strong> (<em>np.ndarray</em>) – Latitude [rad], shape (N,)</p></li>
+<li><p><strong>lon</strong> (<em>np.ndarray</em>) – Longitude [rad], shape (N,)</p></li>
+<li><p><strong>alt</strong> (<em>np.ndarray</em>) – Altitude [m], shape (N,)</p></li>
+<li><p><strong>vn</strong> (<em>np.ndarray</em>) – North velocity [m/s], shape (N,)</p></li>
+<li><p><strong>ve</strong> (<em>np.ndarray</em>) – East velocity [m/s], shape (N,)</p></li>
+<li><p><strong>vd</strong> (<em>np.ndarray</em>) – Down velocity [m/s], shape (N,)</p></li>
+<li><p><strong>fn</strong> (<em>np.ndarray</em>) – North specific force [m/s^2], shape (N,)</p></li>
+<li><p><strong>fe</strong> (<em>np.ndarray</em>) – East specific force [m/s^2], shape (N,)</p></li>
+<li><p><strong>fd</strong> (<em>np.ndarray</em>) – Down specific force [m/s^2], shape (N,)</p></li>
+<li><p><strong>Cnb</strong> (<em>np.ndarray</em>) – Direction cosine matrix (body to navigation), shape (3,3,N) or (3,3)</p></li>
+<li><p><strong>meas</strong> (<em>np.ndarray</em>) – Scalar magnetometer measurement [nT], shape (N,) or (N,1)</p></li>
+<li><p><strong>dt</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a>) – Measurement time step [s]</p></li>
+<li><p><strong>itp_mapS</strong> (<em>callable</em><em> or </em><em>Map_Cache</em>) – Scalar map interpolation function (callable)
+or a Map_Cache object.</p></li>
+<li><p><strong>P0</strong> (<em>np.ndarray</em><em>, </em><em>optional</em>) – Initial covariance matrix, shape (nx,nx).
+Defaults to create_P0().</p></li>
+<li><p><strong>Qd</strong> (<em>np.ndarray</em><em>, </em><em>optional</em>) – Discrete time process/system noise matrix, shape (nx,nx).
+Defaults to create_Qd().</p></li>
+<li><p><strong>R</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em> or </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.13)"><em>tuple</em></a><em>, </em><em>optional</em>) – Measurement noise variance or (R_min, R_max) for adaptation.
+Defaults to 1.0.</p></li>
+<li><p><strong>baro_tau</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Barometer time constant [s]. Defaults to 3600.0.</p></li>
+<li><p><strong>acc_tau</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Accelerometer time constant [s]. Defaults to 3600.0.</p></li>
+<li><p><strong>gyro_tau</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Gyroscope time constant [s]. Defaults to 3600.0.</p></li>
+<li><p><strong>fogm_tau</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – FOGM catch-all time constant [s]. Defaults to 600.0.</p></li>
+<li><p><strong>date</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Measurement date (decimal year) for IGRF [yr].
+Defaults to get_years(2020,185).</p></li>
+<li><p><strong>core</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.13)"><em>bool</em></a><em>, </em><em>optional</em>) – If true, include core magnetic field in measurement. Defaults to False.</p></li>
+<li><p><strong>der_mapS</strong> (<em>callable</em><em>, </em><em>optional</em>) – Scalar map vertical derivative map interpolation function.
+Defaults to None.</p></li>
+<li><p><strong>map_alt</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.13)"><em>float</em></a><em>, </em><em>optional</em>) – Map altitude [m]. Defaults to 0.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Filter results struct.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="api_reference.html#magnavpy.magnav.FILTres" title="magnavpy.magnav.FILTres">FILTres</a></p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 <section id="run-filter-with-additional-options">
 <h2>Run Filter (with additional options)<a class="headerlink" href="#run-filter-with-additional-options" title="Link to this heading">¶</a></h2>

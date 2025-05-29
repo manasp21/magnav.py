@@ -52,6 +52,8 @@
 <span class="c1"># --- Placeholder/Stub Definitions ---</span>
 <span class="c1"># These would typically be imported from other modules or defined in detail.</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">.map_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_map_val</span> <span class="c1"># Added import</span>
+
 <span class="n">SILENT_DEBUG</span> <span class="o">=</span> <span class="kc">False</span> <span class="c1"># Global debug flag, similar to silent_debug in Julia</span>
 
 <div class="viewcode-block" id="Chain">
@@ -1157,13 +1159,10 @@
 
 
 
-<div class="viewcode-block" id="get_map_val">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.compensation.get_map_val">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">get_map_val</span><span class="p">(</span><span class="n">mapS</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">traj</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ind</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">200</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for getting map values along a trajectory.&quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">ind</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">ind</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ind</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span> <span class="o">*</span> <span class="mi">50000</span> <span class="c1"># Dummy map values</span></div>
-
+<span class="c1"># def get_map_val(mapS: Any, traj: np.ndarray, ind: np.ndarray, alpha: float = 200) -&gt; Union[np.ndarray, int]:</span>
+<span class="c1">#     &quot;&quot;&quot;Placeholder for getting map values along a trajectory.&quot;&quot;&quot;</span>
+<span class="c1">#     if ind is None or ind.size == 0: return -1</span>
+<span class="c1">#     return np.random.rand(len(ind)).astype(np.float32) * 50000 # Dummy map values</span>
 
 <div class="viewcode-block" id="get_bpf">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.compensation.get_bpf">[docs]</a>
