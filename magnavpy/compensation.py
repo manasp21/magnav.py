@@ -1240,16 +1240,16 @@ def linear_fwd(
     1. linear_fwd(x_norm, y_bias, y_scale, model_tuple)
     2. linear_fwd(x_raw, data_norms_tuple, model_tuple)
 
-    Args (depending on signature):
-        x_in: N x Nf data matrix (either normalized or raw)
-        data_norms_or_y_bias: Either data_norms tuple (x_bias, x_scale, y_bias, y_scale)
-                                  or y_bias directly.
-        
-        model_or_y_scale: Either the model tuple (coeffs, bias_val) or y_scale directly.
-        model_if_normalized: (optional) The model tuple, used if the first signature is matched.
-
-    Returns:
-        y_hat: length-N prediction vector
+    :param x_in: N x Nf data matrix (either normalized or raw)
+    :type x_in: numpy.ndarray
+    :param data_norms_or_y_bias: Either data_norms tuple (x_bias, x_scale, y_bias, y_scale) or y_bias directly.
+    :type data_norms_or_y_bias: Union[Tuple, float, numpy.ndarray]
+    :param model_or_y_scale: Either the model tuple (coeffs, bias_val) or y_scale directly.
+    :type model_or_y_scale: Union[Tuple[numpy.ndarray, float], float, numpy.ndarray]
+    :param model_if_normalized: The model tuple, used if the first signature is matched.
+    :type model_if_normalized: Optional[Tuple[numpy.ndarray, float]]
+    :returns: length-N prediction vector
+    :rtype: numpy.ndarray
     """
     x_processed: np.ndarray
     y_bias_eff: Union[float, np.ndarray]
