@@ -452,6 +452,7 @@ def get_Phi(nx: int, lat_rad, vn, ve, vd, fn, fe, fd, Cnb,
                    **pinson_kwargs)
     return expm(F_matrix * dt) # Corrected variable name
 
+
 def map_grad(itp_mapS, lat_rad, lon_rad, alt_m, delta_rad=1.0e-8):
     """
     Internal helper function to get local map gradient.

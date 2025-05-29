@@ -15,6 +15,7 @@ from typing import List, Tuple, Callable, Dict, Any, Union, Optional
 from .signal_util import linreg_matrix, get_bpf_sos, bpf_data, bpf_data_inplace
 from .tolles_lawson import create_TL_A
 from .magnav import (
+    # create_TL_A, # Removed as it's now imported from .tolles_lawson
     R_EARTH, E_EARTH, NUM_MAG_MAX, SILENT_DEBUG, XYZ, MapS,
     Traj, INS, XYZ0, XYZ1, XYZ20, XYZ21, # Specific XYZ types
     LinCompParams, NNCompParams, TempParams, # Parameter structs
