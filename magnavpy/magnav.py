@@ -30,6 +30,7 @@ from scipy.interpolate import UnivariateSpline, interp1d, RegularGridInterpolato
 from scipy.io import loadmat, savemat
 from scipy.optimize import minimize as scipy_minimize # Renamed to avoid conflict if we define minimize
 from scipy.special import gamma, gammainc, gammaincinv
+from .tolles_lawson import create_tl_a
 
 # Matplotlib
 import matplotlib.pyplot as plt

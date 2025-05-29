@@ -15,6 +15,7 @@ from typing import List, Tuple, Callable, Dict, Any, Union, Optional
 
 # Imports from .magnav module (assuming these are available)
 # These constants and classes are defined in magnav.py
+from .tolles_lawson import create_TL_A
 from .magnav import (
     R_EARTH, E_EARTH, NUM_MAG_MAX, SILENT_DEBUG, XYZ, MagV, MapS,
     Traj, INS, XYZ0, XYZ1, XYZ20, XYZ21, # Specific XYZ types

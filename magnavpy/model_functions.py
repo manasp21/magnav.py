@@ -408,7 +408,43 @@ def get_Phi(nx: int, lat_rad, vn, ve, vd, fn, fe, fd, Cnb,
             **pinson_kwargs): 
     """
     Get Pinson matrix exponential (state transition matrix Phi).
-    **pinson_kwargs are passed to get_pinson (e.g. k1, k2, k3).
+
+    :param nx: number of states
+    :type nx: int
+    :param lat_rad: latitude [rad]
+    :type lat_rad: float
+    :param vn: north velocity [m/s]
+    :type vn: float
+    :param ve: east velocity [m/s]
+    :type ve: float
+    :param vd: down velocity [m/s]
+    :type vd: float
+    :param fn: north specific force [m/s^2]
+    :type fn: float
+    :param fe: east specific force [m/s^2]
+    :type fe: float
+    :param fd: down specific force [m/s^2]
+    :type fd: float
+    :param Cnb: 3x3 direction cosine matrix (body to navigation)
+    :type Cnb: numpy.ndarray
+    :param baro_tau: barometer correlation time [s]
+    :type baro_tau: float
+    :param acc_tau: accelerometer correlation time [s]
+    :type acc_tau: float
+    :param gyro_tau: gyroscope correlation time [s]
+    :type gyro_tau: float
+    :param fogm_tau: FOGM catch-all correlation time [s]
+    :type fogm_tau: float
+    :param dt: time step [s]
+    :type dt: float
+    :param vec_states: if true, include vector magnetometer states
+    :type vec_states: bool
+    :param fogm_state: if true, include FOGM catch-all bias state
+    :type fogm_state: bool
+    :param pinson_kwargs: additional keyword arguments passed to get_pinson (e.g. k1, k2, k3)
+    :type pinson_kwargs: dict
+    :returns: state transition matrix Phi (NumPy array)
+    :rtype: numpy.ndarray
     """
     F_matrix = get_pinson(nx, lat_rad, vn, ve, vd, fn, fe, fd, Cnb,
                    baro_tau=baro_tau, acc_tau=acc_tau, gyro_tau=gyro_tau,
@@ -665,3 +701,6 @@ if __name__ == '__main__':
 
     h_basic_test = get_h_basic(dummy_itp_mapS, x_err_test, deg2rad(34), deg2rad(-118), 1000)
     print(f"get_h_basic example: {h_basic_test}")
+create_p0 = create_P0
+create_qd = create_Qd
+get_h = get_h_basic

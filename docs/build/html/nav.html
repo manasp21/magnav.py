@@ -73,6 +73,27 @@ States (errors) are 0-indexed:
 </section>
 <section id="run-filter-with-additional-options">
 <h2>Run Filter (with additional options)<a class="headerlink" href="#run-filter-with-additional-options" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="magnavpy.magnav.run_filt">
+<span class="sig-prename descclassname"><span class="pre">magnavpy.magnav.</span></span><span class="sig-name descname"><span class="pre">run_filt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ins</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="api_reference.html#magnavpy.magnav.INS" title="magnavpy.magnav.INS"><span class="pre">INS</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">xyz</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="api_reference.html#magnavpy.magnav.XYZ0" title="magnavpy.magnav.XYZ0"><span class="pre">XYZ0</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="api_reference.html#magnavpy.magnav.XYZ1" title="magnavpy.magnav.XYZ1"><span class="pre">XYZ1</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="api_reference.html#magnavpy.magnav.XYZ20" title="magnavpy.magnav.XYZ20"><span class="pre">XYZ20</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="api_reference.html#magnavpy.magnav.XYZ21" title="magnavpy.magnav.XYZ21"><span class="pre">XYZ21</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.13)"><span class="pre">Any</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">mag_map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">MapS</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">MapS(info='null',</span> <span class="pre">lat=array([],</span> <span class="pre">dtype=float64),</span> <span class="pre">lon=array([],</span> <span class="pre">dtype=float64),</span> <span class="pre">alt=array([],</span> <span class="pre">dtype=float64),</span> <span class="pre">map=array([],</span> <span class="pre">dtype=float64),</span> <span class="pre">xx=array([],</span> <span class="pre">dtype=float64),</span> <span class="pre">yy=array([],</span> <span class="pre">dtype=float64))</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temp_params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="api_reference.html#magnavpy.magnav.TempParams" title="magnavpy.magnav.TempParams"><span class="pre">TempParams</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="api_reference.html#magnavpy.magnav.FILTres" title="magnavpy.magnav.FILTres"><span class="pre">FILTres</span></a></span></span><a class="reference internal" href="_modules/magnavpy/magnav.html#run_filt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#magnavpy.magnav.run_filt" title="Link to this definition">¶</a></dt>
+<dd><p>Runs the specified filter (Extended Kalman Filter or Neural EKF for now)
+and returns its results.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ins</strong> – INS data.</p></li>
+<li><p><strong>xyz</strong> – Flight data (XYZ0, XYZ1, XYZ20, or XYZ21).</p></li>
+<li><p><strong>filter_params</strong> – Filter parameters (e.g., EKF_RT).</p></li>
+<li><p><strong>mag_map</strong> – A <cite>MapS</cite> object representing the magnetic anomaly map. Defaults to <cite>MAP_S_NULL</cite>.</p></li>
+<li><p><strong>temp_params</strong> – (Optional) Temperature compensation parameters.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <cite>FILTres</cite> object containing the filter results.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 </section>
 
