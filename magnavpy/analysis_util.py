@@ -15,13 +15,18 @@ from typing import List, Tuple, Callable, Dict, Any, Union, Optional
 from .signal_util import linreg_matrix, get_bpf_sos, bpf_data, bpf_data_inplace
 from .tolles_lawson import create_TL_A
 from .magnav import (
-    R_EARTH, E_EARTH, NUM_MAG_MAX, SILENT_DEBUG, XYZ, MagV, MapS,
+    R_EARTH, E_EARTH, NUM_MAG_MAX, SILENT_DEBUG, XYZ, MapS,
     Traj, INS, XYZ0, XYZ1, XYZ20, XYZ21, # Specific XYZ types
     LinCompParams, NNCompParams, TempParams, # Parameter structs
     # Functions that were in MagNav.jl and are assumed to be in magnav.py or other modules
-    dcm2euler, euler2dcm, fdm, get_map_val, get_map, get_step,
+    get_map_val, get_map, get_step,
     # For type hinting if needed, though specific XYZ types are better
 )
+from .common_types import MagV # Import MagV from common_types
+from .dcm_util import dcm2euler, euler2dcm # Import dcm functions from dcm_util
+from .fdm_util import fdm # Import fdm function from fdm_util
+from .common_types import MagV # Import MagV from common_types
+from .dcm_util import dcm2euler, euler2dcm # Import dcm functions from dcm_util
 
 # Placeholder for IGRF functionality, replace with a proper IGRF library
 def pyigrf_calc(date_decimal_year: float, alt_km: float, lat_deg: float, lon_deg: float) -> Tuple[float, float, float, float, float, float, float]:

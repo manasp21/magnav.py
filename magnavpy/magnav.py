@@ -30,7 +30,9 @@ from scipy.interpolate import UnivariateSpline, interp1d, RegularGridInterpolato
 from scipy.io import loadmat, savemat
 from scipy.optimize import minimize as scipy_minimize # Renamed to avoid conflict if we define minimize
 from scipy.special import gamma, gammainc, gammaincinv
-from .tolles_lawson import create_tl_a
+from .tolles_lawson import create_TL_A
+from .dcm_util import dcm2euler, euler2dcm # New import for dcm functions
+from .fdm_util import fdm # New import for fdm function
 
 # Matplotlib
 import matplotlib.pyplot as plt
