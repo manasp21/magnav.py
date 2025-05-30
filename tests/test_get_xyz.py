@@ -7,14 +7,15 @@ import os
 from pathlib import Path
 
 # Imports from MagNavPy project (ensure these paths and modules are correct)
-from MagNavPy.src.magnav import XYZ0, XYZ1, XYZ20, XYZ21, Traj, INS, MagV
-from MagNavPy.src.get_xyz import (
-    get_XYZ0, get_XYZ1, get_XYZ, get_traj, get_ins, get_flux
+from magnavpy.magnav import XYZ0, XYZ1, XYZ20, XYZ21, Traj, INS, MagV
+from magnavpy.create_xyz import ( # Changed from get_xyz to create_xyz
+    create_xyz0, create_traj, create_ins, create_flux # Renamed get_ to create_
+    # get_XYZ1 needs to be create_xyz1 if it exists, or handled otherwise
     # If sgl_..._train_path functions exist in get_xyz, import them.
     # Otherwise, the placeholder functions below will be used.
 )
 # If a Python equivalent of MagNav.zero_ins_ll is available, import it.
-# from MagNavPy.src.get_xyz import zero_ins_ll # or from magnav_utils
+# from magnavpy.get_xyz import zero_ins_ll # or from magnav_utils
 
 # Helper for HDF5 field manipulation (if not part of get_xyz module)
 def write_h5_field(filepath, field_name, data):

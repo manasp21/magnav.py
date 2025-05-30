@@ -3,9 +3,9 @@ import numpy as np
 from scipy.io import loadmat
 from pathlib import Path
 
-# Assuming dcm functions are in MagNavPy.src.dcm
+# Assuming dcm functions are in magnavpy.dcm
 # Adjust the import path if your project structure is different
-from MagNavPy.src.dcm import euler2dcm, dcm2euler, correct_Cnb
+from magnavpy.dcm_util import euler2dcm, dcm2euler
 
 # Determine the correct relative path to the .mat file
 # The test script is in MagNavPy/tests/
@@ -31,16 +31,21 @@ yaw_jl = dcm_data["yaw"].flatten()
 # Note: In Julia, euler2dcm might handle single values and arrays differently.
 # The Python version should be consistent or tested for both.
 # For Cnb_1, we take the first element of roll, pitch, yaw.
-cnb_1_expected_jl = dcm_data["Cnb"][:,:,0] # Julia is 1-indexed, Python is 0-indexed for slices if it's a 3D array
+cnb_1_expected_jl = dcm_data["Cnb"] # If Cnb from .mat is already a single 2D DCM
 cnb_expected_jl = dcm_data["Cnb"]
-cnb_estimate_1_expected_jl = dcm_data["Cnb_estimate"][:,:,0]
+cnb_estimate_1_expected_jl = dcm_data["Cnb_estimate"] # If Cnb_estimate from .mat is already a single 2D DCM
 cnb_estimate_expected_jl = dcm_data["Cnb_estimate"]
 
 tilt_err_jl = dcm_data["tilt_err"]
 
 # Calculate Cnb_1 and Cnb using the Python implementation
 # Assuming euler2dcm in Python takes :body2nav as a string argument or has a default
-cnb_1_py = euler2dcm(roll_jl[0], pitch_jl[0], yaw_jl[0], "body2nav")
+cnb_1_py = euler2dcm(
+    roll_jl.item() if roll_jl.ndim == 0 else roll_jl[0].item(),
+    pitch_jl.item() if pitch_jl.ndim == 0 else pitch_jl[0].item(),
+    yaw_jl.item() if yaw_jl.ndim == 0 else yaw_jl[0].item(),
+    "zyx"
+) # Ensure scalar input
 # Assuming euler2dcm can handle array inputs for roll, pitch, yaw
 # If not, this part needs to be looped or handled according to the Python function's design
 # For now, let's assume it processes them element-wise or expects single values
@@ -91,7 +96,7 @@ def test_correct_cnb():
     # If the python correct_Cnb is designed to stack for (3,1) error, this test would be:
     # corrected_cnb_zeros_stacked = correct_Cnb(dummy_cnb_single, np.zeros((3,1)))
     # assert corrected_cnb_zeros_stacked.shape == (3,3,1)
-    # This needs clarification based on MagNavPy.src.dcm.correct_Cnb behavior.
+    # This needs clarification based on magnavpy.dcm.correct_Cnb behavior.
     # For now, we assume the simpler (3,3) output for single DCM.
 
 
@@ -124,7 +129,7 @@ def test_euler_dcm_conversions():
 
 # Additional considerations:
 # 1. Ensure that the string arguments like "body2nav", "nav2body" match exactly
-#    what the Python implementations in MagNavPy.src.dcm expect.
+#    what the Python implementations in magnavpy.dcm expect.
 # 2. The behavior of euler2dcm when given array inputs (roll, pitch, yaw) vs. scalar inputs.
 #    The Julia code implies euler2dcm(roll_vec, pitch_vec, yaw_vec) produces a (3,3,N) stack.
 #    The current Python translation uses a list comprehension and np.stack. If euler2dcm

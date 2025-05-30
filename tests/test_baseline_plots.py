@@ -6,10 +6,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.figure
 
-# Assuming MagNavPy.src modules are importable
+# Assuming magnavpy modules are importable
 # Adjust these imports based on your actual project structure
-from MagNavPy.src import magnav as mn
-from MagNavPy.src import plot_functions as pf
+from magnavpy import magnav as mn
+from magnavpy import plot_functions as pf
 
 # Path to the test data directory, assuming MagNav.jl and MagNavPy are siblings
 BASE_DATA_PATH = Path(__file__).resolve().parent.parent.parent / "MagNav.jl" / "test" / "test_data"

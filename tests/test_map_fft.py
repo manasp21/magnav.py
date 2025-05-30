@@ -6,7 +6,7 @@ from numpy.testing import assert_allclose
 
 # Attempt to import functions from MagNavPy.src.map_fft
 try:
-    from MagNavPy.src.map_fft import (
+    from magnavpy.map_fft import (
         map_up_fft,  # Corresponds to upward_fft
         create_k,
         vector_fft,
@@ -20,13 +20,14 @@ try:
 except ImportError:
     # Define placeholders if some are missing, tests will be skipped
     map_up_fft = create_k = vector_fft = downward_L = psd = map_fft = map_ifft = map_filt_fft = map_grad_fft = None
-    pytest.skip("One or more required functions from MagNavPy.src.map_fft are missing, skipping module.", allow_module_level=True)
+    pytest.skip("One or more required functions from magnavpy.map_fft are missing, skipping module.", allow_module_level=True)
 
 
-# Attempt to import data structures and helpers from MagNavPy.src.magnav
+# Attempt to import data structures and helpers from magnavpy.magnav
 try:
-    from MagNavPy.src.magnav import MapS, MapS3D, MapV
-    from MagNavPy.src.magnav import get_traj, map_trim, get_map
+    from magnavpy.magnav import MapS, MapS3D, MapV
+    from magnavpy.create_xyz import get_traj # Moved get_traj
+    from magnavpy.map_utils import map_trim, get_map # Moved map_trim, get_map
     # Assuming emag2 and emm720 are available, e.g., as constants or accessible via get_map
     # If they are string identifiers for get_map:
     emag2_id = "emag2" # Placeholder ID

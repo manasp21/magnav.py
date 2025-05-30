@@ -573,7 +573,7 @@ def create_ins(
         # Get state transition matrix Phi from analysis_util helper
         Phi_k = get_phi_matrix(
             nx, traj.lat[k], traj.vn[k], traj.ve[k], traj.vd[k],
-            traj.fn[k], traj.fe[k], traj.fd[k], traj.Cnb[k,:,:], # Cnb at step k
+            traj.fn[k], traj.fe[k], traj.fd[k], traj.Cnb, # Cnb is already 2D (3,3)
             baro_tau, acc_tau, gyro_tau, 0, dt, fogm_state=False # 0 for fogm_tau if no fogm_state
         )
         # Propagate error state: err_k+1 = Phi_k * err_k + w_k

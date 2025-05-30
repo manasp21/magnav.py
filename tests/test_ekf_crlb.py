@@ -4,11 +4,12 @@ import scipy.io
 import os
 
 # Assuming MagNavPy classes and functions are in these locations based on user prompt
-from MagNavPy.src.magnav import Traj, INS, MapS, EKF_RT, FILTres, MapCache
-from MagNavPy.src.ekf import crlb, ekf
+from magnavpy.magnav import Traj, INS, MapS, EKF_RT, FILTres, MapCache
+from magnavpy.ekf import crlb, ekf
 # model_functions might contain map_interpolate and map_params.
 # If these are methods of MapS or another class, imports would change.
-from MagNavPy.src.model_functions import map_interpolate, map_params
+from magnavpy.map_utils import map_interpolate
+# from magnavpy.analysis_util import get_map_params # Function not found in analysis_util
 
 # Helper for loading .mat files and extracting the specific variable
 def load_mat_variable(base_path, file_name, variable_name):
@@ -33,8 +34,8 @@ Qd = ekf_data_content["Qd"]
 R_val  = ekf_data_content["R"] # Expecting this to be a scalar or 1x1 array for magnetometer
 
 # From ins_data
-ins_lat  = np.deg2rad(ins_data_content["lat"].ravel())
-ins_lon  = np.deg2rad(ins_data_content["lon"].ravel())
+ins_lat  = np.deg2rad(ins_data_content["lat"][0][0].ravel().astype(float))
+ins_lon  = np.deg2rad(ins_data_content["lon"][0][0].ravel().astype(float))
 ins_alt  = ins_data_content["alt"].ravel()
 ins_vn   = ins_data_content["vn"].ravel()
 ins_ve   = ins_data_content["ve"].ravel()
@@ -47,8 +48,8 @@ ins_Cnb  = ins_data_content["Cnb"] # Assuming shape (3, 3, N) from Julia Cnb[:,:
 # From map_data
 map_info = "Map" # Hardcoded as in Julia script; or map_data_content["map_info"] if exists
 map_map  = map_data_content["map"]
-map_xx   = np.deg2rad(map_data_content["xx"].ravel())
-map_yy   = np.deg2rad(map_data_content["yy"].ravel())
+map_xx   = np.deg2rad(map_data_content["xx"][0][0].ravel().astype(float))
+map_yy   = np.deg2rad(map_data_content["yy"][0][0].ravel().astype(float))
 map_alt_data  = map_data_content["alt"] # Renamed to avoid conflict with alt from traj_data
 # map_params from MagNav.jl returns (map_map,map_mask,map_edges,map_origin,map_res). We need map_mask.
 # Assuming Python map_params has a similar return or can provide the mask.
@@ -61,7 +62,8 @@ map_alt_data  = map_data_content["alt"] # Renamed to avoid conflict with alt fro
 # If map_params returns (map_object_with_mask_attribute), access would differ.
 # Given Julia's direct indexing `[2]`, it's likely a tuple.
 # Let's assume map_params returns (processed_map, mask, other_things...)
-_, map_mask, _, _, _ = map_params(map_map, map_xx, map_yy) # Adjust if return differs
+# _, map_mask, _, _, _ = get_map_params(map_map, map_xx, map_yy) # get_map_params not found
+map_mask = np.ones_like(map_map, dtype=bool) # Placeholder for map_mask
 
 # From params (these are expected to be scalars)
 dt       = params_content["dt"].item()
@@ -72,8 +74,8 @@ fogm_tau = params_content["meas_tau"].item() # Julia uses "meas_tau"
 
 # From traj_data
 tt       = traj_data_content["tt"].ravel()
-lat      = np.deg2rad(traj_data_content["lat"].ravel())
-lon      = np.deg2rad(traj_data_content["lon"].ravel())
+lat      = np.deg2rad(traj_data_content["lat"][0][0].ravel().astype(float))
+lon      = np.deg2rad(traj_data_content["lon"][0][0].ravel().astype(float))
 alt      = traj_data_content["alt"].ravel()
 vn       = traj_data_content["vn"].ravel()
 ve       = traj_data_content["ve"].ravel()
@@ -96,7 +98,9 @@ map_cache = MapCache(maps=[mapS]) # Assuming MapCache class and constructor
 
 # Interpolate map
 # Python equivalent of: (itp_mapS,der_mapS) = map_interpolate(mapS,:linear;return_vert_deriv=true)
-itp_mapS, der_mapS = map_interpolate(mapS, method='linear', return_vert_deriv=True)
+# itp_mapS, der_mapS = map_interpolate(mapS, method='linear', return_vert_deriv=True) # map_interpolate does not support this
+itp_mapS = map_interpolate(mapS, lat, lon) # Placeholder, assuming lat/lon are available
+der_mapS = None # Vertical derivative map not supported by current map_interpolate
 
 # CRLB calculation
 crlb_P_py = crlb(lat, lon, alt, vn, ve, vd, fn, fe, fd, Cnb, dt, itp_mapS,

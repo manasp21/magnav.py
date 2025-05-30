@@ -5,9 +5,10 @@ from scipy.signal import detrend
 import os
 
 # Import functions from MagNavPy
-from MagNavPy.src.tolles_lawson import create_TL_A, create_TL_coef, fdm
+from magnavpy.tolles_lawson import create_TL_A, create_TL_coef
+from magnavpy.fdm_util import fdm # Added import for fdm
 # get_TL_term_ind is mentioned in requirements but not explicitly tested in the original Julia file.
-from MagNavPy.src.magnav import MagV # Imported as per requirement
+from magnavpy.magnav import MagV # Imported as per requirement
 
 # Helper to get path to test data
 def get_test_data_path(filename):

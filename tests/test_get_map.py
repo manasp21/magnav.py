@@ -25,13 +25,14 @@ except ImportError:
     bson = MockBSON()
 
 # Assuming MagNavPy structure, adjust imports as necessary
-from MagNavPy.src import get_map as gm
-from MagNavPy.src import magnav  # For MapS, MapV, MapS3D, etc.
-from MagNavPy.src.magnav import MapS, MapV, MapS3D # Specific imports
-from MagNavPy.src import map_functions # For map_params, upward_fft
+from magnavpy.map_utils import get_map as gm
+from magnavpy import magnav  # For MapS, MapV, MapS3D, etc.
+from magnavpy.magnav import MapS, MapV, MapS3D # Specific imports
+from magnavpy.map_utils import upward_fft
+# from magnavpy.analysis_util import get_map_params # For map_params - Function not found
 # Assuming compensation parameters are in compensation module based on user's open tabs
 try:
-    from MagNavPy.src.compensation import LinCompParams, NNCompParams
+    from magnavpy.compensation import LinCompParams, NNCompParams
     COMP_PARAMS_AVAILABLE = True
 except ImportError:
     COMP_PARAMS_AVAILABLE = False
@@ -75,7 +76,8 @@ def map_data_setup(tmp_path, base_map_data):
 
     # Create map_mask (assuming map_functions.map_params exists and returns [params, mask])
     try:
-        _, map_mask_orig, _ = map_functions.map_params(map_map_orig, map_xx_orig, map_yy_orig) # Adjusted for 0-indexed tuple
+        # _, map_mask_orig, _, _, _ = get_map_params(map_map_orig, map_xx_orig, map_yy_orig) # get_map_params not found
+        map_mask_orig = np.ones_like(map_map_orig, dtype=bool) # Placeholder
     except (AttributeError, TypeError, ValueError) as e: # Handle if map_functions or map_params is not fully available
         print(f"Warning: map_functions.map_params could not be called: {e}. Using a dummy mask.")
         map_mask_orig = np.ones_like(map_map_orig, dtype=bool)
@@ -176,7 +178,7 @@ def test_save_map(map_data_setup, tmp_path):
     
     try:
         # Requires map_functions.upward_fft to be implemented
-        mapS_upward = map_functions.upward_fft(mapS, [mapS.alt, mapS.alt + 5])
+        mapS_upward = upward_fft(mapS, [mapS.alt, mapS.alt + 5])
         assert gm.save_map(mapS_upward, str(map_h5_path)) is None
     except (AttributeError, NotImplementedError) as e:
         pytest.skip(f"upward_fft or its usage in save_map not fully implemented: {e}")

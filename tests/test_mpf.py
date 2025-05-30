@@ -5,16 +5,16 @@ from scipy.io import loadmat
 
 # Assumptions:
 # 1. MagNavPy is in PYTHONPATH or installed.
-# 2. The module structure is as guessed (e.g., MagNavPy.src.magnav, MagNavPy.src.mpf).
+# 2. The module structure is as guessed (e.g., magnavpy.magnav, magnavpy.mpf).
 #    Adjust imports if the actual structure differs.
 # 3. Python versions of functions (mpf, helpers) and classes (INS, MapS) have
 #    signatures and behavior compatible with this translation.
 # 4. Data shapes (e.g., Cnb as (3,3,N)) are handled consistently by Python code.
 
 try:
-    from MagNavPy.src.magnav import INS, MapS, Map_Cache
+    from magnavpy.magnav import INS, MapS, Map_Cache
     # Attempt to import get_years if it exists in a known location
-    # from MagNavPy.src.utils import get_years # Example path
+    # from magnavpy.utils import get_years # Example path
 except ImportError:
     # Fallback or raise error if essential components are missing
     # For now, define INS, MapS, Map_Cache as placeholders if not found,
@@ -23,23 +23,23 @@ except ImportError:
     class INS: pass
     class MapS: pass
     class Map_Cache: pass
-    print("Warning: MagNavPy.src.magnav components not found, using placeholders.")
+    print("Warning: magnavpy.magnav components not found, using placeholders.")
 
 try:
-    from MagNavPy.src.mpf import mpf, sys_resample, part_cov, filter_exit
+    from magnavpy.mpf import mpf, sys_resample, part_cov, filter_exit
 except ImportError:
     def mpf(*args, **kwargs): pass
     def sys_resample(*args, **kwargs): pass
     def part_cov(*args, **kwargs): pass
     def filter_exit(*args, **kwargs): pass
-    print("Warning: MagNavPy.src.mpf components not found, using placeholders.")
+    print("Warning: magnavpy.mpf components not found, using placeholders.")
 
 try:
-    from MagNavPy.src.map_functions import map_params, map_interpolate
+    from magnavpy.map_functions import map_params, map_interpolate
 except ImportError:
     def map_params(*args, **kwargs): return None, np.array([]) # return dummy mask
     def map_interpolate(*args, **kwargs): pass
-    print("Warning: MagNavPy.src.map_functions components not found, using placeholders.")
+    print("Warning: magnavpy.map_functions components not found, using placeholders.")
 
 
 # Helper function for get_years (decimal year calculation)
@@ -90,8 +90,8 @@ Qd = ekf_data['Qd'].squeeze()
 R_julia = ekf_data['R'].squeeze()
 R = float(R_julia) if R_julia.size == 1 else R_julia # Ensure R is scalar if it's meant to be
 
-ins_lat = np.deg2rad(ins_data['lat'].flatten())
-ins_lon = np.deg2rad(ins_data['lon'].flatten())
+ins_lat = np.deg2rad(ins_data['lat'][0][0].flatten().astype(float))
+ins_lon = np.deg2rad(ins_data['lon'][0][0].flatten().astype(float))
 ins_alt = ins_data['alt'].flatten()
 ins_vn = ins_data['vn'].flatten()
 ins_ve = ins_data['ve'].flatten()
@@ -102,12 +102,12 @@ ins_fd = ins_data['fd'].flatten()
 ins_Cnb = ins_data['Cnb']  # Shape (3, 3, N) in Julia/MAT
 N = len(ins_lat)
 
-map_info_val = map_data.get('map_info', "Map") # Default if not in .mat
+map_info_val = map_data['map_info'] if 'map_info' in map_data.dtype.fields else "Map" # Access directly if key exists
 map_info = str(map_info_val.item()) if isinstance(map_info_val, np.ndarray) and map_info_val.size == 1 else str(map_info_val)
 
 map_map = map_data['map']
-map_xx = np.deg2rad(map_data['xx'].flatten())
-map_yy = np.deg2rad(map_data['yy'].flatten())
+map_xx = np.deg2rad(np.array(map_data['xx'].tolist()).flatten().astype(float))
+map_yy = np.deg2rad(np.array(map_data['yy'].tolist()).flatten().astype(float))
 map_alt_julia = map_data['alt'].squeeze()
 map_alt = float(map_alt_julia) if map_alt_julia.size == 1 else map_alt_julia
 

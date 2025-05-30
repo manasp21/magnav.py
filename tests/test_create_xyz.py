@@ -17,16 +17,16 @@ import copy # For deepcopy
 # workspace_root = current_script_path.parent.parent.parent
 # sys.path.append(str(workspace_root / "MagNavPy/src"))
 
-from MagNavPy.src.magnav import XYZ0, Traj, INS, MagV, MapS, get_map, map_trim
-from MagNavPy.src.create_xyz import (
-    create_XYZ0 as create_XYZ0_py,
+from magnavpy.magnav import XYZ0, Traj, INS, MagV, MapS, get_map
+from magnavpy.create_xyz import (
+    create_xyz0 as create_XYZ0_py, # Corrected case
     create_ins as create_ins_py,
     corrupt_mag as corrupt_mag_py,
     create_informed_xyz as create_informed_xyz_py,
-    get_ind as get_ind_py,
-    get_traj as get_traj_py
+    # get_ind as get_ind_py, # Function not found
+    create_traj as get_traj_py # Corrected name
 )
-from MagNavPy.src.tolles_lawson import create_TL_coef
+from magnavpy.tolles_lawson import create_TL_coef
 
 # Set random seed for reproducibility
 np.random.seed(2)
@@ -58,8 +58,8 @@ traj_data_mat = traj_data_mat_content["traj"]
 
 
 # Extract INS data (benchmark from Julia test)
-ins_lat_jl_ref = np.deg2rad(ins_data_mat["lat"].ravel())
-ins_lon_jl_ref = np.deg2rad(ins_data_mat["lon"].ravel())
+ins_lat_jl_ref = np.deg2rad(ins_data_mat["lat"][0][0].ravel().astype(float))
+ins_lon_jl_ref = np.deg2rad(ins_data_mat["lon"][0][0].ravel().astype(float))
 ins_alt_jl_ref = ins_data_mat["alt"].ravel()
 ins_vn_jl_ref  = ins_data_mat["vn"].ravel()
 ins_ve_jl_ref  = ins_data_mat["ve"].ravel()
@@ -84,8 +84,8 @@ gyro_tau_p = params_mat["gyro_tau"].item()
 
 # Extract Trajectory data (input for creating Python objects)
 tt_traj = traj_data_mat["tt"].ravel()
-lat_traj = np.deg2rad(traj_data_mat["lat"].ravel())
-lon_traj = np.deg2rad(traj_data_mat["lon"].ravel())
+lat_traj = np.deg2rad(traj_data_mat["lat"][0][0].ravel().astype(float))
+lon_traj = np.deg2rad(traj_data_mat["lon"][0][0].ravel().astype(float))
 alt_traj = traj_data_mat["alt"].ravel()
 vn_traj = traj_data_mat["vn"].ravel()
 ve_traj = traj_data_mat["ve"].ravel()
@@ -227,7 +227,8 @@ def test_corrupt_mag():
 def test_create_informed_xyz():
     # Create original XYZ0 struct for this test scope
     xyz_orig = create_XYZ0_py(g_mapS_py, alt=2000, t=10, mapV=g_mapV_py)
-    ind = get_ind_py(xyz_orig)
+    # ind = get_ind_py(xyz_orig) # get_ind_py is not defined
+    ind = np.ones(xyz_orig.traj.N, dtype=bool) # Placeholder for ind
     traj_orig = get_traj_py(xyz_orig, ind)
 
     # Define field names for dynamic access

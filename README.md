@@ -8,12 +8,23 @@ MagNavPy is a Python library for magnetic navigation research and development. I
 
 ## Key Features
 
-*   **Magnetic Navigation Simulation**: Tools to simulate and analyze magnetic navigation performance.
-*   **Magnetometer Data Processing**: Utilities for handling and processing raw magnetometer data.
-*   **Aircraft Magnetic Noise Compensation**: Implementation of algorithms like Tolles-Lawson for compensating magnetic interference.
-*   **Navigation Filters**: Includes navigation filters such as Extended Kalman Filters (EKF) tailored for magnetic navigation.
-*   **Magnetic Anomaly Map Utilities**: Functions for working with magnetic anomaly maps.
+*   **Data Handling**: Load, process, and manage flight path, INS, and magnetometer data, including built-in datasets.
+*   **Magnetic Anomaly Maps**: Utilities for loading, manipulating (e.g., upward continuation), and interpolating magnetic anomaly maps, with access to built-in global and regional maps.
+*   **Aeromagnetic Compensation**: Implementations of classical methods like Tolles-Lawson and advanced Neural Network-based models for compensating aircraft magnetic noise.
+*   **Navigation Algorithms**: Tools for magnetic navigation filtering, including Extended Kalman Filters (EKF) and the MagNav filter model, along with performance analysis using the Cramér–Rao Lower Bound (CRLB).
+*   **Simulation & Analysis**: Simulate magnetic navigation scenarios and analyze performance.
 *   **Data Visualization**: Plotting functions to visualize flight data, magnetic maps, and filter outputs.
+
+## Core Concepts
+
+MagNavPy utilizes several key data structures to organize and manage data:
+
+*   [`Map`](magnavpy/common_types.py:9): Represents a magnetic anomaly map.
+*   [`Traj`](magnavpy/magnav.py:40): Stores flight trajectory data.
+*   [`INS`](magnavpy/magnav.py:43): Holds Inertial Navigation System data.
+*   [`XYZ`](magnavpy/magnav.py:48): A general structure for flight data including position, time, and magnetic field measurements.
+*   [`EKF_RT`](magnavpy/ekf.py:81): Represents the state of a Real-Time Extended Kalman Filter.
+*   [`CompParams`](magnavpy/compensation.py:87), [`LinCompParams`](magnavpy/compensation.py:90), [`NNCompParams`](magnavpy/compensation.py:93): Structures for holding parameters for different compensation models.
 
 ## Original Project
 
@@ -26,13 +37,31 @@ This project is a Python conversion of the [MagNav.jl](https://github.com/MIT-AI
 *   Python 3.9 or higher.
 *   **GDAL**: This library has a dependency on GDAL, which needs to be installed manually on your system due to its complex installation process. Please refer to the [official GDAL installation guide](https://gdal.org/download.html#binaries) for instructions specific to your operating system.
 
+### Project Dependencies
+
+Beyond the prerequisites, MagNavPy relies on several Python packages for its functionality. All required packages are listed in the [`requirements.txt`](requirements.txt:0) file and can be installed as described in the installation steps. Key dependencies include:
+
+*   **gdal**: For geospatial data operations (Python bindings, requires system-level GDAL).
+*   **pandas**: For data manipulation and analysis.
+*   **torch**: For deep learning models and tensor computations.
+*   **matplotlib**: For plotting and visualization.
+*   **h5py**: For interacting with HDF5 files.
+*   **scipy**: For scientific and technical computing.
+*   **jax**: For high-performance numerical computing and machine learning research.
+*   **toml**: For parsing TOML configuration files.
+*   **scikit-learn**: For machine learning tools.
+*   **statsmodels**: For statistical modeling.
+*   **pytest**: For running the test suite.
+
+Please ensure GDAL is installed on your system *before* running `pip install -r requirements.txt`.
+
 ### Steps
 
-1.  **Clone the repository (optional, if you want to install from source):**
+1.  **Clone the repository (if you haven't already):**
     ```bash
     git clone https://github.com/yourusername/MagNavPy.git # Replace with actual URL
-    cd MagNavPy
     ```
+    Navigate into the cloned repository's root directory (where `requirements.txt` is located). All subsequent installation commands should be run from this directory.
 
 2.  **Create and activate a Python virtual environment (recommended):**
     ```bash
@@ -44,7 +73,7 @@ This project is a Python conversion of the [MagNav.jl](https://github.com/MIT-AI
     ```
 
 3.  **Install dependencies:**
-    To install the required Python packages, run:
+    Ensure your virtual environment is active and you are in the repository root directory. To install the required Python packages, run:
     ```bash
     pip install -r requirements.txt
     ```
@@ -55,20 +84,19 @@ This project is a Python conversion of the [MagNav.jl](https://github.com/MIT-AI
 
 ## Usage
 
-Here's a basic example of how you might import and use a function from MagNavPy (this is a conceptual example):
+MagNavPy provides functions for various stages of magnetic navigation processing. Here are examples of key functions:
 
-```python
-from magnavpy import compensation
-from magnavpy.common_types import FlightData # Assuming FlightData is a relevant type
+**Data Loading:**
+Use functions like [`create_xyz0`](magnavpy/create_xyz.py:9), [`get_xyz20`](magnavpy/create_xyz.py:11), or [`get_XYZ`](magnavpy/create_xyz.py:13) to load flight data. Built-in datasets like `sgl_2020_train` and `sgl_2021_train` are also available.
 
-# Load or create your flight data
-# flight_data = FlightData(...) # Placeholder for actual data loading/creation
+**Map Handling:**
+Load magnetic anomaly maps using [`get_map`](magnavpy/map_utils.py:9). Functions like [`upward_fft`](magnavpy/map_utils.py:25) are available for map manipulation.
 
-# Example: Apply a compensation model (details depend on actual API)
-# compensated_data = compensation.apply_tolles_lawson(flight_data, model_parameters)
+**Aeromagnetic Compensation:**
+Train and test compensation models using [`comp_train`](magnavpy/compensation.py:16) and [`comp_test`](magnavpy/compensation.py:21). The library supports classical Tolles-Lawson and various Neural Network-based models (e.g., `:m1`, `:m2a`, `:m2b`, `:m2c`, `:m2d`, `:m3s`, `:m3v`).
 
-# print("Compensation applied.")
-```
+**Navigation Filtering:**
+Run navigation filters, such as the Extended Kalman Filter, using the [`run_filt`](magnavpy/magnav.py:33) function.
 
 For more detailed examples, please refer to the `examples/` directory (if available) or the test scripts in the `tests/` directory.
 

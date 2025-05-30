@@ -6,8 +6,8 @@ import os
 # Attempt to import project-specific modules.
 # Tests will be skipped if these imports fail, indicating the modules are not available.
 try:
-    from MagNavPy.src import google_earth
-    from MagNavPy.src import magnav # For Traj, MapS data structures
+    from magnavpy import google_earth
+    from magnavpy import magnav # For Traj, MapS data structures
     # For more specific imports if preferred:
     # from MagNavPy.src.magnav import Traj, MapS
 except ImportError as e:

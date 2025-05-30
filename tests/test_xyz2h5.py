@@ -4,12 +4,10 @@ import pytest
 import h5py
 # from scipy.io import loadmat # Included if .mat files were directly used for XYZ data input
 
-# Assuming xyz2h5 is the primary function for conversion from MagNavPy.src.xyz2h5
-from MagNavPy.src.xyz2h5 import xyz2h5
-# Assuming XYZ0, NNCompParams, Traj are core data structures from MagNavPy.src.magnav
-from MagNavPy.src.magnav import XYZ0
-# Placeholder for NNCompParams and Traj if they are in a different module
-# from MagNavPy.src.compensation import NNCompParams # Alternative location
+# Assuming xyz2h5 is the primary function for conversion from magnavpy.xyz2h5
+from magnavpy.xyz2h5 import xyz2h5 # Function missing
+# Assuming XYZ0, NNCompParams, Traj are core data structures from magnavpy.magnav
+from magnavpy.magnav import XYZ0, Traj, NNCompParams
 # For other MagNav.jl specific utility functions, we'll assume they exist in
 # appropriately named modules or are methods of the XYZ0/NNCompParams classes.
 # e.g., magnav_h5_utils for HDF5 direct operations, magnav_xyz_utils for XYZ object ops.
@@ -39,24 +37,15 @@ def xyz_file_path():
     return XYZ_FILE_ORIGINAL_PATH
 
 # It's assumed NNCompParams and related model functions are available in MagNavPy
-# For example, from MagNavPy.src.magnav or MagNavPy.src.compensation
-# And MagNavPy.src.model_functions for get_nn_m
+# For example, from magnavpy.magnav or magnavpy.compensation
+# And magnavpy.model_functions for get_nn_m
 try:
-    from MagNavPy.src.magnav import NNCompParams # Or compensation
-    from MagNavPy.src.model_functions import get_nn_m # Placeholder
+    from magnavpy.model_functions import get_nn_m # Placeholder
 except ImportError:
     # Define dummy classes/functions if not available, allowing tests to be written
     # This section would be removed if actual MagNavPy modules are present
-    class NNCompParams:
-        def __init__(self, base_params=None, terms=None, reorient_vec=None, model=None, tl_coef=None):
-            self.base_params = base_params
-            self.terms = terms
-            self.reorient_vec = reorient_vec
-            self.model = model
-            self.tl_coef = tl_coef
     def get_nn_m(index): return f"dummy_model_{index}"
     # Traj class might be needed for field_check
-    class Traj: pass
     XYZ0.Traj = Traj # Assuming Traj is an attribute or inner class of XYZ0 or accessible via magnav module
 
 # Placeholder for utility functions that would be part of MagNavPy
@@ -255,8 +244,7 @@ def test_xyz2h5_conversion_and_initial_load(xyz_file_path, tmp_path):
          assert h5_file.exists()
     else:
         pytest.skip("Skipping test for xyz2h5 with data input due to no prior data.")
-
-
+#
 @pytest.fixture
 def prepared_h5_file(xyz_file_path, tmp_path):
     """
@@ -330,7 +318,7 @@ def test_xyz_object_field_operations(prepared_h5_file):
     comp_params_0 = NNCompParams()
     comp_params_1 = NNCompParams(base_params=comp_params_0, terms=['p'], reorient_vec=True)
     
-    # Assuming get_nn_m is available, e.g., from MagNavPy.src.model_functions
+    # Assuming get_nn_m is available, e.g., from magnavpy.model_functions
     # model1 = get_nn_m(1) # Actual model
     # model2 = get_nn_m(2)
     model1 = MagNavXYZUtils.get_nn_m(1) # Using mocked version for now

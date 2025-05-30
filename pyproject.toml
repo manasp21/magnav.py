@@ -22,6 +22,7 @@ statsmodels = "*"
 sphinx = "*"
 sphinx-rtd-theme = "*"
 myst-parser = "*"
+pytest = "*"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

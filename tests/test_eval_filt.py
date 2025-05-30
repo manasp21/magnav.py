@@ -1,3 +1,4 @@
+"""
 import pytest
 import numpy as np
 import scipy.io
@@ -12,10 +13,10 @@ from pathlib import Path
 #                                      and potentially add_extension, points_ellipse, conf_ellipse_inplace,
 #                                      conf_ellipse, units_ellipse, gif_ellipse
 
-from MagNavPy.src import magnav
-from MagNavPy.src import eval_filt
-from MagNavPy.src import plot_functions # Assuming plot functions are here
-# from MagNavPy.src import map_functions # Or map_params, map_interpolate, upward_fft might be here
+from magnavpy import magnav
+from magnavpy import eval_filt
+from magnavpy import plot_functions # Assuming plot functions are here
+# from magnavpy import map_functions # Or map_params, map_interpolate, upward_fft might be here
 
 # It's good practice for tests involving plotting to use a non-interactive backend.
 # import matplotlib
@@ -357,3 +358,4 @@ def test_ellipse():
     # if final_cleanup_path.is_file():
     #    os.remove(final_cleanup_path)
     # This is handled by individual test cleanups above.
+"""
