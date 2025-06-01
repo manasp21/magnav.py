@@ -102,7 +102,7 @@ def ekf(
         current_itp_mapS_for_step = itp_mapS_arg
         current_der_mapS_for_step = der_mapS
 
-        if isinstance(itp_mapS_arg, Map_Cache):
+        if isinstance(itp_mapS_arg, MapCache):
             # get_cached_map returns the interpolator for the current location
             current_itp_mapS_for_step = get_cached_map(itp_mapS_arg, lat[t], lon[t], alt[t], silent=True)
             # In Julia, if map_cache is used, der_mapS is effectively ignored for get_h in RT.
@@ -110,10 +110,27 @@ def ekf(
 
         _Cnb_t = Cnb[:, :, t] if Cnb.ndim == 3 else Cnb
 
-        Phi = get_Phi(nx, lat[t], vn[t], ve[t], vd[t], fn[t], fe[t], fd[t], _Cnb_t,
+        # Ensure Cnb is 2D for get_Phi
+        _Cnb_t_for_phi = _Cnb_t
+        if _Cnb_t.ndim == 3:
+            if _Cnb_t.shape[2] == 1: _Cnb_t_for_phi = _Cnb_t[:,:,0]
+            else: raise ValueError("Cnb for get_Phi should be a 2D matrix for a single time step.")
+
+        # Direct indexing, assuming lat, vn etc. are 1D arrays of scalars
+        lat_t = lat[t]
+        lon_t = lon[t]
+        alt_t = alt[t]
+        vn_t  = vn[t]
+        ve_t  = ve[t]
+        vd_t  = vd[t]
+        fn_t  = fn[t]
+        fe_t  = fe[t]
+        fd_t  = fd[t]
+
+        Phi = get_Phi(nx, lat_t, vn_t, ve_t, vd_t, fn_t, fe_t, fd_t, _Cnb_t_for_phi,
                       baro_tau, acc_tau, gyro_tau, fogm_tau, dt)
 
-        h_pred = get_h(current_itp_mapS_for_step, x, lat[t], lon[t], alt[t],
+        h_pred = get_h(current_itp_mapS_for_step, x, lat_t, lon_t, alt_t,
                        date=date, core=core, der_map=current_der_mapS_for_step, map_alt=map_alt)
 
         if isinstance(h_pred, (float, int, np.number)): h_pred = np.array([h_pred])
@@ -123,7 +140,7 @@ def ekf(
 
         r_out[:, t] = resid.flatten()
 
-        H_m = get_H(current_itp_mapS_for_step, x, lat[t], lon[t], alt[t],
+        H_m = get_H(current_itp_mapS_for_step, x, lat_t, lon_t, alt_t,
                     date=date, core=core) # Expected (nx,) or (1,nx)
         if H_m.ndim == 1: H_m = H_m.reshape(1, -1) # Ensure (1,nx)
         
@@ -248,7 +265,7 @@ def process_ekf_rt_step(
 
     current_itp_mapS_for_step = itp_mapS
     current_der_mapS_for_step = der_mapS
-    if isinstance(itp_mapS, Map_Cache):
+    if isinstance(itp_mapS, MapCache):
         current_itp_mapS_for_step = get_cached_map(itp_mapS, lat_curr, lon_curr, alt_curr, silent=True)
         # Julia: der_mapS = nothing if itp_mapS is Map_Cache
         current_der_mapS_for_step = None 
@@ -329,26 +346,205 @@ def process_ekf_rt_step_ins(
         map_alt=map_alt,
         dt_fallback=ins.dt # dt from INS struct if ekf_rt.t is not initialized
     )
-def crlb(*args, **kwargs):
-    """Placeholder for Cramer-Rao Lower Bound calculation."""
-    pass
+def crlb(
+    lat, lon, alt, vn, ve, vd, fn, fe, fd, Cnb, dt, itp_mapS,
+    P0=None, Qd=None, R=1.0,
+    baro_tau=3600.0, acc_tau=3600.0, gyro_tau=3600.0, fogm_tau=600.0,
+    date=None, core=False
+):
+    """
+    Cramér-Rao lower bound (CRLB) computed with classic Kalman Filter.
+    Equations evaluated about true trajectory.
 
-def calc_crlb_pos(*args, **kwargs):
-    """Placeholder for CRLB position calculation."""
-    pass
+    Args:
+        lat (np.ndarray): Latitude [rad], shape (N,)
+        lon (np.ndarray): Longitude [rad], shape (N,)
+        alt (np.ndarray): Altitude [m], shape (N,)
+        vn (np.ndarray): North velocity [m/s], shape (N,)
+        ve (np.ndarray): East velocity [m/s], shape (N,)
+        vd (np.ndarray): Down velocity [m/s], shape (N,)
+        fn (np.ndarray): North specific force [m/s^2], shape (N,)
+        fe (np.ndarray): East specific force [m/s^2], shape (N,)
+        fd (np.ndarray): Down specific force [m/s^2], shape (N,)
+        Cnb (np.ndarray): Direction cosine matrix (body to navigation), shape (3,3,N) or (3,3)
+        dt (float): Measurement time step [s]
+        itp_mapS (callable or MapCache): Scalar map interpolation function or MapCache.
+        P0 (np.ndarray, optional): Initial covariance matrix, shape (nx,nx).
+                                   Defaults to create_P0().
+        Qd (np.ndarray, optional): Discrete time process/system noise matrix, shape (nx,nx).
+                                   Defaults to create_Qd().
+        R (float or tuple, optional): Measurement noise variance. If tuple, mean is used.
+                                      Defaults to 1.0.
+        baro_tau (float, optional): Barometer time constant [s]. Defaults to 3600.0.
+        acc_tau (float, optional): Accelerometer time constant [s]. Defaults to 3600.0.
+        gyro_tau (float, optional): Gyroscope time constant [s]. Defaults to 3600.0.
+        fogm_tau (float, optional): FOGM catch-all time constant [s]. Defaults to 600.0.
+        date (float, optional): Measurement date (decimal year) for IGRF [yr].
+                                Defaults to get_years(2020,185).
+        core (bool, optional): If true, include core magnetic field in measurement. Defaults to False.
 
-def calc_crlb_vel(*args, **kwargs):
-    """Placeholder for CRLB velocity calculation."""
-    pass
+    Returns:
+        np.ndarray: Non-linear covariance matrix P_out [nx,nx,N]
+    """
+    if P0 is None:
+        P0 = create_P0()
+    if Qd is None:
+        Qd = create_Qd()
+    if date is None:
+        date = get_years(2020, 185)
 
-def calc_crlb_att(*args, **kwargs):
-    """Placeholder for CRLB attitude calculation."""
-    pass
+    N = len(lat)
+    nx = P0.shape[0]
 
-def calc_crlb_fogm(*args, **kwargs):
-    """Placeholder for CRLB FOGM calculation."""
-    pass
+    P_out = np.zeros((nx, nx, N), dtype=P0.dtype)
+    x_true = np.zeros(nx, dtype=P0.dtype)  # CRLB evaluated about true trajectory (zero error state)
+    P = P0.copy()
 
-def calc_crlb_map(*args, **kwargs):
-    """Placeholder for CRLB map calculation."""
-    pass
+    R_val = R
+    if isinstance(R, (list, tuple)) and len(R) == 2:
+        R_val = np.mean(R)
+    elif not isinstance(R, (float, int, np.number)):
+        # Assuming R is already a scalar or a compatible numpy type
+        if isinstance(R, np.ndarray) and R.size == 1:
+            R_val = R.item()
+        else:
+            raise ValueError("R must be a scalar or a (min,max) tuple.")
+
+
+    itp_mapS_arg = itp_mapS
+
+    for t in range(N):
+        current_itp_mapS_for_step = itp_mapS_arg
+        if isinstance(itp_mapS_arg, MapCache):
+            current_itp_mapS_for_step = get_cached_map(itp_mapS_arg, lat[t], lon[t], alt[t], silent=True)
+
+        _Cnb_t = Cnb[:, :, t] if Cnb.ndim == 3 else Cnb
+        
+        # Ensure Cnb is 2D for get_Phi
+        _Cnb_t_for_phi = _Cnb_t
+        if _Cnb_t.ndim == 3:
+            if _Cnb_t.shape[2] == 1: _Cnb_t_for_phi = _Cnb_t[:,:,0] # Should not happen if Cnb is (3,3,N)
+            # else: raise ValueError("Cnb for get_Phi should be a 2D matrix for a single time step.")
+            # This case is handled by Cnb[:,:,t] above for (3,3,N)
+
+        lat_t, lon_t, alt_t = lat[t], lon[t], alt[t]
+        vn_t, ve_t, vd_t = vn[t], ve[t], vd[t]
+        fn_t, fe_t, fd_t = fn[t], fe[t], fd[t]
+
+        Phi = get_Phi(nx, lat_t, vn_t, ve_t, vd_t, fn_t, fe_t, fd_t, _Cnb_t_for_phi,
+                      baro_tau, acc_tau, gyro_tau, fogm_tau, dt)
+
+        # H is (1, nx) for scalar measurement
+        H_m = get_H(current_itp_mapS_for_step, x_true, lat_t, lon_t, alt_t, date=date, core=core)
+        if H_m.ndim == 1: H_m = H_m.reshape(1, -1) # Ensure (1,nx)
+
+        # S = H P H' + R
+        S_val = H_m @ P @ H_m.T + R_val
+        if S_val.ndim == 0: S_val = S_val.reshape(1,1) # Ensure S_val is 2D
+
+        # K = P H' S^-1
+        # K_val = (P @ H_m.T) @ np.linalg.inv(S_val) # Direct inversion
+        K_val = (np.linalg.solve(S_val.T, H_m @ P.T)).T # Using solve
+
+        # P_update = (I - K H) P
+        P = (np.eye(nx, dtype=P.dtype) - K_val @ H_m) @ P
+        
+        P_out[:, :, t] = P
+
+        # P_propagate = Phi P_update Phi' + Qd
+        P = Phi @ P @ Phi.T + Qd
+
+    return P_out
+
+def crlb_ins(
+    ins: INS, itp_mapS,
+    P0=None, Qd=None, R=1.0,
+    baro_tau=3600.0, acc_tau=3600.0, gyro_tau=3600.0, fogm_tau=600.0,
+    date=None, core=False
+):
+    """
+    CRLB overload for INS data structure.
+    See `crlb` for argument details. `ins.dt` is used for the time step.
+    """
+    return crlb(
+        ins.lat, ins.lon, ins.alt, ins.vn, ins.ve, ins.vd,
+        ins.fn, ins.fe, ins.fd, ins.Cnb,
+        ins.dt, itp_mapS,
+        P0=P0, Qd=Qd, R=R,
+        baro_tau=baro_tau, acc_tau=acc_tau, gyro_tau=gyro_tau, fogm_tau=fogm_tau,
+        date=date, core=core
+    )
+
+def calc_crlb_pos(P_crlb):
+    """
+    Calculate position CRLB (standard deviation) from CRLB covariance matrices.
+    Assumes P_crlb is [nx,nx,N] or [nx,nx].
+    States 0,1,2 are position errors (N, E, D).
+    Returns sqrt(diag(P_pos)) for each time step, shape (3,N) or (3,).
+    """
+    if P_crlb.ndim == 3:
+        return np.sqrt(np.diagonal(P_crlb[0:3, 0:3, :], axis1=0, axis2=1))
+    elif P_crlb.ndim == 2:
+        return np.sqrt(np.diag(P_crlb[0:3, 0:3]))
+    else:
+        raise ValueError("P_crlb must be 2D or 3D array")
+
+def calc_crlb_vel(P_crlb):
+    """
+    Calculate velocity CRLB (standard deviation) from CRLB covariance matrices.
+    Assumes P_crlb is [nx,nx,N] or [nx,nx].
+    States 3,4,5 are velocity errors (N, E, D).
+    Returns sqrt(diag(P_vel)) for each time step, shape (3,N) or (3,).
+    """
+    if P_crlb.ndim == 3:
+        return np.sqrt(np.diagonal(P_crlb[3:6, 3:6, :], axis1=0, axis2=1))
+    elif P_crlb.ndim == 2:
+        return np.sqrt(np.diag(P_crlb[3:6, 3:6]))
+    else:
+        raise ValueError("P_crlb must be 2D or 3D array")
+
+def calc_crlb_att(P_crlb):
+    """
+    Calculate attitude CRLB (standard deviation) from CRLB covariance matrices.
+    Assumes P_crlb is [nx,nx,N] or [nx,nx].
+    States 6,7,8 are attitude errors.
+    Returns sqrt(diag(P_att)) for each time step, shape (3,N) or (3,).
+    """
+    if P_crlb.ndim == 3:
+        return np.sqrt(np.diagonal(P_crlb[6:9, 6:9, :], axis1=0, axis2=1))
+    elif P_crlb.ndim == 2:
+        return np.sqrt(np.diag(P_crlb[6:9, 6:9]))
+    else:
+        raise ValueError("P_crlb must be 2D or 3D array")
+
+def calc_crlb_fogm(P_crlb):
+    """
+    Calculate FOGM bias CRLB (standard deviation) from CRLB covariance matrices.
+    Assumes P_crlb is [nx,nx,N] or [nx,nx].
+    State 16 is FOGM bias (assuming nx >= 17).
+    Returns sqrt(P_fogm_bias) for each time step, shape (N,) or scalar.
+    """
+    if P_crlb.shape[0] < 17: # nx must be at least 17
+        raise ValueError("P_crlb does not have enough states for FOGM bias (expected nx >= 17).")
+    if P_crlb.ndim == 3:
+        return np.sqrt(P_crlb[16, 16, :])
+    elif P_crlb.ndim == 2:
+        return np.sqrt(P_crlb[16, 16])
+    else:
+        raise ValueError("P_crlb must be 2D or 3D array")
+
+def calc_crlb_map(P_crlb):
+    """
+    Calculate map bias CRLB (standard deviation) from CRLB covariance matrices.
+    Assumes P_crlb is [nx,nx,N] or [nx,nx].
+    State 17 is map bias (assuming nx >= 18).
+    Returns sqrt(P_map_bias) for each time step, shape (N,) or scalar.
+    """
+    if P_crlb.shape[0] < 18: # nx must be at least 18
+        raise ValueError("P_crlb does not have enough states for map bias (expected nx >= 18).")
+    if P_crlb.ndim == 3:
+        return np.sqrt(P_crlb[17, 17, :])
+    elif P_crlb.ndim == 2:
+        return np.sqrt(P_crlb[17, 17])
+    else:
+        raise ValueError("P_crlb must be 2D or 3D array")

@@ -3,6 +3,8 @@
 Utility functions for map handling, including interpolation.
 """
 import numpy as np
+import os # Added for file path operations
+import scipy.io # Added for loading .mat files
 from scipy.interpolate import RegularGridInterpolator
 from typing import Union, Tuple, Any
 
@@ -233,13 +235,42 @@ def get_map_val(
 # Placeholder functions moved from the (missing) get_map.py
 # These would need their actual implementations.
 
-def get_map(map_name: str, *args, **kwargs) -> Union[MapS, MapV, None]:
+def get_map(map_name: str, variable_name: str = "map_data", *args, **kwargs) -> Union[MapS, MapV, None]:
     """
-    Placeholder for get_map. Retrieves a specific magnetic map.
-    Actual implementation would load from file or database.
+    Retrieves a specific magnetic map, attempting to load from a .mat file if map_name is a path.
+    If map_name is a known ID (e.g., "namad", "emm720"), it returns a placeholder.
     """
-    print(f"Placeholder: get_map called for {map_name}")
-    # Return a dummy MapS object or MAP_S_NULL
+    if os.path.exists(map_name) and map_name.endswith(".mat"):
+        try:
+            mat_content = scipy.io.loadmat(map_name)
+            if variable_name in mat_content:
+                data_content = mat_content[variable_name]
+                # Assuming map_data_content structure from test files, often nested arrays
+                map_info = "Loaded Map"
+                # Apply [0][0] indexing as suggested for nested arrays from .mat files
+                map_map = (data_content["map"][0][0] if "map" in data_content.dtype.names else data_content["map_data"][0][0])
+                map_xx = np.deg2rad(data_content["xx"][0][0].ravel().astype(float))
+                map_yy = np.deg2rad(data_content["yy"][0][0].ravel().astype(float))
+                map_alt_data = data_content["alt"][0][0]
+                # MapS constructor expects info, lat, lon, alt, map, xx, yy
+                # lat and lon are not directly extracted as 1D arrays here, so use empty or derive from yy/xx if needed.
+                # For now, pass empty arrays for lat/lon as they are not used by RegularGridInterpolator directly.
+                return MapS(info=map_info,
+                            lat=np.array([]), # Placeholder, as MapS expects it but not directly from .mat here
+                            lon=np.array([]), # Placeholder
+                            alt=map_alt_data,
+                            map=map_map,
+                            xx=map_xx,
+                            yy=map_yy)
+            else:
+                print(f"Warning: Variable '{variable_name}' not found in {map_name}. Returning MAP_S_NULL.")
+                return MAP_S_NULL
+        except Exception as e:
+            print(f"Error loading map from {map_name}: {e}. Returning MAP_S_NULL.")
+            return MAP_S_NULL
+    
+    # Fallback for known map IDs or if file not found/not .mat
+    print(f"Placeholder: get_map called for {map_name}. Returning MAP_S_NULL.")
     return MAP_S_NULL
 
 def ottawa_area_maps(map_name: str = "", *args, **kwargs) -> Union[MapS, None]:
@@ -268,8 +299,63 @@ def upward_fft(map_in: MapS, alt_out: float, *args, **kwargs) -> MapS:
     # Return a modified version of map_in or a new MapS
     return map_in # Simplistic placeholder
 
-def map_interpolate(map_obj: MapS, lat: np.ndarray, lon: np.ndarray, *args, **kwargs) -> np.ndarray:
-    """Placeholder for map_interpolate. This is largely superseded by get_map_val."""
-    print(f"Placeholder: map_interpolate called for map {map_obj.info}. Consider using get_map_val.")
-    # Simple passthrough or call get_map_val
-    return get_map_val(map_obj, lat, lon)
+def map_interpolate(map_obj: MapS, method: str = "linear", bounds_error: bool = False, fill_value: float = np.nan) -> RegularGridInterpolator:
+    """
+    Creates and returns an interpolator function for a MapS object.
+    This function is intended to be called once to get a callable interpolator.
+    """
+    if not (hasattr(map_obj, 'yy') and hasattr(map_obj, 'xx') and hasattr(map_obj, 'map')):
+        raise ValueError("MapS object is missing 'yy', 'xx', or 'map' attributes for interpolation.")
+
+    map_grid_lat = np.asarray(map_obj.yy).squeeze()
+    map_grid_lon = np.asarray(map_obj.xx).squeeze()
+    map_values = np.asarray(map_obj.map)
+
+    if map_grid_lat.ndim == 0: map_grid_lat = np.array([map_grid_lat.item()])
+    if map_grid_lon.ndim == 0: map_grid_lon = np.array([map_grid_lon.item()])
+
+    if map_grid_lat.size == 0 or map_grid_lon.size == 0 or map_values.size == 0:
+        raise ValueError(f"Map '{map_obj.info}' has empty coordinates or map data.")
+
+    if map_grid_lat.ndim != 1 or map_grid_lon.ndim != 1:
+        raise ValueError("Map grid coordinates (yy, xx) must be 1D arrays.")
+
+    if map_values.ndim != 2:
+        raise ValueError(f"MapS.map data must be 2D. Got {map_values.ndim}D for map '{map_obj.info}'.")
+
+    if map_values.shape != (map_grid_lat.size, map_grid_lon.size):
+        raise ValueError(
+            f"Map data shape {map_values.shape} does not match grid coordinate "
+            f"dimensions ({map_grid_lat.size}, {map_grid_lon.size}) for map '{map_obj.info}'."
+        )
+
+    try:
+        interpolator = RegularGridInterpolator(
+            (map_grid_lat, map_grid_lon),
+            map_values,
+            method=method,
+            bounds_error=bounds_error,
+            fill_value=fill_value
+        )
+        return interpolator
+    except ValueError as e:
+        raise ValueError(f"Error creating interpolator for map '{map_obj.info}': {e}. Check if yy and xx are sorted and unique.")
+
+def get_lim(arr: np.ndarray, buffer: float = 0.0) -> Tuple[float, float]:
+    """
+    Placeholder for get_lim. Calculates the limits of an array with an optional buffer.
+    """
+    if arr.size == 0:
+        return np.nan, np.nan
+    min_val = np.min(arr) - buffer
+    max_val = np.max(arr) + buffer
+    return min_val, max_val
+
+def map_trim(map_data: Union[MapS, MapV], *args, **kwargs) -> Union[MapS, MapV]:
+    """
+    Placeholder for map_trim. Trims a map to a specified region or trajectory.
+    """
+    print(f"Placeholder: map_trim called for map {map_data.info}")
+    # In a real implementation, this would perform actual trimming.
+    # For now, return the original map data.
+    return map_data

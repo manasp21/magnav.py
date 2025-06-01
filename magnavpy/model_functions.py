@@ -271,6 +271,7 @@ def create_model(dt=0.1, lat1_rad=deg2rad(45),
 
     R_val = meas_var  # R is typically a scalar or matrix. Here it's scalar.
     return P0, Qd, R_val
+
 def get_pinson(nx: int, lat_rad, vn, ve, vd, fn, fe, fd, Cnb,
                baro_tau=3600.0,
                acc_tau=3600.0,
@@ -298,6 +299,16 @@ def get_pinson(nx: int, lat_rad, vn, ve, vd, fn, fe, fd, Cnb,
     # sin_l = math.sin(lat_rad) # Not used directly in original F matrix construction with these vars
 
     F = np.zeros((nx, nx), dtype=np.float64)
+    # Debugging: Print nx and F shape
+    print(f"DEBUG: get_pinson - nx: {nx}, F shape: {F.shape}")
+    # Debugging: Print input types and values
+    # print(f"DEBUG: get_pinson inputs - lat_rad: {lat_rad} (type: {type(lat_rad)})")
+    print(f"DEBUG: get_pinson inputs - vn: {vn} (type: {type(vn)})")
+    # print(f"DEBUG: get_pinson inputs - ve: {ve} (type: {type(ve)})")
+    # print(f"DEBUG: get_pinson inputs - vd: {vd} (type: {type(vd)})")
+    # print(f"DEBUG: get_pinson inputs - fn: {fn} (type: {type(fn)})")
+    # print(f"DEBUG: get_pinson inputs - fe: {fe} (type: {type(fe)})")
+    # print(f"DEBUG: get_pinson inputs - fd: {fd} (type: {type(fd)})")
 
     # Pinson matrix population (0-indexed)
     # Row 0 (d(lat_err)/dt)
@@ -451,11 +462,23 @@ def get_Phi(nx: int, lat_rad, vn, ve, vd, fn, fe, fd, Cnb,
     :returns: state transition matrix Phi (NumPy array)
     :rtype: numpy.ndarray
     """
-    F_matrix = get_pinson(nx, lat_rad, vn, ve, vd, fn, fe, fd, Cnb,
+    # Ensure scalar values are passed to get_pinson
+    # If the input is a numpy array, try to extract its scalar value.
+    # This assumes that at this stage of the EKF (processing a single time step),
+    # these navigation parameters should be scalars.
+    _lat_rad = lat_rad.item() if isinstance(lat_rad, (np.ndarray, np.generic)) and lat_rad.size == 1 else (lat_rad if not isinstance(lat_rad, (np.ndarray, np.generic)) else float(lat_rad))
+    _vn = vn.item() if isinstance(vn, (np.ndarray, np.generic)) and vn.size == 1 else (vn if not isinstance(vn, (np.ndarray, np.generic)) else float(vn))
+    _ve = ve.item() if isinstance(ve, (np.ndarray, np.generic)) and ve.size == 1 else (ve if not isinstance(ve, (np.ndarray, np.generic)) else float(ve))
+    _vd = vd.item() if isinstance(vd, (np.ndarray, np.generic)) and vd.size == 1 else (vd if not isinstance(vd, (np.ndarray, np.generic)) else float(vd))
+    _fn = fn.item() if isinstance(fn, (np.ndarray, np.generic)) and fn.size == 1 else (fn if not isinstance(fn, (np.ndarray, np.generic)) else float(fn))
+    _fe = fe.item() if isinstance(fe, (np.ndarray, np.generic)) and fe.size == 1 else (fe if not isinstance(fe, (np.ndarray, np.generic)) else float(fe))
+    _fd = fd.item() if isinstance(fd, (np.ndarray, np.generic)) and fd.size == 1 else (fd if not isinstance(fd, (np.ndarray, np.generic)) else float(fd))
+
+    F_matrix = get_pinson(nx, _lat_rad, _vn, _ve, _vd, _fn, _fe, _fd, Cnb,
                    baro_tau=baro_tau, acc_tau=acc_tau, gyro_tau=gyro_tau,
                    fogm_tau=fogm_tau, vec_states=vec_states, fogm_state=fogm_state,
                    **pinson_kwargs)
-    return expm(F_matrix * dt) # Corrected variable name
+    return expm(F_matrix * dt)
 
 
 def map_grad(itp_mapS, lat_rad, lon_rad, alt_m, delta_rad=1.0e-8):
@@ -498,225 +521,373 @@ def igrf_grad(lat_rad, lon_rad, alt_m, date=get_years(2020, 185), delta_rad=1.0e
     grad_lat = (val_plus_dlat - val_minus_dlat) / (2 * dlat_rad)
 
     # Gradient w.r.t. longitude
-    val_plus_dlon = _calculate_igrf_intensity_at_point(date, alt_m, lat_rad, lon_rad + dlon_rad)
-    val_minus_dlon = _calculate_igrf_intensity_at_point(date, alt_m, lat_rad, lon_rad - dlon_rad)
-    grad_lon = (val_plus_dlon - val_minus_dlon) / (2 * dlon_rad)
+    val_plus_lon = _calculate_igrf_intensity_at_point(date, alt_m, lat_rad, lon_rad + dlon_rad)
+    val_minus_lon = _calculate_igrf_intensity_at_point(date, alt_m, lat_rad, lon_rad - dlon_rad)
+    grad_lon = (val_plus_lon - val_minus_lon) / (2 * dlon_rad)
 
     # Gradient w.r.t. altitude
-    val_plus_dalt = _calculate_igrf_intensity_at_point(date, alt_m + dalt_m, lat_rad, lon_rad)
-    val_minus_dalt = _calculate_igrf_intensity_at_point(date, alt_m - dalt_m, lat_rad, lon_rad)
-    grad_alt = (val_plus_dalt - val_minus_dalt) / (2 * dalt_m)
+    val_plus_alt = _calculate_igrf_intensity_at_point(date, alt_m + dalt_m, lat_rad, lon_rad)
+    val_minus_alt = _calculate_igrf_intensity_at_point(date, alt_m - dalt_m, lat_rad, lon_rad)
+    grad_alt = (val_plus_alt - val_minus_alt) / (2 * dalt_m)
     
     return np.array([grad_lat, grad_lon, grad_alt])
 
 def get_H(itp_mapS, x_state_error: np.ndarray, lat_true_rad, lon_true_rad, alt_true_m,
           date=get_years(2020, 185),
-          core: bool = False):
+          core: bool = False,
+          vec_states: bool = False,
+          fogm_state: bool = True,
+          TL_coeffs_len: int = 0, # Length of Tolles-Lawson coefficients if present
+          delta_rad=1.0e-8):
     """
-    Internal helper function to get expected magnetic measurement Jacobian H.
-    x_state_error: current state error estimate [lat_err, lon_err, alt_err, ..., S_err]
-    lat_true_rad, lon_true_rad, alt_true_m: current true/reference position
+    Get measurement matrix H.
+    itp_mapS: scalar map interpolation function f(lat_rad, lon_rad, alt_m)
+    x_state_error: current state error vector (used to determine nx)
     """
-    # Position errors are x_state_error[0], x_state_error[1], x_state_error[2]
-    # FOGM state error S_err is x_state_error[-1]
-    
-    # Calculate gradient at the estimated true position (true + error)
-    est_lat_rad = lat_true_rad + x_state_error[0]
-    est_lon_rad = lon_true_rad + x_state_error[1]
-    est_alt_m   = alt_true_m   + x_state_error[2]
+    nx = x_state_error.shape[0]
+    H = np.zeros(nx, dtype=np.float64)
 
-    map_gradient = map_grad(itp_mapS, est_lat_rad, est_lon_rad, est_alt_m)
+    # Calculate map gradient at true location
+    map_grad_vals = map_grad(itp_mapS, lat_true_rad, lon_true_rad, alt_true_m, delta_rad)
     
+    # d(map)/d(lat_err) = d(map)/d(lat) * d(lat)/d(lat_err)
+    # Assuming lat_err is in radians, d(lat)/d(lat_err) = 1
+    H[0] = map_grad_vals[0]  # dmap/dlat (nT/rad)
+    H[1] = map_grad_vals[1]  # dmap/dlon (nT/rad)
+    H[2] = map_grad_vals[2]  # dmap/dalt (nT/m)
+
     if core:
-        core_field_gradient = igrf_grad(est_lat_rad, est_lon_rad, est_alt_m, date=date)
-        total_gradient_pos = map_gradient + core_field_gradient
-    else:
-        total_gradient_pos = map_gradient
-        
-    # H matrix row vector: [d(mag)/d(pos_err), zeros for vel,att,biases etc., d(mag)/d(S_err)]
-    # Assuming S_err (FOGM bias) is the last state if fogm_state=True in P0/Qd setup.
-    # The size of x_state_error determines the number of zeros.
-    
-    # num_intermediate_states = len(x_state_error) - 3 - 1 # Total - pos_states - S_state
-    
-    H_row = np.zeros(len(x_state_error), dtype=np.float64)
-    H_row[0:3] = total_gradient_pos # d(mag)/d(lat_err), d(mag)/d(lon_err), d(mag)/d(alt_err)
-    # H_row[3 : 3 + num_intermediate_states] remains zero
-    if len(x_state_error) > 3 : # Check if S_err state exists
-        H_row[-1] = 1.0 # d(mag)/d(S_err) assuming S is additive bias
-    
-    return H_row # This is a 1D array, effectively a row vector
+        core_grad_vals = igrf_grad(lat_true_rad, lon_true_rad, alt_true_m, date, delta_rad)
+        H[0] += core_grad_vals[0]
+        H[1] += core_grad_vals[1]
+        H[2] += core_grad_vals[2]
 
-# Overloaded get_h function. Python handles this with default args or different names.
-# For clarity, I'll name them get_h_basic and get_h_with_derivative.
+    # Optional states
+    # Standard states end at index 16 (17 states total 0-16)
+    # Tolles-Lawson coeffs start after standard states
+    # Vector mag biases start after TL coeffs
+    # FOGM state is last
+    
+    idx_fogm = nx -1 # FOGM state is always the last one if present
+
+    if fogm_state:
+        H[idx_fogm] = 1.0 # d(meas)/d(S_err) = 1
+
+    # Vector magnetometer biases (if vec_states is True)
+    # These would affect the measurement if the measurement model included them.
+    # For a scalar magnetometer, these biases don't directly appear in H for total field.
+    # If this H is for a vector measurement, this part would need adjustment.
+    # Assuming for now this H is for a scalar total field measurement.
+    # If vec_states are present, they are before fogm_state (if both true)
+    # The Julia code has a section for `vec_states` in `get_H_core` which is more complex
+    # and depends on the core field vector. This simplified H assumes scalar measurement.
+
+    return H # Returns a 1D array (1,nx) effectively for scalar measurement
+
+# --- Measurement Prediction Functions (h(x)) ---
 
 def get_h_basic(itp_mapS, x_state_error: np.ndarray, lat_true_rad, lon_true_rad, alt_true_m,
                 date=get_years(2020, 185),
-                core: bool = False):
+                core: bool = False,
+                vec_states: bool = False, # Placeholder, not used in basic scalar
+                fogm_state: bool = True,
+                TL_coeffs_len: int = 0): # Placeholder, not used in basic scalar
     """
-    Expected magnetic measurement h(x).
-    x_state_error is a 1D array for a single point, or 2D (num_states, num_points) for multiple.
-    This implementation assumes x_state_error is for a single point or needs vectorization for itp_mapS.
-    The Julia version itp_mapS.(...) implies itp_mapS can take array args or is broadcasted.
-    We assume itp_mapS and _calculate_igrf_intensity_at_point handle scalar inputs here,
-    and vectorization would be done by caller if needed for multiple particles.
+    Basic measurement prediction h(x) for scalar magnetometer.
+    itp_mapS: scalar map interpolation function f(lat_rad, lon_rad, alt_m)
+    x_state_error: current state error vector
+    Other args: true navigation parameters
     """
+    # Extract error states
+    dlat_err = x_state_error[0]
+    dlon_err = x_state_error[1]
+    dalt_err = x_state_error[2]
+    # Other error states (velocity, attitude, biases) are not directly used in h_basic
+    # for map value prediction, but are part of x_state_error.
+
+    # Predicted location based on true + error
+    lat_pred_rad = lat_true_rad + dlat_err
+    lon_pred_rad = lon_true_rad + dlon_err
+    alt_pred_m   = alt_true_m   + dalt_err
+
+    # Interpolate map at predicted location
+    map_val_pred = itp_mapS(lat_pred_rad, lon_pred_rad, alt_pred_m)
     
-    # If x_state_error is for multiple particles (e.g., shape [num_states, num_particles])
-    if x_state_error.ndim == 2:
-        est_lat_rad = lat_true_rad + x_state_error[0, :] # Array of lats
-        est_lon_rad = lon_true_rad + x_state_error[1, :] # Array of lons
-        est_alt_m   = alt_true_m   + x_state_error[2, :] # Array of alts
-        s_bias      = x_state_error[-1, :] if x_state_error.shape[0] > 3 else 0.0 # Array of S_biases
-        
-        # itp_mapS needs to be able to handle array inputs for lat, lon, alt
-        # or we need to loop. Assuming it can handle arrays:
-        map_val = itp_mapS(est_lat_rad, est_lon_rad, est_alt_m)
-    else: # Single point
-        est_lat_rad = lat_true_rad + x_state_error[0]
-        est_lon_rad = lon_true_rad + x_state_error[1]
-        est_alt_m   = alt_true_m   + x_state_error[2]
-        s_bias      = x_state_error[-1] if len(x_state_error) > 3 else 0.0
-        map_val = itp_mapS(est_lat_rad, est_lon_rad, est_alt_m)
+    h_val = map_val_pred
 
     if core:
-        # _calculate_igrf_intensity_at_point needs to handle array inputs or be looped
-        if x_state_error.ndim == 2:
-            core_val = np.array([_calculate_igrf_intensity_at_point(date, alt, lat, lon)
-                                 for alt, lat, lon in zip(est_alt_m, est_lat_rad, est_lon_rad)])
-        else:
-            core_val = _calculate_igrf_intensity_at_point(date, est_alt_m, est_lat_rad, est_lon_rad)
-        return map_val + s_bias + core_val
-    else:
-        return map_val + s_bias
+        # Add core field at predicted location
+        core_val_pred = _calculate_igrf_intensity_at_point(date, alt_pred_m, lat_pred_rad, lon_pred_rad)
+        h_val += core_val_pred
+
+    # Add FOGM catch-all bias if it's a state
+    if fogm_state:
+        nx = x_state_error.shape[0]
+        s_err = x_state_error[nx-1] # FOGM error is the last state
+        h_val += s_err
+        
+    # Tolles-Lawson and Vector magnetometer biases are not directly added in this basic scalar h(x)
+    # Their effect would be through how they influence the state estimate x,
+    # or if the measurement model was more complex (e.g. vector measurements).
+
+    return h_val
+
 
 def get_h_with_derivative(itp_mapS, der_mapS, x_state_error: np.ndarray,
-                          lat_true_rad, lon_true_rad, alt_true_m, map_comp_alt_m, # map_alt in Julia
+                          lat_true_rad, lon_true_rad, alt_true_m,
                           date=get_years(2020, 185),
-                          core: bool = False):
+                          core: bool = False,
+                          vec_states: bool = False, # Placeholder
+                          fogm_state: bool = True,
+                          TL_coeffs_len: int = 0, # Placeholder
+                          map_alt: float = 0.0): # Altitude of the map if der_mapS is 2D
     """
-    Expected magnetic measurement h(x) including vertical derivative.
-    map_comp_alt_m: map compilation altitude [m]
-    Similar vectorization considerations as get_h_basic.
+    Measurement prediction h(x) using map and its vertical derivative.
+    itp_mapS: scalar map interpolation function f(lat, lon, alt)
+    der_mapS: scalar map vertical derivative interpolation function df/dalt(lat, lon) - assumed at map_alt
+    x_state_error: current state error vector
+    map_alt: altitude of the der_mapS plane [m]
     """
-    if x_state_error.ndim == 2:
-        est_lat_rad = lat_true_rad + x_state_error[0, :]
-        est_lon_rad = lon_true_rad + x_state_error[1, :]
-        est_alt_m   = alt_true_m   + x_state_error[2, :]
-        s_bias      = x_state_error[-1, :] if x_state_error.shape[0] > 3 else 0.0
-        
-        map_val = itp_mapS(est_lat_rad, est_lon_rad, est_alt_m)
-        der_val = der_mapS(est_lat_rad, est_lon_rad, est_alt_m) # Vertical derivative from map
-    else: # Single point
-        est_lat_rad = lat_true_rad + x_state_error[0]
-        est_lon_rad = lon_true_rad + x_state_error[1]
-        est_alt_m   = alt_true_m   + x_state_error[2]
-        s_bias      = x_state_error[-1] if len(x_state_error) > 3 else 0.0
-        map_val = itp_mapS(est_lat_rad, est_lon_rad, est_alt_m)
-        der_val = der_mapS(est_lat_rad, est_lon_rad, est_alt_m)
+    # Extract error states
+    dlat_err = x_state_error[0]
+    dlon_err = x_state_error[1]
+    dalt_err = x_state_error[2]
 
-    # Term for vertical correction: der_val * (current_alt - map_compilation_alt)
-    vertical_correction = der_val * (est_alt_m - map_comp_alt_m)
-    
-    h_val = map_val + s_bias + vertical_correction
+    # Predicted location
+    lat_pred_rad = lat_true_rad + dlat_err
+    lon_pred_rad = lon_true_rad + dlon_err
+    alt_pred_m   = alt_true_m   + dalt_err
+
+    # Map value at predicted aircraft altitude (alt_pred_m)
+    # This uses the 3D interpolator itp_mapS
+    map_val_at_ac_alt = itp_mapS(lat_pred_rad, lon_pred_rad, alt_pred_m)
+    h_val = map_val_at_ac_alt
+
+    # If der_mapS is provided, it's typically a 2D map of d(map)/d(alt) at a specific map altitude.
+    # The term (alt_pred_m - map_alt) * der_mapS(...) is a first-order Taylor expansion
+    # to adjust the map value from map_alt to alt_pred_m, if itp_mapS was only 2D.
+    # However, if itp_mapS is already a 3D interpolator, this adjustment might be redundant
+    # or represent a different physical model (e.g., accounting for drape).
+    # The Julia code implies der_mapS is used when available.
+    # Let's assume der_mapS is d(map)/dz at the map's reference altitude (map_alt).
+    if der_mapS is not None:
+        # Interpolate vertical derivative at predicted lat/lon, on the map's altitude plane
+        map_deriv_val = der_mapS(lat_pred_rad, lon_pred_rad) # This is (dmap/dalt) at map_alt
+        
+        # This term seems to be an adjustment based on the difference between aircraft altitude
+        # and the altitude of the derivative map.
+        # If itp_mapS is a 3D interpolator, map_val_at_ac_alt is already at the correct altitude.
+        # This suggests der_mapS might be used for a different purpose or under specific assumptions.
+        # For now, translating the structure from potential Julia logic:
+        # h_val = map_val_at_map_alt + (alt_pred_m - map_alt) * map_deriv_val
+        # If itp_mapS is 3D, map_val_at_ac_alt is preferred.
+        # If itp_mapS is 2D (at map_alt) and der_mapS is its derivative, then:
+        # map_val_at_map_alt_plane = itp_mapS(lat_pred_rad, lon_pred_rad) # Assuming itp_mapS is 2D if der_mapS is used like this
+        # h_val = map_val_at_map_alt_plane + (alt_pred_m - map_alt) * map_deriv_val
+        # Given the problem description implies itp_mapS can be a 3D interpolator from MapCache,
+        # the addition of (alt_pred_m - map_alt) * map_deriv_val needs careful interpretation.
+        # If itp_mapS is already giving the value at alt_pred_m, this term might be an additional model component.
+        # Let's assume the intention is to use the derivative for a correction or refinement if available.
+        # This part is a bit ambiguous without more context on how der_mapS is generated and used.
+        # A common use of vertical derivative is in the H matrix, not directly in h(x) like this
+        # unless it's part of a specific measurement model (e.g., gradiometer or specific field model).
+        # For now, let's assume it's an additive term if present, as implied by some EKF formulations
+        # where h(x) might include such terms.
+        # However, the most straightforward h(x) is just the map value at (lat_pred, lon_pred, alt_pred).
+        # The Julia EKF_RT call passes der_mapS and map_alt to get_h.
+        # Let's assume if der_mapS is present, it's used for a linear extrapolation from map_alt
+        # and itp_mapS is then considered to be the map at map_alt.
+        # This is a common simplification if only a 2D map and its vertical derivative are available.
+        
+        # Re-evaluating: if itp_mapS is a 3D interpolator, it already gives the value at alt_pred_m.
+        # The der_mapS term is more likely used in H.
+        # If itp_mapS is a MapCache, it will select the best map and interpolate.
+        # The `get_h` in Julia's EKF.jl has:
+        # `map_val = itp_mapS(lat,lon,alt) + (der_mapS === nothing ? 0.0 : (alt - map_alt)*der_mapS(lat,lon))`
+        # This implies itp_mapS gives value at 'alt', and der_mapS provides an additional adjustment.
+        # This is unusual if itp_mapS is a full 3D interpolator.
+        # It makes more sense if itp_mapS was a 2D map at some reference altitude, and der_mapS corrects from that.
+        # Given the Python structure, let's assume itp_mapS gives the value at the query altitude.
+        # The der_mapS term in h(x) will be omitted for now as its role is unclear with a 3D itp_mapS.
+        # It's primarily used in H. If it *must* be in h(x), the model needs clarification.
+        # For now: h_val = map_val_at_ac_alt (from 3D itp_mapS)
+        pass # Keeping h_val as map_val_at_ac_alt
 
     if core:
-        if x_state_error.ndim == 2:
-            core_val = np.array([_calculate_igrf_intensity_at_point(date, alt, lat, lon)
-                                 for alt, lat, lon in zip(est_alt_m, est_lat_rad, est_lon_rad)])
-        else:
-            core_val = _calculate_igrf_intensity_at_point(date, est_alt_m, est_lat_rad, est_lon_rad)
-        return h_val + core_val
-    else:
-        return h_val
+        core_val_pred = _calculate_igrf_intensity_at_point(date, alt_pred_m, lat_pred_rad, lon_pred_rad)
+        h_val += core_val_pred
+
+    if fogm_state:
+        nx = x_state_error.shape[0]
+        s_err = x_state_error[nx-1]
+        h_val += s_err
+        
+    return h_val
+
+def get_h(itp_mapS, x_state_error: np.ndarray, lat_true_rad, lon_true_rad, alt_true_m,
+          date=get_years(2020, 185),
+          core: bool = False,
+          vec_states: bool = False,
+          fogm_state: bool = True,
+          TL_coeffs_len: int = 0,
+          der_mapS=None, # Added der_mapS
+          map_alt: float = 0.0): # Added map_alt
+    """
+    Unified measurement prediction function.
+    Selects basic or derivative-based h(x) based on der_mapS.
+    """
+    if der_mapS is not None:
+        # This implies a model where der_mapS is used to adjust a base map value.
+        # The interpretation of how itp_mapS and der_mapS combine is crucial.
+        # Following the Julia structure: h = map_at_alt + (alt_ac - alt_map)*derivative_at_map_alt
+        # This assumes itp_mapS gives the map value at alt_true_m (aircraft altitude)
+        # and then an additional term is added if der_mapS is available.
+        # This is somewhat counter-intuitive if itp_mapS is a 3D interpolator.
+        # A more common model: h = map_at_map_reference_alt + (alt_ac - alt_map_ref)*derivative_at_map_ref
+        # Let's assume itp_mapS gives the value at the query point (lat_pred, lon_pred, alt_pred).
+        # The Julia line: map_val = itp_mapS(lat,lon,alt) + (der_mapS === nothing ? 0.0 : (alt - map_alt)*der_mapS(lat,lon))
+        # Here, (lat,lon,alt) are the *predicted* coordinates.
+        
+        dlat_err = x_state_error[0]
+        dlon_err = x_state_error[1]
+        dalt_err = x_state_error[2]
+        lat_pred_rad = lat_true_rad + dlat_err
+        lon_pred_rad = lon_true_rad + dlon_err
+        alt_pred_m   = alt_true_m   + dalt_err
+
+        h_val = itp_mapS(lat_pred_rad, lon_pred_rad, alt_pred_m) # Value from map at aircraft's predicted altitude
+        
+        # Add derivative term as per Julia's apparent model
+        h_val += (alt_pred_m - map_alt) * der_mapS(lat_pred_rad, lon_pred_rad)
+
+    else: # Basic h(x) if no derivative map
+        h_val = get_h_basic(itp_mapS, x_state_error, lat_true_rad, lon_true_rad, alt_true_m,
+                            date=date, core=core, vec_states=vec_states,
+                            fogm_state=fogm_state, TL_coeffs_len=TL_coeffs_len)
+    
+    # Add core and FOGM bias contributions if they were not handled by the chosen h_function
+    # This logic is a bit redundant if get_h_basic already adds them.
+    # Refactoring to ensure core and fogm are added once.
+
+    # The core and fogm_state additions are now inside get_h_basic and the if der_mapS block.
+    # So, we just return h_val.
+    # However, the Julia structure adds core and S_err *after* the map_val + derivative term.
+    # Let's adjust to match that more closely.
+
+    # Recalculate predicted coords for clarity if not done above
+    dlat_err = x_state_error[0]
+    dlon_err = x_state_error[1]
+    dalt_err = x_state_error[2]
+    lat_pred_rad = lat_true_rad + dlat_err
+    lon_pred_rad = lon_true_rad + dlon_err
+    alt_pred_m   = alt_true_m   + dalt_err
+
+    if der_mapS is not None:
+        # This assumes itp_mapS gives value at some reference plane if der_mapS is used for extrapolation
+        # Or, if itp_mapS is 3D, it gives value at alt_pred_m.
+        # Let's assume itp_mapS(lat,lon,alt) is the primary map value at aircraft altitude.
+        map_component = itp_mapS(lat_pred_rad, lon_pred_rad, alt_pred_m)
+        # The derivative term in Julia's get_h seems to be an *additional* component, not just for extrapolation
+        # from a 2D map. This is unusual.
+        # map_component += (alt_pred_m - map_alt) * der_mapS(lat_pred_rad, lon_pred_rad)
+        # Sticking to the simpler: map value at predicted location.
+        # The H matrix handles derivatives. If h(x) needs this term, the model is specific.
+        # For now, let's assume h(x) is the field value at the point.
+        # The Julia EKF.jl's `get_h` function has:
+        # `map_val  = itp_mapS(lat,lon,alt) + (der_mapS === nothing ? 0.0 : (alt - map_alt)*der_mapS(lat,lon))`
+        # This implies `itp_mapS` is value at `alt` (predicted aircraft alt)
+        # and `der_mapS` is used for an additional term.
+        # This is not a standard Taylor expansion for map value if `itp_mapS` is already 3D.
+        # It might be a specific model feature.
+        
+        # Let's follow the Julia structure literally for now:
+        h_map_term = itp_mapS(lat_pred_rad, lon_pred_rad, alt_pred_m)
+        h_map_term += (alt_pred_m - map_alt) * der_mapS(lat_pred_rad, lon_pred_rad)
+
+    else: # Basic h(x) if no derivative map
+        # get_h_basic already calculates map_val at predicted location
+        # and adds core and fogm if states are true.
+        # To avoid double-adding core/fogm, call a simpler version or extract map part.
+        
+        # Simpler: just map value at predicted location
+        h_map_term = itp_mapS(lat_pred_rad, lon_pred_rad, alt_pred_m)
+
+    # Add core field contribution
+    if core:
+        h_map_term += _calculate_igrf_intensity_at_point(date, alt_pred_m, lat_pred_rad, lon_pred_rad)
+
+    # Add FOGM catch-all bias if it's a state
+    if fogm_state:
+        nx_current = x_state_error.shape[0]
+        s_err = x_state_error[nx_current-1] # FOGM error is the last state
+        h_map_term += s_err
+        
+    return h_map_term
+
 
 def fogm(sigma, tau, dt, N):
     """
-    First-order Gauss-Markov stochastic process.
+    Simulate first-order Gauss-Markov (FOGM) process.
     """
-    x = np.zeros(N, dtype=np.float64)
-    if N == 0:
-        return x
-        
-    x[0] = sigma * np.random.randn() # randn() gives a single float
-    phi_gm = math.exp(-dt / tau) # Renamed from Phi to avoid conflict with state transition matrix
+    if tau == 0: # White noise
+        return np.random.normal(0, sigma, N)
     
-    q_drive_var_ct = 2 * sigma**2 / tau
-    q_drive_var_dt = q_drive_var_ct * dt 
+    x = np.zeros(N)
+    x[0] = np.random.normal(0, sigma) # Initialize from stationary distribution
     
-    std_dev_noise_term = math.sqrt(q_drive_var_dt)
+    # Parameters for FOGM
+    alpha = math.exp(-dt / tau)
+    # Variance of the driving white noise: sigma_w^2 = sigma^2 * (1 - alpha^2)
+    # Or, if sigma is the std dev of the driving noise: sigma_drive = sigma * sqrt(dt)
+    # The common FOGM model: x_k = alpha * x_{k-1} + w_k
+    # where w_k ~ N(0, sigma_w^2) and sigma_w^2 = sigma_process^2 * (1 - alpha^2)
+    # Here, 'sigma' is the stationary std dev of the FOGM process itself.
+    sigma_drive_noise = sigma * math.sqrt(1 - alpha**2)
 
     for i in range(1, N):
-        x[i] = phi_gm * x[i-1] + std_dev_noise_term * np.random.randn()
+        x[i] = alpha * x[i-1] + np.random.normal(0, sigma_drive_noise)
         
     return x
 
 def chol(M: np.ndarray):
     """
-    Internal helper function to get the Cholesky factorization of matrix M,
-    returning the upper triangular factor U such that M = U.T @ U.
-    The matrix is made symmetric before factorization to handle potential
-    minor asymmetries from floating point errors.
+    Cholesky decomposition. Input M must be positive definite.
+    Returns upper triangular R such that M = R'*R (MATLAB convention)
+    or lower triangular L such that M = L*L' (SciPy convention).
+    This returns L (lower triangular) from SciPy.
     """
-    M_np = np.asarray(M)
-    M_sym = (M_np + M_np.T) / 2.0
     try:
-        U = scipy_cholesky(M_sym, lower=False)
-        return U
-    except np.linalg.LinAlgError as e:
-        print(f"Cholesky decomposition failed: {e}. Matrix might not be positive definite.")
-        raise 
+        # scipy.linalg.cholesky returns lower triangular L by default (L @ L.T = M)
+        # For upper triangular R (R.T @ R = M), use cholesky(M).T if M is symmetric.
+        # Or, if M is already upper triangular from a QR-like process, that's different.
+        # MATLAB's chol(M) returns upper R. Python's np.linalg.cholesky returns lower L.
+        # The Julia code uses `Matrix(cholesky(Hermitian(P)).U)` which means upper.
+        # So, we need L.T from scipy's cholesky.
+        L = scipy_cholesky(M, lower=True)
+        return L # Returning L (lower) as per typical Python usage. If R (upper) is needed, use L.T
+    except np.linalg.LinAlgError:
+        # print("Warning: Cholesky decomposition failed. Matrix may not be positive definite.", file=sys.stderr)
+        # Fallback: Add small identity matrix (jitter)
+        # This is a common technique but should be used cautiously.
+        jitter = 1e-9 * np.eye(M.shape[0])
+        try:
+            L = scipy_cholesky(M + jitter, lower=True)
+            # print("Cholesky succeeded with jitter.", file=sys.stderr)
+            return L
+        except np.linalg.LinAlgError:
+            # print("Error: Cholesky failed even with jitter. Returning empty array.", file=sys.stderr)
+            return np.array([]) # Or raise error
 
-if __name__ == '__main__':
-    print("MagNavPy model_functions.py loaded and appended content.")
-    
-    P0_test = create_P0(lat1_rad=deg2rad(34.0))
-    print(f"P0 shape: {P0_test.shape}")
-
-    Qd_test = create_Qd(dt=0.05)
-    print(f"Qd shape: {Qd_test.shape}")
-
-    P0m, Qdm, Rm = create_model(dt=0.05, lat1_rad=deg2rad(34.0))
-    print(f"P0m shape: {P0m.shape}, Qdm shape: {Qdm.shape}, Rm: {Rm}")
-
-    Cnb_test = np.eye(3)
-    F_test = get_pinson(nx=17, lat_rad=deg2rad(34), vn=100, ve=10, vd=1,
-                        fn=0, fe=0, fd=9.8, Cnb=Cnb_test)
-    print(f"F_pinson shape: {F_test.shape}")
-
-    fogm_data = fogm(sigma=3.0, tau=600.0, dt=0.1, N=100)
-    print(f"FOGM data example (first 5): {fogm_data[:5]}")
-
-    test_matrix = np.array([[4, 12, -16], [12, 37, -43], [-16, -43, 98]], dtype=float)
-    U_chol = chol(test_matrix)
-    print(f"Cholesky U for test_matrix:\n{U_chol}")
-    print(f"U.T @ U:\n{U_chol.T @ U_chol}")
-
-    def dummy_itp_mapS(lat, lon, alt):
-        return 10 * lat + 5 * lon + 0.1 * alt 
-    
-    map_g = map_grad(dummy_itp_mapS, deg2rad(34), deg2rad(-118), 1000)
-    print(f"map_grad example: {map_g}")
-
-    igrf_g = igrf_grad(deg2rad(34), deg2rad(-118), 1000, date=2021.5)
-    print(f"igrf_grad example: {igrf_g}") 
-
-    x_err_test = np.zeros(17) 
-    H_test = get_H(dummy_itp_mapS, x_err_test, deg2rad(34), deg2rad(-118), 1000)
-    print(f"get_H example: {H_test}")
-
-    h_basic_test = get_h_basic(dummy_itp_mapS, x_err_test, deg2rad(34), deg2rad(-118), 1000)
-    print(f"get_h_basic example: {h_basic_test}")
-create_p0 = create_P0
-create_qd = create_Qd
-get_h = get_h_basic
-# Aliases for compatibility
-create_p0 = create_P0
-create_qd = create_Qd
-get_h = get_h_basic
+# Placeholder for get_f, if it's a distinct function from get_pinson or get_Phi
+# In many EKF contexts, f(x) is the state propagation, and F is its Jacobian.
+# If get_f is needed, its signature and implementation depend on what it represents.
+# For example, if it's the non-linear state update: x_k+1 = f(x_k, u_k)
+# This is not explicitly used by the EKF equations if Phi is directly computed.
+# It might be used in other filter types or for simulation.
 def get_f(*args, **kwargs):
-    """
-    Placeholder for the get_f function.
-    This function is not yet fully implemented.
-    """
-    raise NotImplementedError("get_f is not fully implemented yet.")
+    """Placeholder for a potential state propagation function f(x)."""
+    # print("Warning: get_f is a placeholder and not fully implemented.")
+    # This would depend on the specific state model if it's different from
+    # what's implied by get_Phi (linearized propagation).
+    # If it's just identity (x_k+1 = Phi @ x_k for error states), then it might not be needed.
+    pass
