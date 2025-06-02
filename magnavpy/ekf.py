@@ -548,3 +548,348 @@ def calc_crlb_map(P_crlb):
         return np.sqrt(P_crlb[17, 17])
     else:
         raise ValueError("P_crlb must be 2D or 3D array")
+from .common_types import MagV # MagV needed for ekf_online
+from .tolles_lawson import create_TL_A, create_TL_coef, get_TL_term_ind # For online TL EKF
+from scipy.linalg import block_diag # For constructing block diagonal matrices
+
+# Default terms for Tolles-Lawson in online EKF, mapping from common names to short codes
+# Ensure these short codes are compatible with create_TL_A and create_TL_coef
+DEFAULT_TL_TERMS_ONLINE = ['p', 'i', 'e', 'b'] # permanent, induced, eddy, bias
+
+def ekf_online_setup(
+    flux: MagV,
+    meas: np.ndarray,
+    ind: np.ndarray = None,
+    Bt: np.ndarray = None,
+    lam: float = 0.025, # lam is lambda in Julia
+    terms: List[str] = None, # Uses short codes e.g. ['p', 'i', 'e', 'b']
+    pass1: float = 0.1,
+    pass2: float = 0.9,
+    fs: float = 10.0,
+    pole: int = 4,
+    trim: int = 20,
+    N_sigma: int = 100,
+    Bt_scale: float = 50000.0
+):
+    """
+    Setup for Extended Kalman Filter (EKF) with online learning of Tolles-Lawson coefficients.
+    Ports MagNav.jl/src/ekf_online.jl -> ekf_online_setup.
+
+    Args:
+        flux (MagV): Vector magnetometer measurement struct.
+        meas (np.ndarray): Scalar magnetometer measurement [nT].
+        ind (np.ndarray, optional): Selected data indices. Defaults to all true.
+        Bt (np.ndarray, optional): Magnitude of vector magnetometer measurements or
+                                   scalar magnetometer measurements for modified Tolles-Lawson [nT].
+                                   Defaults to norm of flux components.
+        lam (float, optional): Ridge parameter for create_TL_coef. Defaults to 0.025.
+        terms (List[str], optional): Tolles-Lawson terms to use (e.g., ['p','i','e','b']).
+                                     Defaults to ['p', 'i', 'e', 'b'].
+        pass1 (float, optional): First passband frequency [Hz] for create_TL_coef. Defaults to 0.1.
+        pass2 (float, optional): Second passband frequency [Hz] for create_TL_coef. Defaults to 0.9.
+        fs (float, optional): Sampling frequency [Hz] for create_TL_coef. Defaults to 10.0.
+        pole (int, optional): Number of poles for Butterworth filter in create_TL_coef. Defaults to 4.
+        trim (int, optional): Number of elements to trim after filtering in create_TL_coef. Defaults to 20.
+        N_sigma (int, optional): Number of Tolles-Lawson coefficient sets to use to create TL_sigma.
+                                 Defaults to 100.
+        Bt_scale (float, optional): Scaling factor for induced & eddy current terms [nT]. Defaults to 50000.0.
+
+    Returns:
+        tuple: (x0_TL, P0_TL, TL_sigma)
+            - x0_TL (np.ndarray): Initial Tolles-Lawson coefficient states.
+            - P0_TL (np.ndarray): Initial Tolles-Lawson covariance matrix.
+            - TL_sigma (np.ndarray): Tolles-Lawson coefficients process noise std dev.
+    """
+    if ind is None:
+        ind = np.ones(len(meas), dtype=bool)
+    if terms is None:
+        terms = DEFAULT_TL_TERMS_ONLINE
+
+    # Calculate Bt if not provided, using only indexed data for consistency
+    if Bt is None:
+        if not (flux.x.shape == flux.y.shape == flux.z.shape):
+            raise ValueError("flux.x, flux.y, flux.z must have the same shape.")
+        Bt_full = np.sqrt(flux.x**2 + flux.y**2 + flux.z**2)
+        Bt_calc = Bt_full[ind]
+    else:
+        Bt_calc = Bt[ind] if Bt.shape == ind.shape else Bt # Assume Bt is already indexed if not matching ind shape
+
+    x0_TL, y_var = create_TL_coef(
+        flux_or_Bx=flux, meas_or_By=meas, # Pass full flux and meas
+        ind=ind, # Pass indexer
+        Bt=Bt_calc, # Pass indexed Bt
+        lam=lam, terms=terms, pass1=pass1, pass2=pass2, fs=fs,
+        pole=pole, trim=trim, Bt_scale=Bt_scale, return_y_var=True
+    )
+
+    A = create_TL_A(
+        flux_or_Bx=flux, ind=ind, # Pass indexer
+        Bt=Bt_calc, # Pass indexed Bt
+        terms=terms, Bt_scale=Bt_scale
+    )
+
+    if A.shape[0] == 0: # No data selected by ind
+        raise ValueError("No data selected by 'ind', A matrix is empty.")
+    if A.shape[0] < A.shape[1]:
+        # Not enough data points for a full rank A'A, use pseudo-inverse
+        P0_TL = np.linalg.pinv(A.T @ A) * y_var if y_var is not None else np.linalg.pinv(A.T @ A)
+    else:
+        try:
+            P0_TL = np.linalg.inv(A.T @ A) * y_var if y_var is not None else np.linalg.inv(A.T @ A)
+        except np.linalg.LinAlgError: # If singular
+             P0_TL = np.linalg.pinv(A.T @ A) * y_var if y_var is not None else np.linalg.pinv(A.T @ A)
+
+
+    true_indices = np.where(ind)[0]
+    N_ind = len(true_indices)
+    
+    # Ensure N_sigma calculation is robust
+    min_data_for_tl_coef = max(2 * trim, 50) # Minimum data points for one create_TL_coef call
+    if N_ind < min_data_for_tl_coef:
+        raise ValueError(f"Not enough data points ({N_ind}) after indexing. Need at least {min_data_for_tl_coef}.")
+
+    # N is the number of windows to process
+    # window_len is the length of data in each window
+    # N_sigma is the desired number of coefficient sets
+    
+    # Max possible windows of at least min_data_for_tl_coef length
+    max_possible_N = N_ind - min_data_for_tl_coef + 1
+    N = min(max_possible_N, N_sigma)
+
+    N_min_loops = 10 # Julia has N_min = 10
+    if N < N_min_loops and N_ind >= min_data_for_tl_coef : # if we can make at least one window
+        print(f"Warning: ekf_online_setup: N_sigma reduced from {N_sigma} to {N} due to limited data ({N_ind} points). Minimum {N_min_loops} preferred.")
+    elif N_ind < min_data_for_tl_coef:
+         raise ValueError(f"ekf_online_setup: Not enough data ({N_ind} points) to create even one TL coefficient set. Need at least {min_data_for_tl_coef}.")
+    if N <= 0 : N = 1 # Ensure at least one loop if possible
+
+    window_len = N_ind - N + 1 # Length of data for each call to create_TL_coef
+
+    coef_set = np.zeros((len(x0_TL), N))
+
+    for i in range(N):
+        current_window_indices = true_indices[i : i + window_len]
+        
+        # Bt for the current window
+        if Bt is None:
+             Bt_window = np.sqrt(flux.x[current_window_indices]**2 + \
+                                 flux.y[current_window_indices]**2 + \
+                                 flux.z[current_window_indices]**2)
+        else: # If Bt was provided, assume it's full and slice, or it's pre-indexed and we need to be careful
+             # This part is tricky if Bt is pre-indexed. Assuming full Bt for simplicity here.
+             Bt_window = Bt[current_window_indices]
+
+
+        coef_set[:, i] = create_TL_coef(
+            flux_or_Bx=flux, meas_or_By=meas, # Pass full flux and meas
+            ind=current_window_indices, # Pass current window's indices
+            Bt=Bt_window,
+            lam=lam, terms=terms, pass1=pass1, pass2=pass2, fs=fs,
+            pole=pole, trim=trim, Bt_scale=Bt_scale, return_y_var=False
+        )
+
+    TL_sigma = np.std(coef_set, axis=1)
+
+    return x0_TL, P0_TL, TL_sigma
+
+
+def ekf_online(
+    lat: np.ndarray, lon: np.ndarray, alt: np.ndarray,
+    vn: np.ndarray, ve: np.ndarray, vd: np.ndarray,
+    fn: np.ndarray, fe: np.ndarray, fd: np.ndarray, Cnb: np.ndarray,
+    meas: np.ndarray, flux: MagV, dt: float, itp_mapS,
+    x0_TL: np.ndarray, P0_tl: np.ndarray, tl_proc_noise_std: np.ndarray,
+    R: Union[float, np.ndarray] = 1.0,
+    P0_nav: np.ndarray = None, Qd_nav: np.ndarray = None,
+    baro_tau: float = 3600.0, acc_tau: float = 3600.0,
+    gyro_tau: float = 3600.0, fogm_tau: float = 600.0,
+    date: float = None, core: bool = False,
+    terms: List[str] = None, Bt_scale: float = 50000.0,
+    map_alt: float = 0.0,
+    der_mapS=None # For consistency with batch EKF, though get_H might not use it for scalar
+):
+    """
+    Extended Kalman Filter (EKF) with online learning of Tolles-Lawson coefficients.
+    Ports MagNav.jl/src/ekf_online.jl -> ekf_online.
+    Assumes nx_vec = 0 (no estimation of vector magnetometer errors in state).
+
+    Args:
+        lat, lon, alt, vn, ve, vd, fn, fe, fd, Cnb: Standard navigation inputs.
+        meas (np.ndarray): Scalar magnetometer measurement [nT].
+        flux (MagV): Vector magnetometer measurements (for TL A matrix).
+        dt (float): Measurement time step [s].
+        itp_mapS: Scalar map interpolation function or MapCache.
+        x0_TL (np.ndarray): Initial Tolles-Lawson coefficient states.
+        P0_tl (np.ndarray): Initial covariance for TL states.
+        tl_proc_noise_std (np.ndarray): Process noise standard deviation for TL states.
+        R (float or np.ndarray): Measurement noise variance. Defaults to 1.0.
+        P0_nav (np.ndarray, optional): Initial covariance for navigation states (18 states).
+                                       Defaults to create_P0().
+        Qd_nav (np.ndarray, optional): Process noise for navigation states (18 states).
+                                       Defaults to create_Qd().
+        baro_tau, acc_tau, gyro_tau, fogm_tau: Time constants.
+        date (float, optional): Measurement date for IGRF. Defaults to get_years(2020,185).
+        core (bool, optional): If true, include core field. Defaults to False.
+        terms (List[str], optional): Tolles-Lawson terms for A matrix. Defaults to ['p','i','e','b'].
+        Bt_scale (float, optional): Scaling for TL A matrix. Defaults to 50000.0.
+        map_alt (float, optional): Map altitude. Defaults to 0.
+        der_mapS (callable, optional): Scalar map vertical derivative interpolator.
+
+    Returns:
+        FILTres: Filter results struct.
+    """
+    if P0_nav is None: P0_nav = create_P0()
+    if Qd_nav is None: Qd_nav = create_Qd()
+    if date is None: date = get_years(2020, 185)
+    if terms is None: terms = DEFAULT_TL_TERMS_ONLINE
+
+    N_data = len(lat)
+    nx_nav = P0_nav.shape[0] # Should be 18
+    nx_TL = len(x0_TL)
+    nx_full = nx_nav + nx_TL
+
+    if P0_nav.shape != (nx_nav, nx_nav) or Qd_nav.shape != (nx_nav, nx_nav):
+        raise ValueError(f"P0_nav and Qd_nav must be square matrices of size {nx_nav}x{nx_nav}")
+    if P0_tl.shape != (nx_TL, nx_TL):
+        raise ValueError(f"P0_tl must be a square matrix of size {nx_TL}x{nx_TL}")
+    if tl_proc_noise_std.shape != (nx_TL,):
+        raise ValueError(f"tl_proc_noise_std must be of length {nx_TL}")
+
+    # Construct full P0 and Qd
+    P0_full = block_diag(P0_nav, P0_tl)
+    Qd_tl = np.diag(tl_proc_noise_std**2)
+    Qd_full = block_diag(Qd_nav, Qd_tl)
+
+    if meas.ndim == 1:
+        ny = 1
+        _meas_internal = meas.reshape(-1, 1)
+    elif meas.ndim == 2 and meas.shape[1] == 1:
+        ny = 1
+        _meas_internal = meas
+    else:
+        raise ValueError("meas must be a 1D array or a 2D array with one column.")
+
+    x_out = np.zeros((nx_full, N_data))
+    P_out = np.zeros((nx_full, nx_full, N_data))
+    r_out = np.zeros((ny, N_data))
+
+    x = np.zeros(nx_full)
+    x[nx_nav : nx_full] = x0_TL # Nav states start at zero error
+    P = P0_full.copy()
+
+    # Create the Tolles-Lawson A matrix (design matrix)
+    # Bt for A matrix construction - use full flux data for consistency with Julia
+    # The create_TL_A function handles indexing if `ind` is passed, but here we need A for all time steps.
+    # So, we pass full flux and it should return A for all time steps.
+    Bt_for_A = np.sqrt(flux.x**2 + flux.y**2 + flux.z**2)
+    A_tl_matrix = create_TL_A(flux_or_Bx=flux, Bt=Bt_for_A, terms=terms, Bt_scale=Bt_scale)
+
+    if A_tl_matrix.shape[0] != N_data or A_tl_matrix.shape[1] != nx_TL:
+        raise ValueError(f"A_tl_matrix shape mismatch. Expected ({N_data}, {nx_TL}), got {A_tl_matrix.shape}")
+
+    itp_mapS_arg = itp_mapS # To handle MapCache if passed
+
+    for t in range(N_data):
+        current_itp_mapS_for_step = itp_mapS_arg
+        current_der_mapS_for_step = der_mapS
+        if isinstance(itp_mapS_arg, MapCache):
+            # This assumes a function _get_interpolator_from_cache exists or
+            # get_h/get_H can handle MapCache directly.
+            # For now, pass the cache and let get_h/get_H resolve.
+            # If get_h/get_H expect only interpolators, this needs adjustment:
+            # current_itp_mapS_for_step = _get_interpolator_from_cache(itp_mapS_arg, lat[t], lon[t], alt[t])
+            # current_der_mapS_for_step = _get_interpolator_from_cache(der_mapS, lat[t], lon[t], alt[t]) if isinstance(der_mapS, MapCache) else der_mapS
+            pass # Assuming get_h/get_H handle MapCache
+
+        _Cnb_t = Cnb[:, :, t] if Cnb.ndim == 3 else Cnb
+
+        # 1. Construct full Phi
+        Phi_nav_t = get_Phi(nx_nav, lat[t], vn[t], ve[t], vd[t], fn[t], fe[t], fd[t], _Cnb_t,
+                            baro_tau, acc_tau, gyro_tau, fogm_tau, dt)
+        Phi_tl_t = np.eye(nx_TL) # TL states are random walk or constant
+        Phi_full_t = block_diag(Phi_nav_t, Phi_tl_t)
+
+        # 2. Predict measurement
+        x_nav_t = x[:nx_nav]
+        x_tl_t = x[nx_nav:]
+        
+        A_row_t = A_tl_matrix[t, :]
+        h_tl_comp = A_row_t @ x_tl_t
+        
+        # get_h expects nav states (including map bias if it's part of its state definition)
+        h_map_pred = get_h(current_itp_mapS_for_step, x_nav_t, lat[t], lon[t], alt[t],
+                           date=date, core=core, der_map=current_der_mapS_for_step, map_alt=map_alt)
+        
+        if isinstance(h_map_pred, (float, int, np.number)): h_map_pred = np.array([h_map_pred])
+        if h_map_pred.ndim == 1: h_map_pred = h_map_pred.reshape(-1,1) # to (1,1)
+
+        h_full_pred = h_tl_comp + h_map_pred
+        resid = _meas_internal[t, :].reshape(-1,1) - h_full_pred
+        r_out[:, t] = resid.flatten()
+
+        # 3. Construct full H
+        # get_H returns Jacobian for nav states (1 x nx_nav)
+        H_nav_t = get_H(current_itp_mapS_for_step, x_nav_t, lat[t], lon[t], alt[t],
+                        date=date, core=core)
+        if H_nav_t.ndim == 1: H_nav_t = H_nav_t.reshape(1, -1) # Ensure (1, nx_nav)
+
+        H_tl_t = A_row_t.reshape(1, -1) # (1 x nx_TL)
+        H_full_t = np.concatenate((H_nav_t, H_tl_t), axis=1) # (1 x nx_full)
+
+        # 4. Kalman Update
+        S_matrix_term = H_full_t @ P @ H_full_t.T
+        _R_val = R
+        if isinstance(R, np.ndarray) and R.ndim == 0: _R_val = R.item() # Handle 0-dim array R
+
+        if ny == 1 and isinstance(_R_val, (float, int, np.number)):
+            S_val = S_matrix_term + _R_val
+        elif isinstance(_R_val, np.ndarray) and _R_val.shape == (ny, ny):
+            S_val = S_matrix_term + _R_val
+        else: # Fallback for ny > 1 and R_val scalar (though ny=1 here)
+            S_val = S_matrix_term + np.eye(ny) * _R_val
+        if S_val.ndim == 0: S_val = S_val.reshape(1,1)
+
+        K_val = (np.linalg.solve(S_val.T, H_full_t @ P.T)).T
+
+        x = x + K_val @ resid.flatten()
+        P = (np.eye(nx_full) - K_val @ H_full_t) @ P
+        
+        x_out[:, t] = x
+        P_out[:, :, t] = P
+
+        # 5. Propagate
+        x = Phi_full_t @ x
+        P = Phi_full_t @ P @ Phi_full_t.T + Qd_full
+        
+    return FILTres(x_out, P_out, r_out, True)
+
+
+def ekf_online_ins(
+    ins: INS,
+    meas: np.ndarray,
+    flux: MagV,
+    itp_mapS,
+    x0_TL: np.ndarray, P0_tl: np.ndarray, tl_proc_noise_std: np.ndarray,
+    R: Union[float, np.ndarray] = 1.0,
+    P0_nav: np.ndarray = None, Qd_nav: np.ndarray = None,
+    baro_tau: float = 3600.0, acc_tau: float = 3600.0,
+    gyro_tau: float = 3600.0, fogm_tau: float = 600.0,
+    date: float = None, core: bool = False,
+    terms: List[str] = None, Bt_scale: float = 50000.0,
+    map_alt: float = 0.0,
+    der_mapS=None
+):
+    """
+    EKF with online Tolles-Lawson learning, overload for INS data structure.
+    See `ekf_online` for detailed argument descriptions.
+    """
+    return ekf_online(
+        ins.lat, ins.lon, ins.alt, ins.vn, ins.ve, ins.vd,
+        ins.fn, ins.fe, ins.fd, ins.Cnb,
+        meas, flux, ins.dt, itp_mapS,
+        x0_TL, P0_tl, tl_proc_noise_std,
+        R=R, P0_nav=P0_nav, Qd_nav=Qd_nav,
+        baro_tau=baro_tau, acc_tau=acc_tau, gyro_tau=gyro_tau, fogm_tau=fogm_tau,
+        date=date, core=core, terms=terms, Bt_scale=Bt_scale,
+        map_alt=map_alt, der_mapS=der_mapS
+    )

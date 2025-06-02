@@ -3,10 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import detrend as scipy_detrend, welch, spectrogram
 # Note: firwin, filtfilt were in thought process but not directly used in final Julia code shown
-# from scipy.signal import firwin, filtfilt
 from scipy.stats import pearsonr, linregress
 from scipy.special import expit as sigmoid # for σ
-# from scipy.misc import derivative # Deprecated, implemented manually or using alternatives
 import math
 
 # Assuming these will be available from other modules in MagNavPy

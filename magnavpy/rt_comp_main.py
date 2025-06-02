@@ -564,3 +564,283 @@ def ekf_online_nn_setup(
     
     nn_sigma[nn_sigma < 1e-6] = 1e-6
     return P0_nn, nn_sigma
+
+# --- Main Script for Real-Time Compensation Workflow ---
+import argparse
+import os
+import logging
+# import pandas as pd # Already imported numpy as np, copy, typing
+
+# --- Imports from other magnavpy modules for the main script ---
+from . import create_xyz
+from . import map_utils
+from . import compensation
+from . import common_types
+from . import model_functions # For get_igrf if needed
+from .common_types import XYZ0, INS, MagV, MagScal # Assuming MagScal for scalar measurements
+
+def setup_logging():
+    """Sets up basic logging."""
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s - %(levelname)s - %(message)s')
+
+def rt_compensation_main(args):
+    """
+    Main function to run the real-time compensation workflow.
+    """
+    setup_logging()
+    logging.info(f"Starting real-time compensation workflow with args: {args}")
+
+    # 1. Load Data
+    logging.info(f"Loading flight data from: {args.data_file}")
+    try:
+        data_dict = create_xyz.read_xyz_file(args.data_file, file_type=args.data_file_type)
+        
+        ins_data = data_dict['ins']     # Should be an INS object
+        flux_data = data_dict['flux_a'] # Should be a MagV object
+        scalar_mag_data = data_dict['mag_1_uc'] # Should be a np.ndarray (uncompensated scalar)
+        dt = ins_data.dt
+        num_points = ins_data.N
+        logging.info(f"Loaded {num_points} data points with dt={dt}s.")
+
+    except Exception as e:
+        logging.error(f"Error loading data file {args.data_file}: {e}")
+        return
+
+    logging.info(f"Loading magnetic map from: {args.map_file}")
+    try:
+        mag_map = map_utils.get_map(args.map_file, flight_alt=args.map_alt, map_type=args.map_type) # Returns MapS/MapSd
+        itp_mapS = map_utils.get_itp(mag_map) # Returns interpolator function
+        logging.info(f"Loaded map: {mag_map.info}")
+    except Exception as e:
+        logging.error(f"Error loading map file {args.map_file}: {e}")
+        return
+
+    # 2. Initialize Parameters based on mode
+    baro_tau = args.baro_tau
+    acc_tau  = args.acc_tau
+    gyro_tau = args.gyro_tau
+    fogm_tau = args.fogm_tau
+    date_val = get_years(args.year, args.day_of_year)
+
+    R_scalar_mag = np.array([[args.R_scalar_mag**2]]) if args.ekf_mode != 'nn_comp' else args.R_scalar_mag**2
+
+    P_NED = (0.1/60)**2      
+    P_VEL = (0.01)**2        
+    P_ATT = (0.01*np.pi/180)**2 
+    P_ACC = (100e-6*9.81)**2 
+    P_GYR = (0.01*np.pi/180/3600)**2 
+    P_ALT = (1.0)**2         
+
+    if args.ekf_mode == 'tl_comp':
+        logging.info("Setting up for Tolles-Lawson EKF compensation.")
+        ind_setup = np.ones(num_points, dtype=bool)
+        
+        x0_TL, P0_TL, TL_sigma = ekf_online_tl_setup(
+            flux_data, scalar_mag_data, ind=ind_setup,
+            ridge_param=args.tl_ridge_param, terms=args.tl_terms.split(','),
+            pass1=args.tl_pass1, pass2=args.tl_pass2, fs=1/dt,
+            Bt_scale=args.tl_bt_scale
+        )
+        nx_TL = len(x0_TL)
+        logging.info(f"Tolles-Lawson setup complete. {nx_TL} coefficients.")
+
+        nx_ins = 18
+        nx_scalar_bias = 1
+        nx_vec = 0 
+        
+        if args.P0_diag_values:
+            P0_diag = np.array([float(p) for p in args.P0_diag_values.split(',')])
+            if len(P0_diag) != (nx_ins + nx_TL + nx_vec + nx_scalar_bias):
+                raise ValueError(f"P0_diag_values length mismatch. Expected {nx_ins + nx_TL + nx_vec + nx_scalar_bias}, got {len(P0_diag)}")
+            P0 = np.diag(P0_diag)
+        else:
+            P0_ins_diag_default = np.concatenate([
+                np.full(2, P_NED), np.full(3, P_VEL), np.full(3, P_ATT),
+                np.full(3, P_ACC), np.full(3, P_GYR),
+                np.full(1, P_ALT), 
+                np.full(1, 1e-2),   
+                np.full(2, 1e-4)    
+            ]) 
+            P0_ins = np.diag(P0_ins_diag_default[:nx_ins])
+            P0_scalar_bias = np.array([[args.P0_scalar_bias_init**2]])
+            from scipy.linalg import block_diag
+            P0 = block_diag(P0_ins, P0_TL, P0_scalar_bias)
+            if nx_vec > 0: 
+                P0_vec_mag = np.eye(nx_vec) * 1e-2 
+                P0 = block_diag(P0_ins, P0_TL, P0_vec_mag, P0_scalar_bias)
+
+        Qd_ins_diag = np.array([ 
+            (0.03)**2, (0.03)**2, 
+            (0.01)**2, (0.01)**2, (0.01)**2, 
+            (1e-5)**2, (1e-5)**2, (1e-5)**2, 
+            (1e-4)**2, (1e-4)**2, (1e-4)**2, 
+            (1e-6)**2, (1e-6)**2, (1e-6)**2, 
+            (0.1)**2, 
+            (1e-7)**2, 
+            (1e-7)**2 
+        ])[:nx_ins]
+
+        Qd_TL_diag = TL_sigma**2 * dt 
+        Qd_scalar_bias_diag = np.array([args.Qd_scalar_bias_val**2]) * dt
+        
+        Qd = np.diag(np.concatenate([Qd_ins_diag, Qd_TL_diag, Qd_scalar_bias_diag]))
+        if nx_vec > 0:
+             Qd_vec_mag_diag = np.ones(nx_vec) * 1e-4 * dt
+             Qd = np.diag(np.concatenate([Qd_ins_diag, Qd_TL_diag, Qd_vec_mag_diag, Qd_scalar_bias_diag]))
+
+        logging.info(f"Running EKF Online Tolles-Lawson with P0 shape {P0.shape}, Qd shape {Qd.shape}")
+        filt_res = ekf_online_tl_ins(
+            ins_data, scalar_mag_data, flux_data, itp_mapS,
+            x0_TL, P0, Qd, R_scalar_mag, 
+            baro_tau=baro_tau, acc_tau=acc_tau, gyro_tau=gyro_tau,
+            fogm_tau=fogm_tau, date=date_val, core=args.map_core,
+            terms=args.tl_terms.split(','), Bt_scale=args.tl_bt_scale
+        )
+
+    elif args.ekf_mode == 'nn_comp':
+        logging.info("Setting up for Neural Network EKF compensation.")
+        class DummyNN: # Placeholder
+            def __init__(self, num_params=10):
+                self._dummy_num_params = num_params
+                self.params = np.random.randn(num_params)
+            def __call__(self, x): 
+                return np.sum(x) * np.sum(self.params) * 0.01
+        
+        if os.path.exists(args.nn_model_file):
+            try:
+                logging.info(f"Attempting to load NN model from BSON: {args.nn_model_file}")
+                nn_model = DummyNN(num_params=args.nn_num_params_guess) 
+                logging.info("Loaded NN model (or using dummy).")
+            except Exception as e:
+                logging.warning(f"Could not load NN model from {args.nn_model_file}: {e}. Using dummy NN.")
+                nn_model = DummyNN(num_params=args.nn_num_params_guess)
+        else:
+            logging.warning(f"NN model file {args.nn_model_file} not found. Using dummy NN.")
+            nn_model = DummyNN(num_params=args.nn_num_params_guess)
+
+        y_norms = (args.nn_y_norm_bias, args.nn_y_norm_scale) 
+        x_nn_inputs = np.column_stack([flux_data.x, flux_data.y, flux_data.z])
+        if x_nn_inputs.shape[0] != num_points:
+            logging.error("Mismatch in x_nn_inputs length and data points.")
+            return
+
+        P0_nn, nn_sigma = ekf_online_nn_setup(
+            x_nn_inputs, scalar_mag_data, nn_model, y_norms, 
+            N_sigma_points=args.nn_N_sigma_points
+        )
+        nx_nn = P0_nn.shape[0] if P0_nn.ndim == 2 else 0
+        if nx_nn == 0 and args.nn_num_params_guess > 0 : 
+            nx_nn = args.nn_num_params_guess
+            P0_nn = np.eye(nx_nn) * 1e-2
+            nn_sigma = np.ones(nx_nn) * 0.1
+            logging.warning(f"NN setup returned empty P0_nn/nn_sigma, using fallback for {nx_nn} params.")
+
+        logging.info(f"Neural Network setup complete. {nx_nn} parameters.")
+
+        nx_ins = 18
+        nx_scalar_bias = 1
+        
+        if args.P0_diag_values:
+            P0_diag = np.array([float(p) for p in args.P0_diag_values.split(',')])
+            if len(P0_diag) != (nx_ins + nx_nn + nx_scalar_bias):
+                raise ValueError(f"P0_diag_values length mismatch for NN. Expected {nx_ins + nx_nn + nx_scalar_bias}, got {len(P0_diag)}")
+            P0 = np.diag(P0_diag)
+        else:
+            P0_ins_diag_default = np.concatenate([
+                np.full(2, P_NED), np.full(3, P_VEL), np.full(3, P_ATT),
+                np.full(3, P_ACC), np.full(3, P_GYR),
+                np.full(1, P_ALT), np.full(1, 1e-2), np.full(2, 1e-4)
+            ])
+            P0_ins = np.diag(P0_ins_diag_default[:nx_ins])
+            P0_scalar_bias = np.array([[args.P0_scalar_bias_init**2]])
+            from scipy.linalg import block_diag
+            if nx_nn > 0:
+                P0 = block_diag(P0_ins, P0_nn, P0_scalar_bias)
+            else: 
+                P0 = block_diag(P0_ins, P0_scalar_bias) 
+                logging.warning("NN mode selected but nx_nn is 0. P0 might be misconfigured.")
+
+        Qd_ins_diag = np.array([
+            (0.03)**2, (0.03)**2, (0.01)**2, (0.01)**2, (0.01)**2, (1e-5)**2, (1e-5)**2, (1e-5)**2,
+            (1e-4)**2, (1e-4)**2, (1e-4)**2, (1e-6)**2, (1e-6)**2, (1e-6)**2,
+            (0.1)**2, (1e-7)**2, (1e-7)**2,(1e-7)**2
+        ])[:nx_ins]
+
+        Qd_nn_diag = nn_sigma**2 * dt if nx_nn > 0 else np.array([])
+        Qd_scalar_bias_diag = np.array([args.Qd_scalar_bias_val**2]) * dt
+        
+        diag_parts = [Qd_ins_diag]
+        if nx_nn > 0: diag_parts.append(Qd_nn_diag)
+        diag_parts.append(Qd_scalar_bias_diag)
+        Qd = np.diag(np.concatenate(diag_parts))
+
+        logging.info(f"Running EKF Online Neural Network with P0 shape {P0.shape}, Qd shape {Qd.shape}")
+        filt_res = ekf_online_nn_ins(
+            ins_data, scalar_mag_data, itp_mapS, x_nn_inputs,
+            nn_model, y_norms, P0, Qd, R_scalar_mag,
+            baro_tau=baro_tau, acc_tau=acc_tau, gyro_tau=gyro_tau,
+            fogm_tau=fogm_tau, date=date_val, core=args.map_core
+        )
+    else:
+        logging.error(f"Unknown EKF mode: {args.ekf_mode}")
+        return
+
+    logging.info("EKF processing complete.")
+    logging.info(f"Filter success: {filt_res.success_flag}")
+    logging.info(f"Output state shape: {filt_res.x_out.shape}")
+    logging.info(f"Output covariance shape: {filt_res.P_out.shape}")
+    logging.info(f"Output residual shape: {filt_res.r_out.shape}")
+
+    if args.output_dir:
+        os.makedirs(args.output_dir, exist_ok=True)
+        out_path_x = os.path.join(args.output_dir, "ekf_x_out.npy")
+        out_path_P = os.path.join(args.output_dir, "ekf_P_out.npy")
+        out_path_r = os.path.join(args.output_dir, "ekf_r_out.npy")
+        np.save(out_path_x, filt_res.x_out)
+        np.save(out_path_P, filt_res.P_out)
+        np.save(out_path_r, filt_res.r_out)
+        logging.info(f"Results saved to {args.output_dir}")
+
+    logging.info("Real-time compensation workflow finished.")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="MagNav Real-Time Compensation Main Script")
+    parser.add_argument("--data_file", type=str, required=True, help="Path to the flight data file (e.g., .xyz, .h5)")
+    parser.add_argument("--data_file_type", type=str, default=None, help="Type of data file, if not inferable from extension (e.g., 'xyz', 'mat', 'h5')")
+    parser.add_argument("--map_file", type=str, required=True, help="Path to the magnetic anomaly map file (e.g., .h5)")
+    parser.add_argument("--map_alt", type=float, default=None, help="Altitude for map if constant altitude map (e.g. EMAG2). Not for drape maps.")
+    parser.add_argument("--map_type", type=str, default="infer", help="Map type ('scalar', 'scalar_drape', 'emag2', 'emm720', 'namad', 'infer')")
+    parser.add_argument("--map_core", type=bool, default=False, help="Use core field model with map (default: False)")
+
+    parser.add_argument("--output_dir", type=str, default="rt_comp_results", help="Directory to save results")
+    parser.add_argument("--ekf_mode", type=str, choices=['tl_comp', 'nn_comp'], default='tl_comp', help="EKF and compensation mode")
+
+    parser.add_argument("--year", type=int, default=2020, help="Year for IGRF model")
+    parser.add_argument("--day_of_year", type=int, default=185, help="Day of year for IGRF model")
+
+    parser.add_argument("--R_scalar_mag", type=float, default=1.0, help="Measurement noise std dev for scalar magnetometer [nT]")
+    parser.add_argument("--P0_scalar_bias_init", type=float, default=10.0, help="Initial std dev for scalar magnetometer bias state [nT]")
+    parser.add_argument("--Qd_scalar_bias_val", type=float, default=0.01, help="Process noise std dev for scalar magnetometer bias state [nT/sqrt(s)]")
+    parser.add_argument("--P0_diag_values", type=str, default=None, help="Comma-separated string of initial diagonal P0 values for the full state vector.")
+
+    parser.add_argument("--baro_tau", type=float, default=3600.0, help="Barometer bias time constant [s]")
+    parser.add_argument("--acc_tau", type=float, default=3600.0, help="Accelerometer bias time constant [s]")
+    parser.add_argument("--gyro_tau", type=float, default=3600.0, help="Gyroscope bias time constant [s]")
+    parser.add_argument("--fogm_tau", type=float, default=600.0, help="FOGM (scalar mag) bias time constant [s]")
+
+    parser.add_argument("--tl_terms", type=str, default="permanent,induced,eddy", help="Comma-separated Tolles-Lawson terms (permanent, induced, eddy, bias)")
+    parser.add_argument("--tl_ridge_param", type=float, default=0.025, help="Ridge parameter (lambda) for TL coefficient estimation")
+    parser.add_argument("--tl_pass1", type=float, default=0.1, help="Low-pass filter cutoff for TL [Hz]")
+    parser.add_argument("--tl_pass2", type=float, default=0.9, help="High-pass filter cutoff for TL [Hz]")
+    parser.add_argument("--tl_bt_scale", type=float, default=50000.0, help="Bt scaling factor for TL A matrix")
+
+    parser.add_argument("--nn_model_file", type=str, default="nn_model.bson", help="Path to the pre-trained NN model file (format depends on NN library)")
+    parser.add_argument("--nn_y_norm_bias", type=float, default=0.0, help="Bias term for denormalizing NN output")
+    parser.add_argument("--nn_y_norm_scale", type=float, default=1.0, help="Scale term for denormalizing NN output")
+    parser.add_argument("--nn_N_sigma_points", type=int, default=1000, help="Number of points for NN sigma estimation in setup")
+    parser.add_argument("--nn_num_params_guess", type=int, default=100, help="Guess for number of NN parameters if model loading fails/is dummy")
+
+    args = parser.parse_args()
+    rt_compensation_main(args)
