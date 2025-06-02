@@ -17,64 +17,88 @@ class MagV:
 
 # --- Data Structures (Map related classes) ---
 class Map(ABC):
-    """Abstract type for a magnetic anomaly map."""
+    """Abstract type for a magnetic anomaly map.
+    Base fields are inherited by subclasses.
+    """
     info: str       # map information
-    lat: np.ndarray # latitude [rad]
-    lon: np.ndarray # longitude [rad]
-    alt: np.ndarray # altitude [m]
-    map: np.ndarray # magnetic anomaly map [nT]
+    lat: np.ndarray # latitude [rad] - often general bounds or not used if xx/yy present
+    lon: np.ndarray # longitude [rad] - often general bounds or not used if xx/yy present
+    alt: np.ndarray # altitude [m] - type varies in subclasses, shadowed if needed
+    map: np.ndarray # magnetic anomaly map [nT] - structure varies, shadowed if needed
 
 @dataclass
 class MapS(Map):
-    """Scalar magnetic anomaly map struct."""
-    info: str
-    lat: np.ndarray
-    lon: np.ndarray
-    alt: np.ndarray
-    map: np.ndarray
-    xx: np.ndarray = field(default_factory=lambda: np.array([])) # longitude coordinates [rad]
-    yy: np.ndarray = field(default_factory=lambda: np.array([])) # latitude coordinates [rad]
+    """Scalar magnetic anomaly map struct. Based on Julia's MapS.
+    Inherits lat, lon from Map ABC. Defines its own alt (scalar) and map (2D).
+    """
+    info: str       # map information
+    map: np.ndarray # ny x nx scalar magnetic anomaly map [nT] (2D)
+    xx: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))  # nx map x-direction (longitude) coordinates [rad] (1D)
+    yy: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))  # ny map y-direction (latitude)  coordinates [rad] (1D)
+    alt: float      # map altitude [m] (scalar)
+    mask: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=bool)) # ny x nx mask for valid (not filled-in) map data (2D boolean)
+
+    # lat, lon are inherited from Map ABC. If they are needed for __init__ (i.e. no default in ABC),
+    # they must be provided or Map ABC must be adjusted.
+    # For dataclass __init__ generation, fields in MapS shadow those in Map.
+    # Unmentioned fields from Map (like lat, lon if they lack defaults) would be required by __init__.
+    # Assuming lat, lon from Map ABC are handled (e.g. have defaults or are optional in practice).
 
 @dataclass
-class MapSd(MapS):
-    """Scalar magnetic anomaly map struct with derivative information."""
+class MapSd(Map): # Inherits directly from Map, not MapS, for alt_matrix clarity
+    """Scalar magnetic anomaly map struct for drape maps (altitude varies per grid point).
+    Based on Julia's MapSd.
+    """
     info: str
-    lat: np.ndarray
-    lon: np.ndarray
-    alt: np.ndarray
-    map: np.ndarray
-    xx: np.ndarray = field(default_factory=lambda: np.array([]))
-    yy: np.ndarray = field(default_factory=lambda: np.array([]))
-    dmap_dx: np.ndarray = field(default_factory=lambda: np.array([])) # derivative in x-direction
-    dmap_dy: np.ndarray = field(default_factory=lambda: np.array([])) # derivative in y-direction
-    dmap_dz: np.ndarray = field(default_factory=lambda: np.array([])) # derivative in z-direction
+    map: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=float))     # ny x nx scalar magnetic anomaly map [nT] (2D)
+    xx: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))      # nx map x-direction (longitude) coordinates [rad] (1D)
+    yy: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))      # ny map y-direction (latitude)  coordinates [rad] (1D)
+    alt_matrix: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=float)) # ny x nx altitude map [m] (2D). Corresponds to Julia MapSd.alt.
+    mask: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=bool))    # ny x nx mask (2D boolean)
+    # This class does not use the 'alt' field from the Map ABC in the same way as MapS.
+    # lat, lon are inherited from Map ABC.
 
 @dataclass
-class MapS3D(MapS):
-    """3D scalar magnetic anomaly map struct."""
+class MapS3D(Map):
+    """3D (multi-level) scalar magnetic anomaly map struct. Based on Julia's MapS3D."""
     info: str
-    lat: np.ndarray
-    lon: np.ndarray
-    alt: np.ndarray
-    map: np.ndarray
-    xx: np.ndarray = field(default_factory=lambda: np.array([]))
-    yy: np.ndarray = field(default_factory=lambda: np.array([]))
-    zz: np.ndarray = field(default_factory=lambda: np.array([])) # altitude coordinates [m]
+    map: np.ndarray = field(default_factory=lambda: np.empty((0,0,0), dtype=float)) # ny x nx x nz 3D map [nT]
+    xx: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))      # nx longitude coordinates [rad] (1D)
+    yy: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))      # ny latitude coordinates [rad] (1D)
+    zz: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))      # nz altitude levels [m] (1D). Corresponds to Julia MapS3D.alt.
+    mask: np.ndarray = field(default_factory=lambda: np.empty((0,0,0), dtype=bool)) # ny x nx x nz 3D mask
+    # lat, lon are inherited from Map ABC. 'alt' from Map ABC is not directly used by zz.
 
 @dataclass
 class MapV(Map):
-    """Vector magnetic anomaly map struct."""
+    """Vector magnetic anomaly map struct. Based on Julia's MapV."""
     info: str
-    lat: np.ndarray
-    lon: np.ndarray
-    alt: np.ndarray
-    map: np.ndarray
-    x: np.ndarray = field(default_factory=lambda: np.array([])) # x-direction magnetic anomaly [nT]
-    y: np.ndarray = field(default_factory=lambda: np.array([])) # y-direction magnetic anomaly [nT]
-    z: np.ndarray = field(default_factory=lambda: np.array([])) # z-direction magnetic anomaly [nT]
+    # mapX, mapY, mapZ from Julia are x, y, z here.
+    x: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=float)) # x-direction magnetic anomaly [nT] (2D)
+    y: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=float)) # y-direction magnetic anomaly [nT] (2D)
+    z: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=float)) # z-direction magnetic anomaly [nT] (2D)
+    xx: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))  # nx longitude coordinates [rad] (1D)
+    yy: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))  # ny latitude coordinates [rad] (1D)
+    alt: float    # map altitude [m] (scalar)
+    mask: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=bool)) # ny x nx mask (2D boolean)
+    # 'map' field from Map ABC is not directly used by components x,y,z.
+    # lat, lon are inherited. 'alt' from Map ABC is shadowed by float alt here.
 
-# Null map constant
-MAP_S_NULL = MapS(info="null", lat=np.array([]), lon=np.array([]), alt=np.array([]), map=np.array([]))
+# Null map constant, updated for the new MapS definition.
+# Assumes MapS constructor will handle inherited lat, lon from Map ABC if they are required.
+# For this to work without error, lat/lon in Map ABC should ideally have defaults or be Optional.
+# If lat/lon from Map ABC are mandatory non-default, they must be provided here.
+MAP_S_NULL = MapS(
+    info="Null map",
+    # Provide lat/lon if they are mandatory from Map ABC and lack defaults
+    lat=np.array([], dtype=float), # Assuming these are needed by MapS effective __init__
+    lon=np.array([], dtype=float), # Assuming these are needed by MapS effective __init__
+    map=np.zeros((1,1), dtype=float),
+    xx=np.array([0.0], dtype=float),
+    yy=np.array([0.0], dtype=float),
+    alt=0.0,
+    mask=np.ones((1,1), dtype=bool)
+)
 
 class MapCache:
     """Map cache struct, mutable."""
