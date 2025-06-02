@@ -1,35 +1,37 @@
 """
 This module is responsible for creating and initializing XYZ data objects,
-translated from the Julia MagNav.jl/src/create_XYZ.jl.
+and handling XYZ text file input/output.
+Translated and extended from the Julia MagNav.jl/src/create_XYZ.jl.
 """
 import numpy as np
 import h5py
-from typing import Union, Tuple, List, Optional, Any
+from typing import Union, Tuple, List, Optional, Any, Dict
 from dataclasses import dataclass, field
 import math
 import random
+import os
+import pandas as pd
 from scipy.stats import multivariate_normal
 from scipy.interpolate import interp1d
 from copy import deepcopy
 
 # Attempt to import from project modules
 try:
-    from .map_utils import get_map_val # Added import
+    from .map_utils import get_map_val
     from .magnav import (XYZ0, Traj, INS, MagV, MapS, MapSd, MapS3D, MapV,
-                           BaseMap, # Assuming BaseMap is a common base for MapS, MapSd, etc.
-                           Path) # Path = Union[Traj, INS] or a base class
+                           BaseMap, Path)
     from .analysis_util import (
         add_extension, g_earth, get_map, map_check, dlat2dn, dlon2de, dn2dlat,
-        de2dlon, fdm, utm_zone_from_latlon, transform_lla_to_utm, # Assumed geospatial helpers
-        create_dcm_from_vel, dcm2euler, euler2dcm, # Attitude helpers
-        create_ins_model_matrices, get_phi_matrix, correct_cnb_matrix, # INS helpers
-        upward_fft_map, get_map_params, fill_map_gaps, trim_map, # get_map_value_at_coords removed
-        generate_fogm_noise, create_tolles_lawson_A_matrix, # Noise & TL helpers
-        get_igrf_magnetic_field, # IGRF helper
-        apply_band_pass_filter, get_band_pass_filter_coeffs, # Filter helpers
-        tolles_lawson_coeffs_to_matrix, get_tolles_lawson_aircraft_field_vector, # More TL helpers
-        get_trajectory_subset, # Helper for xyz.traj(ind) like behavior
-        approximate_gradient # Helper for map gradient
+        de2dlon, fdm, utm_zone_from_latlon, transform_lla_to_utm,
+        create_dcm_from_vel, dcm2euler, euler2dcm,
+        create_ins_model_matrices, get_phi_matrix, correct_cnb_matrix,
+        upward_fft_map, get_map_params, fill_map_gaps, trim_map,
+        generate_fogm_noise, create_tolles_lawson_A_matrix,
+        get_igrf_magnetic_field,
+        apply_band_pass_filter, get_band_pass_filter_coeffs,
+        tolles_lawson_coeffs_to_matrix, get_tolles_lawson_aircraft_field_vector,
+        get_trajectory_subset,
+        approximate_gradient
     )
     # Define default map identifiers if they are constants in analysis_util
     DEFAULT_SCALAR_MAP_ID = "namad" # Placeholder
@@ -63,7 +65,6 @@ except ImportError:
     def get_map(map_id): return MapS(xx=np.array([]), yy=np.array([]), map=np.array([])) # Dummy
     DEFAULT_SCALAR_MAP_ID = "namad"
     DEFAULT_VECTOR_MAP_ID = "emm720"
-    # Add other dummy functions as needed based on usage below...
     def map_check(m,la,lo): return True
     def dlat2dn(dlat,lat): return dlat * 111000
     def dlon2de(dlon,lat): return dlon * 111000 * np.cos(lat)
@@ -72,9 +73,7 @@ except ImportError:
     def fdm(arr): return np.gradient(arr) if arr.ndim == 1 else np.array([np.gradient(arr[i]) for i in range(arr.shape[0])])
     def utm_zone_from_latlon(lat_deg, lon_deg): return (int((lon_deg + 180) / 6) + 1, lat_deg >=0)
     def transform_lla_to_utm(lat_rad, lon_rad, zone, is_north):
-        # Simplified placeholder for pyproj or gdal
         lat_deg, lon_deg = np.rad2deg(lat_rad), np.rad2deg(lon_rad)
-        # This is NOT a real UTM conversion, just for structure
         return lon_deg * 1000, lat_deg * 1000
     def create_dcm_from_vel(vn, ve, dt, order): return np.array([np.eye(3)] * len(vn))
     def dcm2euler(dcm, order): return np.zeros((len(dcm), 3)) if dcm.ndim == 3 else np.zeros(3)
@@ -86,9 +85,9 @@ except ImportError:
     def get_map_params(map_s): return (None,None,None,None) # ind0,ind1,_,_
     def fill_map_gaps(map_s): return map_s
     def trim_map(map_s): return map_s
-    # def get_map_value_at_coords(map_s, lat, lon, alt, alpha=200, return_itp=False):
-    #     if return_itp: return np.zeros(len(lat)), None
-    #     return np.zeros(len(lat))
+    def get_map_val(map_s, lat, lon, alt, alpha=200, return_interpolator=False):
+        if return_interpolator: return np.zeros(len(lat)), None
+        return np.zeros(len(lat))
     def generate_fogm_noise(sigma, tau, dt, N): return np.random.randn(N) * sigma
     def create_tolles_lawson_A_matrix(Bx,By,Bz,terms=None): return np.zeros((len(Bx), 18)) # Dummy
     def get_igrf_magnetic_field(xyz, ind=None, frame='body', norm_igrf=False, check_xyz=True):
@@ -123,7 +122,7 @@ def create_xyz0(
     mapV: Optional[MapV] = None,
     cor_sigma: float = 1.0,
     cor_tau: float = 600.0,
-    cor_var: float = 1.0**2, # This is for compensated, but Julia has it duplicated
+    cor_var: float = 1.0**2,
     cor_drift: float = 0.001,
     cor_perm_mag: float = 5.0,
     cor_ind_mag: float = 5.0,
@@ -139,18 +138,17 @@ def create_xyz0(
     a_hat_sigma: float = 0.01,
     acc_sigma: float = 0.000245,
     gyro_sigma: float = 0.00000000727,
-    fogm_sigma: float = 1.0, # This is for compensated
+    fogm_sigma: float = 1.0,
     baro_tau: float = 3600.0,
     acc_tau: float = 3600.0,
     gyro_tau: float = 3600.0,
-    fogm_tau: float = 600.0, # This is for compensated
+    fogm_tau: float = 600.0,
     save_h5: bool = False,
     xyz_h5: str = "xyz_data.h5",
     silent: bool = False
 ) -> XYZ0:
     """
-    Create basic flight data. Assumes constant altitude (2D flight).
-    Corresponds to create_XYZ0 in Julia.
+    Create basic flight data (XYZ0 struct). Assumes constant altitude (2D flight).
     """
     if mapS is None:
         mapS = get_map(DEFAULT_SCALAR_MAP_ID)
@@ -163,7 +161,7 @@ def create_xyz0(
     traj = create_traj(
         mapS,
         alt=alt, dt=dt, t=t, v=v, ll1=ll1, ll2=ll2, N_waves=N_waves,
-        attempts=attempts, save_h5=save_h5, traj_h5=xyz_h5 # Note: traj_h5 uses xyz_h5
+        attempts=attempts, save_h5=save_h5, traj_h5=xyz_h5
     )
 
     # Create INS
@@ -174,82 +172,56 @@ def create_xyz0(
         VRW_sigma=VRW_sigma, ARW_sigma=ARW_sigma, baro_sigma=baro_sigma,
         ha_sigma=ha_sigma, a_hat_sigma=a_hat_sigma, acc_sigma=acc_sigma,
         gyro_sigma=gyro_sigma, baro_tau=baro_tau, acc_tau=acc_tau,
-        gyro_tau=gyro_tau, save_h5=save_h5, ins_h5=xyz_h5 # Note: ins_h5 uses xyz_h5
+        gyro_tau=gyro_tau, save_h5=save_h5, ins_h5=xyz_h5
     )
 
     # Create compensated (clean) scalar magnetometer measurements
-    # Julia's create_XYZ0 uses cor_var, fogm_sigma, fogm_tau for this.
     mag_1_c = create_mag_c(
         traj, mapS,
-        meas_var=cor_var, # Using the general cor_var for compensated noise variance
-        fogm_sigma=fogm_sigma, # Using the general fogm_sigma for compensated FOGM
-        fogm_tau=fogm_tau, # Using the general fogm_tau for compensated FOGM
+        meas_var=cor_var,
+        fogm_sigma=fogm_sigma,
+        fogm_tau=fogm_tau,
         silent=silent
     )
 
     # Create compensated (clean) vector magnetometer measurements
     flux_a = create_flux(
         traj, mapV,
-        meas_var=cor_var, # Using the general cor_var
-        fogm_sigma=fogm_sigma, # Using the general fogm_sigma
-        fogm_tau=fogm_tau, # Using the general fogm_tau
+        meas_var=cor_var,
+        fogm_sigma=fogm_sigma,
+        fogm_tau=fogm_tau,
         silent=silent
     )
 
     # Create uncompensated (corrupted) scalar magnetometer measurements
-    # Julia's create_XYZ0 uses specific cor_ values for this.
     mag_1_uc, _, diurnal_effect = corrupt_mag(
         mag_1_c, flux_a,
         dt=dt,
-        cor_sigma=cor_sigma, cor_tau=cor_tau, cor_var=cor_var, # These are the uncompensated specific ones
+        cor_sigma=cor_sigma, cor_tau=cor_tau, cor_var=cor_var,
         cor_drift=cor_drift, cor_perm_mag=cor_perm_mag,
         cor_ind_mag=cor_ind_mag, cor_eddy_mag=cor_eddy_mag
     )
 
-    num_points = len(traj.lat)
+    num_points = traj.N
     flights = np.full(num_points, flight, dtype=int)
     lines   = np.full(num_points, line, dtype=int)
     years   = np.full(num_points, year, dtype=int)
     doys    = np.full(num_points, doy, dtype=int)
+    diurnal = diurnal_effect
 
-    # Placeholder for diurnal, assuming corrupt_mag returns it or it's calculated elsewhere.
-    # In Julia, it's the third return from corrupt_mag.
-    diurnal = diurnal_effect # Or np.zeros(num_points) if not returned by corrupt_mag
-
-    # Initialize IGRF, then calculate actual values
     igrf_initial = np.zeros(num_points)
     
-    # Construct preliminary XYZ to pass to get_igrf
-    # Note: This might require XYZ0 to allow partial initialization or a different approach
-    # For now, assuming XYZ0 can be created with placeholder igrf
-    xyz_temp_fields = {
-        "info": info, "traj": traj, "ins": ins, "flux_a": flux_a,
-        "flights": flights, "lines": lines, "years": years, "doys": doys,
-        "diurnal": diurnal, "igrf": igrf_initial, "mag_1_c": mag_1_c, "mag_1_uc": mag_1_uc
-    }
-    # This is a bit tricky. If XYZ0 is a strict dataclass, we might need to pass all args.
-    # Let's assume get_igrf can work with a dictionary or a partially formed object,
-    # or we make a temporary XYZ0 instance.
-    
-    # Simplification: Create XYZ0 first, then update igrf.
-    # This requires all fields for XYZ0 constructor.
     xyz = XYZ0(info=info, traj=traj, ins=ins, flux_a=flux_a,
                flights=flights, lines=lines, years=years, doys=doys,
-               diurnal=diurnal, igrf=igrf_initial, # igrf_initial is placeholder
+               diurnal=diurnal, igrf=igrf_initial,
                mag_1_c=mag_1_c, mag_1_uc=mag_1_uc)
 
     igrf_vector_body = get_igrf_magnetic_field(xyz, frame='body', norm_igrf=False, check_xyz=False)
-    igrf_scalar = np.linalg.norm(igrf_vector_body, axis=0) # Assuming igrf_vector_body is 3xN
+    igrf_scalar = np.linalg.norm(igrf_vector_body, axis=0)
     xyz.igrf = igrf_scalar
 
     if save_h5:
-        # 'a' mode: read/write if exists, create otherwise. Julia 'cw' is similar.
         with h5py.File(xyz_h5, "a") as file:
-            # Overwrite if traj/ins already wrote some of these, or manage groups.
-            # For simplicity, assuming direct write/overwrite at root or that
-            # traj_h5/ins_h5 were different files or used groups.
-            # If xyz_h5 is the *same* file, need to be careful about overwriting.
-            # The Julia code implies it's the same file and appends/overwrites.
             if "flux_a_x" not in file: file.create_dataset("flux_a_x", data=flux_a.x)
             else: file["flux_a_x"][:] = flux_a.x
             if "flux_a_y" not in file: file.create_dataset("flux_a_y", data=flux_a.y)
@@ -274,7 +246,7 @@ def create_xyz0(
             else: file["doy"][:] = doys
             if "diurnal" not in file: file.create_dataset("diurnal", data=diurnal)
             else: file["diurnal"][:] = diurnal
-            if "igrf" not in file: file.create_dataset("igrf", data=xyz.igrf) # Use updated igrf
+            if "igrf" not in file: file.create_dataset("igrf", data=xyz.igrf)
             else: file["igrf"][:] = xyz.igrf
     return xyz
 
@@ -293,156 +265,120 @@ def create_traj(
 ) -> Traj:
     """
     Create Traj trajectory struct with a straight or sinusoidal flight path.
-    Corresponds to create_traj in Julia.
     """
     traj_h5 = add_extension(traj_h5, ".h5")
 
-    # Check flight altitude
     if isinstance(mapS, MapSd) and hasattr(mapS, 'mask') and mapS.mask is not None:
-        # Ensure mapS.alt is indexable by mapS.mask if mapS.alt is a grid
-        # This part needs careful handling based on MapSd structure
-        # Assuming mapS.alt is a 2D grid and mapS.mask is a boolean grid of same shape
-        valid_alts = mapS.alt[mapS.mask] if mapS.mask.any() else [np.mean(mapS.alt)] # fallback
+        valid_alts = mapS.alt[mapS.mask] if mapS.mask.any() else [np.mean(mapS.alt)]
         map_altitude_ref = np.median(valid_alts) if len(valid_alts) > 0 else np.mean(mapS.alt)
-
     elif isinstance(mapS.alt, (list, np.ndarray)) and len(mapS.alt) > 0:
         map_altitude_ref = mapS.alt[0]
     elif isinstance(mapS.alt, (float, int)):
          map_altitude_ref = mapS.alt
     else:
-        # Fallback or error if mapS.alt structure is unknown
         raise ValueError("Cannot determine reference altitude from mapS")
 
     if alt < map_altitude_ref:
         raise ValueError(f"Flight altitude {alt} < map reference altitude {map_altitude_ref}")
 
     i = 0
-    N_pts = 2 # Initial number of points for lat/lon arrays
+    N_pts = 2 
     lat_path = np.zeros(N_pts, dtype=float)
     lon_path = np.zeros(N_pts, dtype=float)
     
-    # Loop to find a valid trajectory
-    # The condition `(not map_check(mapS, lat_path, lon_path) and i <= attempts) or i == 0`
-    # ensures at least one attempt and retries if path is not on map.
     path_found_on_map = False
     while (not path_found_on_map and i < attempts) or i == 0:
         i += 1
-        if not ll1:  # If ll1 is empty, put initial point in middle 50% of map
+        if not ll1:
             lat_min, lat_max = np.min(mapS.yy), np.max(mapS.yy)
             lon_min, lon_max = np.min(mapS.xx), np.max(mapS.xx)
-            # Ensure mapS.yy and mapS.xx are in radians if subsequent calcs expect radians
-            # Assuming they are already in radians as per typical geodetic calculations
             lat1 = lat_min + (lat_max - lat_min) * (0.25 + 0.50 * random.random())
             lon1 = lon_min + (lon_max - lon_min) * (0.25 + 0.50 * random.random())
-        else:  # Use given initial point (degrees), convert to radians
+        else:
             lat1, lon1 = np.deg2rad(ll1[0]), np.deg2rad(ll1[1])
 
-        if not ll2:  # Use given velocity & time to set distance
+        if not ll2:
             N_pts = int(round(t / dt + 1))
-            dist = v * t  # distance
-            theta_utm = 2 * math.pi * random.random()  # random heading
-            # Convert distance and heading to lat/lon changes
-            # These require geodetic calculations (e.g., Vincenty or simpler spherical model)
-            # Using analysis_util helpers: dn2dlat, de2dlon
-            # dn = dist * sin(theta_utm), de = dist * cos(theta_utm)
+            dist = v * t
+            theta_utm = 2 * math.pi * random.random()
             lat2 = lat1 + dn2dlat(dist * math.sin(theta_utm), lat1)
             lon2 = lon1 + de2dlon(dist * math.cos(theta_utm), lat1)
-        else:  # Use given final point directly
-            N_pts_est = 1000 * (N_waves + 1) # Estimated N, to be corrected
+        else:
+            N_pts_est = 1000 * (N_waves + 1)
             lat2, lon2 = np.deg2rad(ll2[0]), np.deg2rad(ll2[1])
-            # N_pts will be refined later based on actual path length and dt
 
         dlat = lat2 - lat1
         dlon = lon2 - lon1
-        theta_ll = math.atan2(dlat, dlon) # Heading in lat/lon rad space (y,x)
+        theta_ll = math.atan2(dlat, dlon)
 
-        # Initial straight line path (or base for waves)
-        # Use N_pts if ll2 is not set, or N_pts_est if ll2 is set (will be resampled)
         current_N = N_pts if not ll2 else N_pts_est
         lat_path = np.linspace(lat1, lat2, current_N)
         lon_path = np.linspace(lon1, lon2, current_N)
 
         if N_waves > 0:
+            # Simplified wave application; direct port of Julia's complex wave scaling is involved.
+            # This part might need further refinement if precise wave shapes are critical.
             phi_waves = np.linspace(0, N_waves * 2 * math.pi, current_N)
-            # Wave amplitude needs to be determined. Julia's example doesn't specify amplitude.
-            # Assuming a fraction of the path length or a fixed value.
-            # The Julia code `wav = [ϕ sin.(ϕ)]` implies amplitude is 1 in ϕ units.
-            # This needs to be scaled to geographic units.
-            # The Julia code `cor = wav*rot'` and then `lat = (cor[:,2] .- cor[1,2] .+ lat1)`
-            # suggests the wave is applied to the parametric progression (phi) and then rotated.
-            # This part is complex to translate directly without knowing wave amplitude scaling.
-            # For now, a simplified placeholder or assuming amplitude is implicitly handled.
-            # Let's assume the wave is a perturbation perpendicular to the path.
-            # A common way is A * sin(phi_waves), where A is amplitude in radians.
-            # The Julia code seems to make the path itself sinusoidal in the direction of travel.
-            # `wav = [ϕ sin.(ϕ)]` -> `wav_x = phi_waves`, `wav_y = np.sin(phi_waves)`
-            # `rot = [[cos(θ_ll), -sin(θ_ll)], [sin(θ_ll), cos(θ_ll)]]`
-            # `cor = np.dot(np.vstack((wav_x, wav_y)).T, rot.T)`
-            # `lon_path = (cor[:,0] - cor[0,0]) + lon1`
-            # `lat_path = (cor[:,1] - cor[0,1]) + lat1`
-            # This interpretation makes the path itself a rotated sinusoid.
-            # The Julia code `cor[:,2]` and `cor[:,1]` implies wav is (N,2) and rot is (2,2).
-            # `wav = [ϕ sin.(ϕ)]` -> `wav = np.column_stack((phi_waves, np.sin(phi_waves)))`
+            # Assuming amplitude is relative or needs scaling factor based on path length.
+            # For now, a simple perturbation perpendicular to the path.
+            # A_wave_rad = 0.001 # Example amplitude in radians, adjust as needed
+            # lat_path += A_wave_rad * np.cos(theta_ll) * np.sin(phi_waves) # Perpendicular to path
+            # lon_path -= A_wave_rad * np.sin(theta_ll) * np.sin(phi_waves) # Perpendicular to path
+            # The Julia code `wav = [ϕ sin.(ϕ)]` and rotation implies a more complex transformation.
+            # Replicating Julia's `cor = wav*rot'` logic:
+            _phi = np.linspace(0, 1, current_N) # Parametric distance
+            # Amplitude of sin wave (relative to total length, scaled by dlat/dlon)
+            # This is a simplification of the Julia logic which is non-trivial to map directly
+            # without more context on the intended wave amplitude scaling.
+            # The Julia code scales `sin.(phi_waves)` by rotation with `theta_ll`
+            # and adds it to the base `lat1, lon1`.
+            # `wav = [ϕ sin.(ϕ)]` -> `wav = np.column_stack((_phi_scaled_dist, amp_scaled * np.sin(phi_waves)))`
             # `rot_matrix = np.array([[math.cos(theta_ll), -math.sin(theta_ll)],
             #                          [math.sin(theta_ll), math.cos(theta_ll)]])`
             # `cor = np.dot(wav, rot_matrix.T)`
-            # `lon_path = (cor[:,0] - cor[0,0]) + lon1` # Julia used cor[:,1] for lat, cor[:,2] for lon (1-indexed)
-            # `lat_path = (cor[:,1] - cor[0,1]) + lat1` # Python: cor[:,0] for x-like, cor[:,1] for y-like
-            # This seems to be the correct interpretation of Julia's 1-based indexing.
-            # The amplitude of sin(phi) is 1. This needs scaling to meters or degrees.
-            # The Julia code does not show explicit scaling of sin(phi).
-            # This suggests the "waviness" is relative to the total length implicitly.
-            # Re-evaluating: `lat = (cor[:,2] .- cor[1,2] .+ lat1)`
-            # `lon = (cor[:,1] .- cor[1,1] .+ lon1)`
-            # This means `cor` has columns for transformed x and y.
-            # If `wav` is `[phi, sin(phi)]`, then `phi` is the along-track progress and `sin(phi)` is cross-track.
-            # This part is tricky. A simpler approach for Python might be needed if direct translation is unclear.
-            # For now, skipping the complex wave part for brevity, assuming straight line or simple wave.
-            # If waves are critical, this needs more detailed translation.
-            pass # Simplified: waves not fully implemented here due to ambiguity in scaling.
+            # `lon_path_wave = (cor[:,0] - cor[0,0]) + lon1`
+            # `lat_path_wave = (cor[:,1] - cor[0,1]) + lat1`
+            # For now, this part is simplified as the exact scaling in Julia was implicit.
+            pass
 
-        # Iteratively scale path to target distance or endpoint
-        # This loop in Julia: `while !(frac1 ≈ 1) | !(frac2 ≈ 1)`
-        # Python: `while not (np.isclose(frac1, 1.0) and np.isclose(frac2, 1.0)):` (approx)
-        # For simplicity, let's assume a few iterations or direct calculation if possible.
-        # The Julia code recalculates dx, dy, d_now inside this loop.
+
+        dx_m = dlon2de(fdm(lon_path), lat_path)
+        dy_m = dlat2dn(fdm(lat_path), lat_path)
         
-        # Calculate actual distance of the current path (lat_path, lon_path)
-        # Using fdm and geodetic distance helpers
-        dx_m = dlon2de(fdm(lon_path), lat_path) # Easting distances
-        dy_m = dlat2dn(fdm(lat_path), lat_path) # Northing distances
-        # fdm might return N points or N-1. Assuming N points, first is often 0 or NaN.
-        # Distances are between points, so use diff or slice.
-        segment_distances = np.sqrt(dx_m[1:]**2 + dy_m[1:]**2) # Skip first fdm element if it's an offset
-        current_total_dist = np.sum(segment_distances)
+        valid_segments = (dx_m.shape[0] > 1 and dy_m.shape[0] > 1)
+        if valid_segments and len(dx_m) > 1 : # fdm might return N or N-1 points
+            segment_distances = np.sqrt(dx_m[1:]**2 + dy_m[1:]**2)
+            current_total_dist = np.sum(segment_distances)
+        else:
+            current_total_dist = 0.0
 
-        if not ll2: # Scale to target distance `dist`
-            if current_total_dist > 1e-6: # Avoid division by zero
+
+        if not ll2:
+            if current_total_dist > 1e-6:
                 scale_factor = dist / current_total_dist
-                # Rescale lat_path, lon_path. This is non-trivial for curved paths.
-                # Julia's approach: `lat = (lat .- lat[1])*frac1 .+ lat[1]`
-                # This scales relative to the start point.
                 lat_path = (lat_path - lat_path[0]) * scale_factor + lat_path[0]
                 lon_path = (lon_path - lon_path[0]) * scale_factor + lon_path[0]
-        else: # Scale to target endpoint (lat2, lon2)
-            if len(lat_path) > 1 and abs(lat_path[-1] - lat_path[0]) > 1e-9 : # Avoid div by zero
+        else:
+            if len(lat_path) > 1 and abs(lat_path[-1] - lat_path[0]) > 1e-9 :
                  scale_factor_lat = (lat2 - lat_path[0]) / (lat_path[-1] - lat_path[0])
                  lat_path = (lat_path - lat_path[0]) * scale_factor_lat + lat_path[0]
             if len(lon_path) > 1 and abs(lon_path[-1] - lon_path[0]) > 1e-9:
                  scale_factor_lon = (lon2 - lon_path[0]) / (lon_path[-1] - lon_path[0])
                  lon_path = (lon_path - lon_path[0]) * scale_factor_lon + lon_path[0]
         
-        # Recalculate N_pts based on true distance and dt if ll2 was given
         if ll2:
             dx_m = dlon2de(fdm(lon_path), lat_path)
             dy_m = dlat2dn(fdm(lat_path), lat_path)
-            segment_distances = np.sqrt(dx_m[1:]**2 + dy_m[1:]**2)
-            true_dist = np.sum(segment_distances)
+            if dx_m.shape[0] > 1 and dy_m.shape[0] > 1 and len(dx_m) > 1:
+                segment_distances = np.sqrt(dx_m[1:]**2 + dy_m[1:]**2)
+                true_dist = np.sum(segment_distances)
+            else:
+                true_dist = 0.0
             
-            t_flight = true_dist / v # True time
-            N_pts = int(round(t_flight / dt + 1)) # Correct number of time steps
+            t_flight = true_dist / v if v > 1e-6 else 0.0
+            N_pts = int(round(t_flight / dt + 1)) if dt > 1e-6 else 1
+            N_pts = max(N_pts, 2) # Ensure at least 2 points for interpolation
             
-            # Resample lat_path, lon_path to new N_pts
             if len(lat_path) > 1 :
                 current_progression = np.linspace(0, 1, len(lat_path))
                 new_progression = np.linspace(0, 1, N_pts)
@@ -450,46 +386,40 @@ def create_traj(
                 interp_lon = interp1d(current_progression, lon_path, kind='linear', fill_value="extrapolate")
                 lat_path = interp_lat(new_progression)
                 lon_path = interp_lon(new_progression)
-            else: # Single point case
+            elif len(lat_path) == 1: # Single point from previous step
                 lat_path = np.full(N_pts, lat_path[0])
                 lon_path = np.full(N_pts, lon_path[0])
-            t = t_flight # Update total time
+            else: # No points, should not happen if N_pts_est was > 0
+                lat_path = np.full(N_pts, lat1) # Fallback
+                lon_path = np.full(N_pts, lon1) # Fallback
+
+            t = t_flight
 
         path_found_on_map = map_check(mapS, lat_path, lon_path)
         if path_found_on_map:
-            break # Exit loop if valid path found
+            break
     
-    if not path_found_on_map: # or i > attempts
-        raise RuntimeError(f"Maximum attempts ({attempts}) reached, could not create valid trajectory on map. Decrease t or increase v.")
+    if not path_found_on_map:
+        raise RuntimeError(f"Maximum attempts ({attempts}) reached, could not create valid trajectory on map.")
 
-    # Ensure lat_path, lon_path are set for the final N_pts
-    # If ll2 was not set, N_pts was set from t/dt initially.
-    # If ll2 was set, N_pts was refined.
-    
-    # UTM conversion using assumed helpers from analysis_util
-    # These helpers should handle pyproj or gdal internally.
     mean_lat_deg_traj = np.rad2deg(np.mean(lat_path))
     mean_lon_deg_traj = np.rad2deg(np.mean(lon_path))
     utm_zone_num, utm_is_north = utm_zone_from_latlon(mean_lat_deg_traj, mean_lon_deg_traj)
     
     utms_x, utms_y = transform_lla_to_utm(lat_path, lon_path, utm_zone_num, utm_is_north)
 
-    # Velocities & specific forces from position
-    # fdm (finite difference method) from analysis_util
-    vn = fdm(utms_y) / dt  # North velocity from UTM y
-    ve = fdm(utms_x) / dt  # East velocity from UTM x
-    vd = np.zeros_like(lat_path) # Assuming constant altitude, so vd is zero
+    vn = fdm(utms_y) / dt if dt > 1e-6 else np.zeros_like(utms_y)
+    ve = fdm(utms_x) / dt if dt > 1e-6 else np.zeros_like(utms_x)
+    vd = np.zeros_like(lat_path)
     
-    fn = fdm(vn) / dt      # North specific force (acceleration)
-    fe = fdm(ve) / dt      # East specific force
-    fd = fdm(vd) / dt - g_earth # Down specific force (includes gravity)
+    fn = fdm(vn) / dt if dt > 1e-6 else np.zeros_like(vn)
+    fe = fdm(ve) / dt if dt > 1e-6 else np.zeros_like(ve)
+    fd = fdm(vd) / dt - g_earth if dt > 1e-6 else np.full_like(vd, -g_earth)
     
-    tt = np.linspace(0, t, N_pts) # Time vector
+    tt = np.linspace(0, t, N_pts)
 
-    # DCM (body to navigation) from heading
-    # create_dcm_from_vel and dcm2euler from analysis_util
-    Cnb_array = create_dcm_from_vel(vn, ve, dt, order='body2nav') # Returns N x 3 x 3
-    euler_angles = dcm2euler(Cnb_array, order='body2nav') # Returns N x 3 (roll, pitch, yaw)
+    Cnb_array = create_dcm_from_vel(vn, ve, dt, order='body2nav')
+    euler_angles = dcm2euler(Cnb_array, order='body2nav')
     roll_path  = euler_angles[:,0]
     pitch_path = euler_angles[:,1]
     yaw_path   = euler_angles[:,2]
@@ -497,9 +427,7 @@ def create_traj(
     alt_path = np.full_like(lat_path, alt)
 
     if save_h5:
-        with h5py.File(traj_h5, "a") as file: # Append mode
-            # Create datasets if they don't exist, or overwrite if they do.
-            # Grouping might be better if file is shared (e.g., file.require_group("traj"))
+        with h5py.File(traj_h5, "a") as file:
             for key, data_arr in [
                 ("tt", tt), ("lat", lat_path), ("lon", lon_path), ("alt", alt_path),
                 ("vn", vn), ("ve", ve), ("vd", vd), ("fn", fn), ("fe", fe), ("fd", fd),
@@ -517,7 +445,7 @@ def create_ins(
     init_pos_sigma: float = 3.0,
     init_alt_sigma: float = 0.001,
     init_vel_sigma: float = 0.01,
-    init_att_sigma: float = np.deg2rad(0.00001), # Julia default was 0.01, then changed to 0.00001
+    init_att_sigma: float = np.deg2rad(0.00001),
     VRW_sigma: float = 0.000238,
     ARW_sigma: float = 0.000000581,
     baro_sigma: float = 1.0,
@@ -533,74 +461,45 @@ def create_ins(
 ) -> INS:
     """
     Creates an INS trajectory about a true trajectory using a Pinson error model.
-    Corresponds to create_ins in Julia.
     """
     ins_h5 = add_extension(ins_h5, ".h5")
 
     N = traj.N
     dt = traj.dt
-    nx = 17  # Total state dimension for Pinson error model
+    nx = 17
 
-    # Get initial covariance P0 and process noise Qd from analysis_util helper
-    P0, Qd, _ = create_ins_model_matrices( # R (measurement noise) not used here
-        dt, traj.lat[0], # Initial latitude
+    P0, Qd, _ = create_ins_model_matrices(
+        dt, traj.lat[0],
         init_pos_sigma=init_pos_sigma, init_alt_sigma=init_alt_sigma,
         init_vel_sigma=init_vel_sigma, init_att_sigma=init_att_sigma,
         VRW_sigma=VRW_sigma, ARW_sigma=ARW_sigma,
         baro_sigma=baro_sigma, ha_sigma=ha_sigma, a_hat_sigma=a_hat_sigma,
         acc_sigma=acc_sigma, gyro_sigma=gyro_sigma,
         baro_tau=baro_tau, acc_tau=acc_tau, gyro_tau=gyro_tau,
-        fogm_state=False # Assuming FOGM state is not part of this 17-state model
+        fogm_state=False
     )
 
-    P_ins = np.zeros((N, nx, nx)) # Store covariance at each step
-    err_ins = np.zeros((N, nx))   # Store error state at each step
+    P_ins = np.zeros((N, nx, nx))
+    err_ins = np.zeros((N, nx))
 
     P_ins[0,:,:] = P0
-    # Sample initial error from N(0, P0)
     err_ins[0,:] = multivariate_normal.rvs(mean=np.zeros(nx), cov=P0)
     
-    # Cholesky decomposition of Qd for sampling process noise: sqrt(Qd) * N(0,I)
-    # Ensure Qd is positive definite. Add small epsilon if numerical issues.
     try:
         Qd_chol = np.linalg.cholesky(Qd)
     except np.linalg.LinAlgError:
-        # Add small diagonal offset if Qd is not positive definite
         Qd_chol = np.linalg.cholesky(Qd + np.eye(nx) * 1e-12)
 
-
     for k in range(N - 1):
-        # Get state transition matrix Phi from analysis_util helper
         Phi_k = get_phi_matrix(
             nx, traj.lat[k], traj.vn[k], traj.ve[k], traj.vd[k],
-            traj.fn[k], traj.fe[k], traj.fd[k], traj.Cnb, # Cnb is already 2D (3,3)
-            baro_tau, acc_tau, gyro_tau, 0, dt, fogm_state=False # 0 for fogm_tau if no fogm_state
+            traj.fn[k], traj.fe[k], traj.fd[k], traj.Cnb[k,:,:], # Pass Cnb for current step
+            baro_tau, acc_tau, gyro_tau, 0, dt, fogm_state=False
         )
-        # Propagate error state: err_k+1 = Phi_k * err_k + w_k
-        # w_k ~ N(0, Qd), so sample as Qd_chol * N(0,I)
         process_noise_k = Qd_chol @ np.random.randn(nx)
         err_ins[k+1,:] = Phi_k @ err_ins[k,:] + process_noise_k
-        
-        # Propagate covariance: P_k+1 = Phi_k * P_k * Phi_k^T + Qd
         P_ins[k+1,:,:] = Phi_k @ P_ins[k,:,:] @ Phi_k.T + Qd
 
-    # Apply errors to true trajectory to get INS trajectory
-    # Error state definition (typical Pinson):
-    # err[0:3] = pos_err (lat, lon, alt) -> Julia used subtraction, so INS = True - Err
-    # err[3:6] = vel_err (vn, ve, vd)
-    # err[6:9] = att_err (psi_n, psi_e, psi_d) -> tilt errors
-    # err[9:12]= acc_bias
-    # err[12:15]=gyro_bias
-    # err[15] = baro_bias
-    # err[16] = baro_scale_factor (or other, depending on model variant)
-    
-    # Note: Julia subtracts error: lat = traj.lat - err[0,:]. If err is (true-estimate), then estimate = true - err.
-    # If err is (estimate-true), then estimate = true + err.
-    # Assuming err_ins represents (true - ins_estimate) for position/velocity,
-    # or (ins_estimate - true) for biases.
-    # The Julia code `lat = traj.lat - err[0,:]` implies err[0] is (true_lat - ins_lat).
-    # So, ins_lat = traj.lat - err_pos_lat. This seems consistent.
-    
     ins_lat = traj.lat - err_ins[:,0]
     ins_lon = traj.lon - err_ins[:,1]
     ins_alt = traj.alt - err_ins[:,2]
@@ -608,22 +507,19 @@ def create_ins(
     ins_ve  = traj.ve  - err_ins[:,4]
     ins_vd  = traj.vd  - err_ins[:,5]
 
-    # Recalculate specific forces from INS velocities
-    ins_fn = fdm(ins_vn) / dt
-    ins_fe = fdm(ins_ve) / dt
-    ins_fd = fdm(ins_vd) / dt - g_earth
+    ins_fn = fdm(ins_vn) / dt if dt > 1e-6 else np.zeros_like(ins_vn)
+    ins_fe = fdm(ins_ve) / dt if dt > 1e-6 else np.zeros_like(ins_ve)
+    ins_fd = fdm(ins_vd) / dt - g_earth if dt > 1e-6 else np.full_like(ins_vd, -g_earth)
 
-    # Correct Cnb using attitude errors (err_ins[:,6:9])
-    # correct_cnb_matrix from analysis_util
-    # Julia used -err[7:9,:], so if err_att is (true_att - ins_att), then ins_att = true_att - err_att.
-    # Cnb_ins = Cnb_true * (I - skew(err_att_ins))
-    ins_Cnb = correct_cnb_matrix(traj.Cnb, -err_ins[:,6:9].T) # Pass err_att (3xN)
+    ins_Cnb_list = []
+    for k_cnb in range(N):
+      ins_Cnb_list.append(correct_cnb_matrix(traj.Cnb[k_cnb,:,:], -err_ins[k_cnb,6:9]))
+    ins_Cnb = np.array(ins_Cnb_list)
 
-    if np.any(ins_Cnb > 1.00001) or np.any(ins_Cnb < -1.00001): # Add tolerance for float precision
-        # This check might be too strict for floating point DCMs.
-        # Consider checking orthogonality or determinant instead if issues arise.
-        print("Warning: INS Cnb matrix out of expected bounds [-1, 1].")
-        # raise ValueError("create_ins() failed, Cnb out of bounds. Re-run or check trajectory.")
+
+    if np.any(np.abs(ins_Cnb) > 1.00001):
+        print("Warning: INS Cnb matrix out of expected bounds [-1, 1]. Values might be clamped or indicate instability.")
+        ins_Cnb = np.clip(ins_Cnb, -1.0, 1.0) # Basic stabilization
 
     ins_euler_angles = dcm2euler(ins_Cnb, order='body2nav')
     ins_roll  = ins_euler_angles[:,0]
@@ -637,7 +533,7 @@ def create_ins(
                 ("ins_vn", ins_vn), ("ins_ve", ins_ve), ("ins_vd", ins_vd),
                 ("ins_fn", ins_fn), ("ins_fe", ins_fe), ("ins_fd", ins_fd),
                 ("ins_roll", ins_roll), ("ins_pitch", ins_pitch), ("ins_yaw", ins_yaw),
-                ("ins_P", P_ins) # Save covariance history
+                ("ins_P", P_ins)
             ]:
                 if key not in file: file.create_dataset(key, data=data_arr)
                 else: file[key][:] = data_arr
@@ -651,8 +547,8 @@ def create_mag_c(
     path_or_lat: Union[Path, np.ndarray],
     lon_or_mapS: Union[np.ndarray, Union[MapS, MapSd, MapS3D]],
     mapS_if_path: Optional[Union[MapS, MapSd, MapS3D]] = None,
-    alt: Optional[float] = None, # Used if lat,lon are inputs
-    dt: Optional[float] = None,   # Used if lat,lon are inputs
+    alt: Optional[float] = None,
+    dt: Optional[float] = None,
     meas_var: float = 1.0**2,
     fogm_sigma: float = 1.0,
     fogm_tau: float = 600.0,
@@ -660,72 +556,45 @@ def create_mag_c(
 ) -> np.ndarray:
     """
     Create compensated (clean) scalar magnetometer measurements.
-    Overloaded: (lat, lon, mapS, ...) or (path, mapS, ...)
-    Corresponds to create_mag_c in Julia.
     """
-    if isinstance(path_or_lat, (Traj, INS)): # Path object
+    if isinstance(path_or_lat, (Traj, INS)):
         path = path_or_lat
-        mapS_actual = lon_or_mapS # mapS is the second arg in this case
+        mapS_actual = lon_or_mapS
         if not isinstance(mapS_actual, (MapS, MapSd, MapS3D)):
              if mapS_actual is None: mapS_actual = get_map(DEFAULT_SCALAR_MAP_ID)
              else: raise TypeError("mapS_actual must be a MapS, MapSd, or MapS3D object when path is provided.")
-
-        lat_rad = path.lat
-        lon_rad = path.lon
-        # Use median altitude from path if alt not explicitly overridden by user (though not an option here)
-        alt_val = np.median(path.alt)
-        dt_val  = path.dt
-    elif isinstance(path_or_lat, np.ndarray) and isinstance(lon_or_mapS, np.ndarray): # lat, lon arrays
-        lat_rad = path_or_lat
-        lon_rad = lon_or_mapS
+        lat_rad, lon_rad, alt_val, dt_val = path.lat, path.lon, np.median(path.alt), path.dt
+    elif isinstance(path_or_lat, np.ndarray) and isinstance(lon_or_mapS, np.ndarray):
+        lat_rad, lon_rad = path_or_lat, lon_or_mapS
         mapS_actual = mapS_if_path
         if not isinstance(mapS_actual, (MapS, MapSd, MapS3D)):
             if mapS_actual is None: mapS_actual = get_map(DEFAULT_SCALAR_MAP_ID)
             else: raise TypeError("mapS_actual must be a MapS, MapSd, or MapS3D object.")
-        
-        if alt is None or dt is None:
-            raise ValueError("alt and dt must be provided when giving lat, lon arrays.")
-        alt_val = alt
-        dt_val = dt
+        if alt is None or dt is None: raise ValueError("alt and dt must be provided for lat, lon arrays.")
+        alt_val, dt_val = alt, dt
     else:
-        raise TypeError("Invalid arguments for create_mag_c. Provide (Path, MapS) or (lat_arr, lon_arr, MapS).")
+        raise TypeError("Invalid arguments for create_mag_c.")
 
-    # Convert MapS3D to MapS at specified altitude if necessary
-    # upward_fft_map from analysis_util
     if isinstance(mapS_actual, MapS3D):
         mapS_actual = upward_fft_map(mapS_actual, alt_val)
 
     N = len(lat_rad)
-    
-    # map_params, fill_map_gaps, trim_map from analysis_util
-    # These steps ensure the map is suitable for value extraction.
-    # The Julia code checks `sum(ind0)/sum(ind0+ind1) > 0.01` for filling.
-    # This implies `map_params` returns info about filled/unfilled portions.
-    # Assuming these util functions handle such logic.
-    # ind0, ind1, _, _ = get_map_params(mapS_actual) # If needed for explicit check
-    # if sum(ind0) / (sum(ind0) + sum(ind1)) > 0.01: # Simplified logic
     if not silent: print("Info: preparing scalar map (filling/trimming if necessary).")
-    mapS_processed = fill_map_gaps(trim_map(mapS_actual)) # Chain operations
+    mapS_processed = fill_map_gaps(trim_map(mapS_actual))
 
-    # Get map values along trajectory
-    # get_map_value_at_coords from analysis_util
     if not silent: print("Info: getting scalar map values (upward/downward continuation if needed).")
     map_values_scalar = get_map_val(mapS_processed, lat_rad, lon_rad, alt_val)
 
-    # Add FOGM & white noise
-    # generate_fogm_noise from analysis_util
     if not silent: print("Info: adding FOGM & white noise to scalar map values.")
     fogm_noise_scalar = generate_fogm_noise(fogm_sigma, fogm_tau, dt_val, N)
     white_noise_scalar = np.sqrt(meas_var) * np.random.randn(N)
     
-    mag_c_values = map_values_scalar + fogm_noise_scalar + white_noise_scalar
-    
-    return mag_c_values
+    return map_values_scalar + fogm_noise_scalar + white_noise_scalar
 
 
 def corrupt_mag(
     mag_c: np.ndarray,
-    flux_or_Bx: Union[MagV, np.ndarray], # MagV object or Bx array
+    flux_or_Bx: Union[MagV, np.ndarray],
     By_if_coords: Optional[np.ndarray] = None,
     Bz_if_coords: Optional[np.ndarray] = None,
     dt: float = 0.1,
@@ -733,66 +602,44 @@ def corrupt_mag(
     cor_tau: float = 600.0,
     cor_var: float = 1.0**2,
     cor_drift: float = 0.001,
-    cor_perm_mag: float = 5.0, # Std dev for permanent TL coefs
-    cor_ind_mag: float = 5.0,  # Std dev for induced TL coefs
-    cor_eddy_mag: float = 0.5  # Std dev for eddy current TL coefs
+    cor_perm_mag: float = 5.0,
+    cor_ind_mag: float = 5.0,
+    cor_eddy_mag: float = 0.5
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Corrupt compensated scalar mag data with FOGM, drift, and Tolles-Lawson noise.
-    Overloaded: (mag_c, flux_obj, ...) or (mag_c, Bx, By, Bz, ...)
     Returns (mag_uc, TL_coefficients, corruption_FOGM_noise)
-    Corresponds to corrupt_mag in Julia.
     """
     if isinstance(flux_or_Bx, MagV):
-        flux_obj = flux_or_Bx
-        Bx_vals, By_vals, Bz_vals = flux_obj.x, flux_obj.y, flux_obj.z
+        Bx_vals, By_vals, Bz_vals = flux_or_Bx.x, flux_or_Bx.y, flux_or_Bx.z
     elif isinstance(flux_or_Bx, np.ndarray) and \
          isinstance(By_if_coords, np.ndarray) and \
          isinstance(Bz_if_coords, np.ndarray):
         Bx_vals, By_vals, Bz_vals = flux_or_Bx, By_if_coords, Bz_if_coords
     else:
-        raise TypeError("Invalid arguments for corrupt_mag. Provide (mag_c, MagV_obj) or (mag_c, Bx, By, Bz).")
+        raise TypeError("Invalid arguments for corrupt_mag.")
 
     N = len(mag_c)
-
-    # Tolles-Lawson coefficients are sampled from N(0, P)
-    # P is diagonal with variances: perm^2 (3 terms), ind^2 (6 terms), eddy^2 (9 terms)
-    # Total 3+6+9 = 18 coefficients for standard TL model.
     tl_variances = np.concatenate([
-        np.full(3, cor_perm_mag**2),
-        np.full(6, cor_ind_mag**2),
-        np.full(9, cor_eddy_mag**2)
+        np.full(3, cor_perm_mag**2), np.full(6, cor_ind_mag**2), np.full(9, cor_eddy_mag**2)
     ])
     P_tl_cov = np.diag(tl_variances)
-    
-    # Sample TL coefficients
-    # Ensure mean is explicitly zero for multivariate_normal
     tl_coefficients = multivariate_normal.rvs(mean=np.zeros(len(tl_variances)), cov=P_tl_cov)
 
-    # FOGM noise for corruption
     corruption_fogm_noise = generate_fogm_noise(cor_sigma, cor_tau, dt, N)
-
-    # White noise for corruption
     corruption_white_noise = np.sqrt(cor_var) * np.random.randn(N)
-    
-    # Linear drift for corruption
-    # Julia: cor_drift*rand()*(0:dt:dt*(N-1)) -> single random scale for whole drift
     time_vector = np.arange(N) * dt
     corruption_drift = cor_drift * random.random() * time_vector
     
     mag_uc_intermediate = mag_c + corruption_white_noise + corruption_fogm_noise + corruption_drift
 
-    # Add Tolles-Lawson aircraft field contribution if Bx,By,Bz are non-zero
-    # create_tolles_lawson_A_matrix from analysis_util
     if not (np.allclose(Bx_vals, 0) and np.allclose(By_vals, 0) and np.allclose(Bz_vals, 0)):
-        A_tl = create_tolles_lawson_A_matrix(Bx_vals, By_vals, Bz_vals) # Uses all terms by default
-        # A_tl should be N x 18. tl_coefficients is 18.
-        # TL effect is A_tl @ tl_coefficients
-        if A_tl.shape[1] == len(tl_coefficients): # Check compatibility
+        A_tl = create_tolles_lawson_A_matrix(Bx_vals, By_vals, Bz_vals)
+        if A_tl.shape[0] > 0 and A_tl.shape[1] == len(tl_coefficients): # Check compatibility
              tl_effect_on_scalar = A_tl @ tl_coefficients
              mag_uc_final = mag_uc_intermediate + tl_effect_on_scalar
         else:
-            print(f"Warning: TL matrix columns {A_tl.shape[1]} != TL coeffs {len(tl_coefficients)}. Skipping TL effect.")
+            print(f"Warning: TL matrix columns {A_tl.shape[1]} != TL coeffs {len(tl_coefficients)} or A_tl is empty. Skipping TL effect.")
             mag_uc_final = mag_uc_intermediate
     else:
         mag_uc_final = mag_uc_intermediate
@@ -804,9 +651,9 @@ def create_flux(
     path_or_lat: Union[Path, np.ndarray],
     lon_or_mapV: Union[np.ndarray, MapV],
     mapV_if_path: Optional[MapV] = None,
-    Cnb_if_coords: Optional[np.ndarray] = None, # N x 3 x 3, used if lat,lon are inputs
-    alt: Optional[float] = None, # Used if lat,lon are inputs
-    dt: Optional[float] = None,   # Used if lat,lon are inputs
+    Cnb_if_coords: Optional[np.ndarray] = None,
+    alt: Optional[float] = None,
+    dt: Optional[float] = None,
     meas_var: float = 1.0**2,
     fogm_sigma: float = 1.0,
     fogm_tau: float = 600.0,
@@ -814,407 +661,446 @@ def create_flux(
 ) -> MagV:
     """
     Create compensated (clean) vector magnetometer measurements (fluxgate).
-    Overloaded: (path, mapV, ...) or (lat, lon, mapV, Cnb, alt, dt, ...)
-    Corresponds to create_flux in Julia.
     """
-    if isinstance(path_or_lat, (Traj, INS)): # Path object
+    if isinstance(path_or_lat, (Traj, INS)):
         path = path_or_lat
-        mapV_actual = lon_or_mapV # mapV is the second arg
+        mapV_actual = lon_or_mapV
         if not isinstance(mapV_actual, MapV):
             if mapV_actual is None: mapV_actual = get_map(DEFAULT_VECTOR_MAP_ID)
             else: raise TypeError("mapV_actual must be a MapV object when path is provided.")
-
-        lat_rad = path.lat
-        lon_rad = path.lon
-        Cnb_val = path.Cnb # N x 3 x 3
-        alt_val = np.median(path.alt)
-        dt_val  = path.dt
-    elif isinstance(path_or_lat, np.ndarray) and isinstance(lon_or_mapV, np.ndarray): # lat, lon arrays
-        lat_rad = path_or_lat
-        lon_rad = lon_or_mapV
+        lat_rad, lon_rad, Cnb_val, alt_val, dt_val = path.lat, path.lon, path.Cnb, np.median(path.alt), path.dt
+    elif isinstance(path_or_lat, np.ndarray) and isinstance(lon_or_mapV, np.ndarray):
+        lat_rad, lon_rad = path_or_lat, lon_or_mapV
         mapV_actual = mapV_if_path
         if not isinstance(mapV_actual, MapV):
             if mapV_actual is None: mapV_actual = get_map(DEFAULT_VECTOR_MAP_ID)
             else: raise TypeError("mapV_actual must be a MapV object.")
-        
         if Cnb_if_coords is None or alt is None or dt is None:
-            raise ValueError("Cnb, alt, and dt must be provided when giving lat, lon arrays.")
-        Cnb_val = Cnb_if_coords
-        alt_val = alt
-        dt_val = dt
+            raise ValueError("Cnb, alt, and dt must be provided for lat, lon arrays.")
+        Cnb_val, alt_val, dt_val = Cnb_if_coords, alt, dt
     else:
-        raise TypeError("Invalid arguments for create_flux. Provide (Path, MapV) or (lat, lon, MapV, Cnb, ...).")
+        raise TypeError("Invalid arguments for create_flux.")
 
     N = len(lat_rad)
-    if Cnb_val.shape[0] != N or Cnb_val.shape[1:] != (3,3):
-        # If Cnb is single 3x3, tile it. Julia default was repeat(I(3),1,1,N)
-        if Cnb_val.shape == (3,3) and N > 0 : # Single DCM provided
-            Cnb_val = np.tile(Cnb_val, (N,1,1))
-        elif N == 0 and Cnb_val.shape == (3,3): # No points, but Cnb given
-             pass # Cnb_val is fine, loops won't run
-        else:
-            raise ValueError(f"Cnb shape {Cnb_val.shape} inconsistent with N={N} points.")
+    if Cnb_val.ndim == 2 and Cnb_val.shape == (3,3) and N > 0: # Single DCM provided
+        Cnb_val = np.tile(Cnb_val, (N,1,1))
+    elif Cnb_val.shape[0] != N or Cnb_val.shape[1:] != (3,3):
+        if not (N == 0 and Cnb_val.shape == (3,3)): # Allow if N=0 and Cnb is single
+             raise ValueError(f"Cnb shape {Cnb_val.shape} inconsistent with N={N} points.")
 
-
-    # Get vector map values (Bx_nav, By_nav, Bz_nav) along trajectory
-    # get_map_value_at_coords for MapV should return a tuple of 3 arrays or similar
-    if not silent: print("Info: getting vector map values (upward/downward continuation if needed).")
-    # Assuming get_map_value_at_coords for MapV returns tuple (Bx_nav, By_nav, Bz_nav)
-    map_values_vector_nav = get_map_val(mapV_actual, lat_rad, lon_rad, alt_val)
+    if not silent: print("Info: getting vector map values.")
+    map_values_vector_nav = get_map_val(mapV_actual, lat_rad, lon_rad, alt_val) # Expected (Bx,By,Bz) tuple
     if not (isinstance(map_values_vector_nav, tuple) and len(map_values_vector_nav) == 3):
-        raise ValueError("get_map_value_at_coords for MapV did not return 3 vector components.")
+        raise ValueError("get_map_val for MapV did not return 3 vector components.")
     Bx_nav, By_nav, Bz_nav = map_values_vector_nav
 
-    # Add FOGM & white noise to each component
     if not silent: print("Info: adding FOGM & white noise to vector map values.")
     noise_std_dev = np.sqrt(meas_var)
     Bx_nav_noisy = Bx_nav + generate_fogm_noise(fogm_sigma, fogm_tau, dt_val, N) + noise_std_dev * np.random.randn(N)
     By_nav_noisy = By_nav + generate_fogm_noise(fogm_sigma, fogm_tau, dt_val, N) + noise_std_dev * np.random.randn(N)
     Bz_nav_noisy = Bz_nav + generate_fogm_noise(fogm_sigma, fogm_tau, dt_val, N) + noise_std_dev * np.random.randn(N)
     
-    # Total field magnitude in navigation frame (before rotation to body)
-    Bt_nav_noisy = np.sqrt(Bx_nav_noisy**2 + By_nav_noisy**2 + Bz_nav_noisy**2)
-
-    # Rotate measurements from navigation to body frame: B_body = Cnb^T * B_nav
-    # Cnb is body to nav, so Cnb.T is nav to body.
-    Bx_body = np.zeros(N)
-    By_body = np.zeros(N)
-    Bz_body = np.zeros(N)
-
-    for i in range(N):
-        B_nav_i = np.array([Bx_nav_noisy[i], By_nav_noisy[i], Bz_nav_noisy[i]])
-        # Cnb_val[i] is C_body_nav for point i. Cnb_val[i].T is C_nav_body
-        B_body_i = Cnb_val[i,:,:].T @ B_nav_i
-        Bx_body[i], By_body[i], Bz_body[i] = B_body_i[0], B_body_i[1], B_body_i[2]
+    Bx_body, By_body, Bz_body = np.zeros(N), np.zeros(N), np.zeros(N)
+    if N > 0: # Ensure Cnb_val is ready for loop if N=0
+        for i in range(N):
+            B_nav_i = np.array([Bx_nav_noisy[i], By_nav_noisy[i], Bz_nav_noisy[i]])
+            B_body_i = Cnb_val[i,:,:].T @ B_nav_i
+            Bx_body[i], By_body[i], Bz_body[i] = B_body_i[0], B_body_i[1], B_body_i[2]
         
-    # Total field magnitude in body frame (should be same as Bt_nav_noisy if rotation is correct)
     Bt_body = np.sqrt(Bx_body**2 + By_body**2 + Bz_body**2)
-    # Assert or check if Bt_body is close to Bt_nav_noisy as a sanity check.
-    # if N > 0 and not np.allclose(Bt_body, Bt_nav_noisy):
-    #    print("Warning: Total field magnitude changed after rotation to body frame.")
-
     return MagV(x=Bx_body, y=By_body, z=Bz_body, t=Bt_body)
 
 
-def create_dcm_internal( # Renamed from create_dcm to avoid conflict if there's a main one
+def create_dcm_internal(
     vn: np.ndarray,
     ve: np.ndarray,
     dt: float = 0.1,
-    order: str = 'body2nav' # :body2nav or :nav2body
+    order: str = 'body2nav'
 ) -> np.ndarray:
     """
     Internal helper to estimate DCM using known heading with FOGM noise.
-    Corresponds to create_dcm in Julia.
     """
     N = len(vn)
-    # FOGM noise parameters from Julia code (hardcoded)
     roll_fogm_std_rad  = np.deg2rad(2.0)
     pitch_fogm_std_rad = np.deg2rad(0.5)
     yaw_fogm_std_rad   = np.deg2rad(1.0)
-    fogm_tau_attitude  = 2.0 # seconds
+    fogm_tau_attitude  = 2.0
 
     roll_noise  = generate_fogm_noise(roll_fogm_std_rad,  fogm_tau_attitude, dt, N)
     pitch_noise = generate_fogm_noise(pitch_fogm_std_rad, fogm_tau_attitude, dt, N)
     yaw_noise   = generate_fogm_noise(yaw_fogm_std_rad,   fogm_tau_attitude, dt, N)
 
-    # Band-pass filter for attitude noise (from analysis_util)
-    # Julia: bpf = get_bpf(;pass1=1e-6,pass2=1)
-    bpf_coeffs = get_band_pass_filter_coeffs(pass1=1e-6, pass2=1.0) # Assuming 1 Hz upper for attitude
+    bpf_coeffs = get_band_pass_filter_coeffs(pass1=1e-6, pass2=1.0)
     
     roll_filt  = apply_band_pass_filter(roll_noise, bpf_coeffs=bpf_coeffs)
-    pitch_filt = apply_band_pass_filter(pitch_noise, bpf_coeffs=bpf_coeffs) + np.deg2rad(2.0) # Pitch bias
+    pitch_filt = apply_band_pass_filter(pitch_noise, bpf_coeffs=bpf_coeffs) + np.deg2rad(2.0)
     
-    # Yaw definition from velocities (heading) + filtered noise
-    # atan2(ve, vn) gives heading angle (from North, positive East)
     heading_rad = np.arctan2(ve, vn)
     yaw_filt = apply_band_pass_filter(yaw_noise, bpf_coeffs=bpf_coeffs) + heading_rad
     
-    # Convert Euler angles (roll, pitch, yaw) to DCM
-    # euler2dcm from analysis_util
-    dcm_array = euler2dcm(roll_filt, pitch_filt, yaw_filt, order=order) # N x 3 x 3
-    
-    return dcm_array
+    return euler2dcm(roll_filt, pitch_filt, yaw_filt, order=order)
 
 
 def calculate_imputed_TL_earth(
-    xyz: XYZ0, # Assuming XYZ0 or a compatible type
-    ind: np.ndarray, # Indices for the subset of data
-    map_val_scalar: np.ndarray, # Scalar magnetic anomaly map values for these indices
+    xyz: XYZ0,
+    ind: np.ndarray,
+    map_val_scalar: np.ndarray,
     set_igrf_in_xyz: bool,
-    TL_coef: np.ndarray, # Tolles-Lawson coefficients (1D array)
-    terms: List[str] = ['permanent', 'induced', 'eddy'], # Or use symbols/enums
+    TL_coef: np.ndarray,
+    terms: List[str] = ['permanent', 'induced', 'eddy'],
     Bt_scale: float = 50000.0
-) -> Tuple[np.ndarray, np.ndarray]: # Returns (TL_aircraft_vector_field_3xN, B_earth_vector_field_3xN)
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Internal helper to get imputed Earth vector and TL aircraft field.
-    Corresponds to calculate_imputed_TL_earth in Julia.
+    Returns (TL_aircraft_vector_field_3xN, B_earth_vector_field_3xN)
     """
-    # Get IGRF vector in body frame for the selected indices
-    # get_igrf_magnetic_field from analysis_util
     igrf_vector_body = get_igrf_magnetic_field(
         xyz, ind=ind, frame='body', norm_igrf=False, check_xyz=(not set_igrf_in_xyz)
-    ) # Returns 3xN_ind
+    )
 
     if set_igrf_in_xyz:
-        # Calculate scalar IGRF and update in xyz object for the given indices
         xyz.igrf[ind] = np.linalg.norm(igrf_vector_body, axis=0)
 
-    # Total Earth field scalar magnitude (map anomaly + IGRF scalar)
-    # Assuming map_val_scalar corresponds to ind
-    B_earth_scalar_total = map_val_scalar + np.linalg.norm(igrf_vector_body, axis=0) # No diurnal here
+    B_earth_scalar_total = map_val_scalar + np.linalg.norm(igrf_vector_body, axis=0)
 
-    # Impute Earth vector field by scaling normalized IGRF vector
-    # Normalize each column of igrf_vector_body (3xN_ind)
     norm_igrf_vec = np.linalg.norm(igrf_vector_body, axis=0, keepdims=True)
-    # Avoid division by zero if norm is zero
-    norm_igrf_vec[norm_igrf_vec == 0] = 1e-9 # Replace zero norms
+    norm_igrf_vec[norm_igrf_vec == 0] = 1e-9
     unit_igrf_vector_body = igrf_vector_body / norm_igrf_vec
     
-    B_earth_vector_body = unit_igrf_vector_body * B_earth_scalar_total[np.newaxis, :] # 3xN_ind
+    B_earth_vector_body = unit_igrf_vector_body * B_earth_scalar_total[np.newaxis, :]
 
-    # Time-derivative of Earth vector field (in body frame)
-    # fdm from analysis_util, applied row-wise to 3xN_ind array
-    # Assuming fdm handles 2D arrays by operating on rows or needs a loop/map.
-    # If fdm is 1D:
     B_earth_dot_body = np.vstack([
-        fdm(B_earth_vector_body[0,:]),
-        fdm(B_earth_vector_body[1,:]),
-        fdm(B_earth_vector_body[2,:])
-    ]) # Results in 3xN_ind
+        fdm(B_earth_vector_body[0,:]), fdm(B_earth_vector_body[1,:]), fdm(B_earth_vector_body[2,:])
+    ]) / xyz.traj.dt # Assuming dt is consistent for the subset
 
-    # Convert TL coefficients to matrix form (permanent, induced, eddy matrices)
-    # tolles_lawson_coeffs_to_matrix from analysis_util
     TL_coef_p_mat, TL_coef_i_mat, TL_coef_e_mat = \
         tolles_lawson_coeffs_to_matrix(TL_coef, terms=terms, Bt_scale=Bt_scale)
 
-    # Calculate aircraft's magnetic field vector due to Earth's field (TL effect)
-    # get_tolles_lawson_aircraft_field_vector from analysis_util
     TL_aircraft_vector_field = get_tolles_lawson_aircraft_field_vector(
         B_earth_vector_body, B_earth_dot_body,
         TL_coef_p_mat, TL_coef_i_mat, TL_coef_e_mat
-    ) # Returns 3xN_ind
+    )
     
     return TL_aircraft_vector_field, B_earth_vector_body
 
 
 def create_informed_xyz(
-    xyz: XYZ0, # Assuming XYZ0 or a compatible type
-    ind: np.ndarray, # Indices for the subset of data
+    xyz: XYZ0,
+    ind: np.ndarray,
     mapS: Union[MapS, MapSd, MapS3D],
-    use_mag_field_name: str, # e.g., "mag_1_uc"
-    use_vec_field_name: str, # e.g., "flux_a"
-    TL_coef: np.ndarray, # Tolles-Lawson coefficients (1D array)
+    use_mag_field_name: str,
+    use_vec_field_name: str,
+    TL_coef: np.ndarray,
     terms: List[str] = ['permanent', 'induced', 'eddy'],
-    disp_min_m: float = 100.0, # Min displacement in meters
-    disp_max_m: float = 500.0, # Max displacement in meters
-    Bt_disp_nT: float = 50.0,  # Target total field displacement offset in nT
+    disp_min_m: float = 100.0,
+    disp_max_m: float = 500.0,
+    Bt_disp_nT: float = 50.0,
     Bt_scale: float = 50000.0
 ) -> XYZ0:
     """
     Create knowledge-informed XYZ data by displacing trajectory and updating mag fields.
-    Corresponds to create_informed_xyz in Julia.
     """
-    # Basic validation of terms (simplified from Julia's specific symbol checks)
     required_term_categories = {'permanent', 'induced', 'eddy'}
     provided_term_categories = set()
-    for term in terms: # crude check
-        if 'perm' in term: provided_term_categories.add('permanent')
-        if 'ind' in term: provided_term_categories.add('induced')
-        if 'eddy' in term: provided_term_categories.add('eddy')
+    for term_group in terms: # terms might be like 'p', 'i', 'e' or full names
+        if 'perm' in term_group or term_group == 'p': provided_term_categories.add('permanent')
+        if 'ind' in term_group or term_group == 'i': provided_term_categories.add('induced')
+        if 'eddy' in term_group or term_group == 'e': provided_term_categories.add('eddy')
     if not required_term_categories.issubset(provided_term_categories):
-        raise ValueError("Permanent, induced, and eddy terms are required for create_informed_xyz.")
-    if any(t in terms for t in ['fdm', 'bias']): # crude check
-        raise ValueError("Derivative and bias terms may not be used in create_informed_xyz.")
+        raise ValueError("Permanent, induced, and eddy terms are required.")
+    if any(t in terms for t in ['fdm', 'f', 'bias', 'b']):
+        raise ValueError("Derivative and bias terms may not be used.")
 
-    # Validate TL_coef length against a test A matrix (if create_TL_A is robust)
-    # A_test = create_tolles_lawson_A_matrix(np.array([1.0]),np.array([1.0]),np.array([1.0]), terms=terms)
-    # if len(TL_coef) != A_test.shape[1]:
-    #     raise ValueError("TL_coef length does not agree with specified terms.")
-
-    # Get the relevant subset of the trajectory
-    # get_trajectory_subset from analysis_util
     traj_subset = get_trajectory_subset(xyz.traj, ind)
-
     if not map_check(mapS, traj_subset.lat, traj_subset.lon):
         raise ValueError("Original trajectory subset must be inside the provided map.")
 
-    # Get scalar map values and interpolation object for the original trajectory subset
-    # get_map_value_at_coords from analysis_util
     map_val_orig, itp_mapS_obj = get_map_val(
         mapS, traj_subset.lat, traj_subset.lon, np.median(traj_subset.alt),
         return_interpolator=True
     )
-    if itp_mapS_obj is None:
-        raise RuntimeError("Could not get map interpolator object.")
+    if itp_mapS_obj is None: raise RuntimeError("Could not get map interpolator object.")
 
-    # Calculate initial aircraft and Earth vector fields for the original subset
-    # Note: set_igrf_in_xyz=False as we are not modifying the input xyz here.
     TL_aircraft_orig, B_earth_orig = calculate_imputed_TL_earth(
         xyz, ind, map_val_orig, False, TL_coef, terms=terms, Bt_scale=Bt_scale
-    ) # Both are 3xN_ind
+    )
 
-    # Determine displacement direction (towards map center, along map gradient)
-    # Sample ~100 points along trajectory subset
     num_samples = min(100, len(traj_subset.lat))
-    sample_indices = np.linspace(0, len(traj_subset.lat) - 1, num_samples, dtype=int)
+    sample_indices = np.linspace(0, len(traj_subset.lat) - 1, num_samples, dtype=int) if num_samples > 0 else []
     
+    if not sample_indices.size: # Handle empty trajectory subset
+        print("Warning: Empty trajectory subset for informed XYZ, returning copy.")
+        return deepcopy(xyz)
+
     sampled_lats = traj_subset.lat[sample_indices]
     sampled_lons = traj_subset.lon[sample_indices]
 
-    # Average lat/lon of trajectory subset and map center
     traj_avg_latlon = np.array([np.mean(traj_subset.lat), np.mean(traj_subset.lon)])
-    map_center_latlon = np.array([np.mean(mapS.yy), np.mean(mapS.xx)]) # Assuming yy,xx are rad
+    map_center_latlon = np.array([np.mean(mapS.yy), np.mean(mapS.xx)])
 
-    # Calculate average map gradient at sampled points
-    # approximate_gradient(itp_func, y, x) from analysis_util -> returns [dval/dlat, dval/dlon]
     gradients_at_samples = [approximate_gradient(itp_mapS_obj, la, lo)
                             for la, lo in zip(sampled_lats, sampled_lons)]
-    avg_gradient_latlon = np.mean(np.array(gradients_at_samples), axis=0) # [avg_dval/dlat, avg_dval/dlon]
+    avg_gradient_latlon = np.mean(np.array(gradients_at_samples), axis=0)
 
-    # Displacement direction based on gradient, normalized
-    if np.linalg.norm(avg_gradient_latlon) < 1e-9: # Avoid division by zero if gradient is flat
-        # Default to direction towards map center if gradient is zero
-        disp_dir_latlon = map_center_latlon - traj_avg_latlon
-    else:
-        disp_dir_latlon = avg_gradient_latlon
-    
+    disp_dir_latlon = avg_gradient_latlon if np.linalg.norm(avg_gradient_latlon) >= 1e-9 else map_center_latlon - traj_avg_latlon
     norm_disp_dir = np.linalg.norm(disp_dir_latlon)
-    if norm_disp_dir < 1e-9: # If direction is still zero (e.g. traj_avg == map_center)
-        disp_dir_latlon = np.array([1.0, 0.0]) # Arbitrary direction (e.g., East)
-        norm_disp_dir = 1.0
-    disp_dir_unit_latlon = disp_dir_latlon / norm_disp_dir
-
-    # Ensure displacement is towards map center (if gradient pointed away)
+    disp_dir_unit_latlon = disp_dir_latlon / norm_disp_dir if norm_disp_dir >= 1e-9 else np.array([1.0, 0.0])
+    
     vec_to_map_center = map_center_latlon - traj_avg_latlon
-    if np.dot(vec_to_map_center, disp_dir_unit_latlon) < 0:
-        disp_dir_unit_latlon *= -1 # Reverse direction
+    if np.dot(vec_to_map_center, disp_dir_unit_latlon) < 0: disp_dir_unit_latlon *= -1
 
-    # Convert displacement limits from meters to radians
-    # Using dn2dlat, de2dlon from analysis_util
-    # Use average latitude of the trajectory for conversion factor
     avg_lat_for_conv = traj_avg_latlon[0]
-    disp_min_rad = min(dn2dlat(disp_min_m, avg_lat_for_conv),
-                       de2dlon(disp_min_m, avg_lat_for_conv))
-    disp_max_rad = max(dn2dlat(disp_max_m, avg_lat_for_conv),
-                       de2dlon(disp_max_m, avg_lat_for_conv))
+    disp_min_rad = min(dn2dlat(disp_min_m, avg_lat_for_conv), de2dlon(disp_min_m, avg_lat_for_conv))
+    disp_max_rad = max(dn2dlat(disp_max_m, avg_lat_for_conv), de2dlon(disp_max_m, avg_lat_for_conv))
 
-    # Determine displacement magnitude in radians to achieve Bt_disp_nT change
-    # Gradient magnitude along displacement direction: |d(MapVal)/d(Path)| in [nT/rad]
-    # This is dot(avg_gradient_latlon, disp_dir_unit_latlon)
     gradient_mag_along_disp = abs(np.dot(avg_gradient_latlon, disp_dir_unit_latlon))
-    
-    if gradient_mag_along_disp < 1e-6: # Avoid division by zero if map is flat along displacement
-        disp_rad_magnitude = (disp_min_rad + disp_max_rad) / 2 # Mid-range displacement
-    else:
-        disp_rad_magnitude = Bt_disp_nT / gradient_mag_along_disp
-        
-    # Clamp displacement magnitude to [disp_min_rad, disp_max_rad]
+    disp_rad_magnitude = Bt_disp_nT / gradient_mag_along_disp if gradient_mag_along_disp >= 1e-6 else (disp_min_rad + disp_max_rad) / 2
     disp_rad_magnitude_clamped = np.clip(disp_rad_magnitude, disp_min_rad, disp_max_rad)
-    
-    # Final displacement vector in (delta_lat_rad, delta_lon_rad)
     displacement_latlon_rad = disp_rad_magnitude_clamped * disp_dir_unit_latlon
 
-    # Create a deep copy of the original xyz data to modify
     xyz_disp = deepcopy(xyz)
-
-    # Apply displacement to the trajectory subset in the new xyz_disp object
     xyz_disp.traj.lat[ind] += displacement_latlon_rad[0]
     xyz_disp.traj.lon[ind] += displacement_latlon_rad[1]
-    # Note: Velocities, accelerations, Cnb in xyz_disp.traj for these 'ind' are NOT updated.
-    # This assumes the displacement is a parallel shift and dynamics are preserved,
-    # which is a simplification. Julia code also does not update them.
 
-    # Check if new displaced trajectory is still on the map
     displaced_traj_subset = get_trajectory_subset(xyz_disp.traj, ind)
     if not map_check(mapS, displaced_traj_subset.lat, displaced_traj_subset.lon):
-        raise ValueError("Displaced trajectory is outside the map. Adjust displacement parameters or map.")
+        raise ValueError("Displaced trajectory is outside the map.")
 
-    # Get scalar map values for the new displaced trajectory subset
-    map_val_disp = get_map_value_at_coords(
+    map_val_disp = get_map_val(
         mapS, displaced_traj_subset.lat, displaced_traj_subset.lon,
         np.median(displaced_traj_subset.alt), alpha=200
     )
 
-    # Calculate aircraft and Earth vector fields for the new displaced subset
-    # This time, set_igrf_in_xyz=True to update IGRF in xyz_disp for these 'ind'.
     TL_aircraft_disp, B_earth_disp = calculate_imputed_TL_earth(
         xyz_disp, ind, map_val_disp, True, TL_coef, terms=terms, Bt_scale=Bt_scale
-    ) # Both are 3xN_ind
+    )
 
-    # Calculate changes in vector fields
-    delta_B_TL_effect = TL_aircraft_disp - TL_aircraft_orig # Change due to aircraft's TL interaction at new spot
-    delta_B_earth_field = B_earth_disp - B_earth_orig     # Change due to Earth's field at new spot
-    total_delta_B_vector = delta_B_TL_effect + delta_B_earth_field # Total change in 3D vector field (3xN_ind)
+    delta_B_TL_effect = TL_aircraft_disp - TL_aircraft_orig
+    delta_B_earth_field = B_earth_disp - B_earth_orig
+    total_delta_B_vector = delta_B_TL_effect + delta_B_earth_field
 
-    # Update vector magnetometer readings in xyz_disp for the specified field and indices
-    # getattr and setattr can be used for dynamic field names
-    flux_disp_obj = getattr(xyz_disp, use_vec_field_name) # e.g., xyz_disp.flux_a
-    
-    # Assuming flux_disp_obj fields (x,y,z,t) are numpy arrays that can be indexed by 'ind'
-    # And that they are already copies from deepcopy(xyz)
+    flux_disp_obj = getattr(xyz_disp, use_vec_field_name)
     flux_disp_obj.x[ind] += total_delta_B_vector[0,:]
     flux_disp_obj.y[ind] += total_delta_B_vector[1,:]
     flux_disp_obj.z[ind] += total_delta_B_vector[2,:]
-    flux_disp_obj.t[ind] = np.sqrt(flux_disp_obj.x[ind]**2 + \
-                                   flux_disp_obj.y[ind]**2 + \
-                                   flux_disp_obj.z[ind]**2)
-    # setattr(xyz_disp, use_vec_field_name, flux_disp_obj) # Not needed if flux_disp_obj is mutable reference
+    flux_disp_obj.t[ind] = np.sqrt(flux_disp_obj.x[ind]**2 + flux_disp_obj.y[ind]**2 + flux_disp_obj.z[ind]**2)
 
-    # Update scalar magnetometer readings in xyz_disp
-    # Change in scalar reading is projection of total_delta_B_vector onto new total field direction
-    # New total field direction is approximately direction of flux_disp_obj.x/y/z[ind]
-    
-    # Project total_delta_B_vector onto the direction of the new (displaced) flux vector
-    # new_flux_vectors_at_ind = np.vstack((flux_disp_obj.x[ind], flux_disp_obj.y[ind], flux_disp_obj.z[ind])) # 3xN_ind
-    # norm_new_flux = np.linalg.norm(new_flux_vectors_at_ind, axis=0, keepdims=True)
-    # norm_new_flux[norm_new_flux == 0] = 1e-9
-    # unit_new_flux_vectors = new_flux_vectors_at_ind / norm_new_flux
-    # delta_B_scalar_projection = np.sum(total_delta_B_vector * unit_new_flux_vectors, axis=0) # Dot product per column
-
-    # Julia's approach for scalar update:
-    # ΔB_dot = dot.(eachcol(ΔB),[[x,y,z] for (x,y,z) in zip(flux.x[ind],flux.y[ind],flux.z[ind])]) ./ flux.t[ind]
-    # This is projecting ΔB onto the *original* flux direction at displaced location (before ΔB is added to flux).
-    # Let's use the new flux vector (after adding total_delta_B_vector) for projection, which seems more consistent.
-    # If flux.x[ind] etc. are already updated:
     current_flux_x_at_ind = flux_disp_obj.x[ind]
     current_flux_y_at_ind = flux_disp_obj.y[ind]
     current_flux_z_at_ind = flux_disp_obj.z[ind]
-    current_flux_t_at_ind = flux_disp_obj.t[ind] # This is already sqrt(x^2+y^2+z^2) of *new* flux
-
-    # Avoid division by zero for flux_t
+    current_flux_t_at_ind = flux_disp_obj.t[ind]
     valid_t_mask = current_flux_t_at_ind != 0
     delta_B_scalar_projection = np.zeros_like(current_flux_t_at_ind)
-
     if np.any(valid_t_mask):
         dot_prod_valid = (total_delta_B_vector[0, valid_t_mask] * current_flux_x_at_ind[valid_t_mask] +
                           total_delta_B_vector[1, valid_t_mask] * current_flux_y_at_ind[valid_t_mask] +
                           total_delta_B_vector[2, valid_t_mask] * current_flux_z_at_ind[valid_t_mask])
         delta_B_scalar_projection[valid_t_mask] = dot_prod_valid / current_flux_t_at_ind[valid_t_mask]
 
-
-    # Update the specified uncompensated scalar magnetometer field
     current_mag_uc_vals = getattr(xyz_disp, use_mag_field_name)
     current_mag_uc_vals[ind] += delta_B_scalar_projection
-    # setattr(xyz_disp, use_mag_field_name, current_mag_uc_vals) # Not needed if mutable
-
-    # Update the compensated scalar magnetometer field (mag_1_c)
-    # Change is simply the difference in map anomaly values
+    
     delta_map_val_scalar = map_val_disp - map_val_orig
     xyz_disp.mag_1_c[ind] += delta_map_val_scalar
     
     return xyz_disp
+
+# --- New functions for text-based XYZ file handling ---
+
+def xyz_file_name(
+    flight: Union[int, str],
+    line: Union[int, str],
+    output_dir: str = ".",
+    prefix: str = "flight",
+    suffix: str = "",
+    ext: str = ".xyz"
+) -> str:
+    """
+    Generates a standardized XYZ file name.
+    Example: flight_1001_line_1.xyz
+    """
+    base_name = f"{prefix}_{flight}_line_{line}{suffix}{ext}"
+    return os.path.join(output_dir, base_name)
+
+def write_xyz(
+    xyz_obj: XYZ0,
+    file_path: str,
+    columns: Optional[List[str]] = None,
+    na_rep: str = "NaN",
+    float_format: str = "%.3f",
+    include_header: bool = True,
+    delimiter: str = ","
+) -> None:
+    """
+    Writes data from an XYZ0 object to a text-based XYZ file (typically CSV).
+
+    Args:
+        xyz_obj: The XYZ0 data object.
+        file_path: Path to the output XYZ file.
+        columns: Optional list of column names to write. If None, a default set is used.
+                 Available sources: 'traj', 'ins', 'flux_a', 'scalar_mags', 'meta'.
+                 Specific columns can be like 'traj.lat', 'mag_1_uc', etc.
+        na_rep: Representation for missing values.
+        float_format: Format string for floating point numbers.
+        include_header: Whether to write the header row.
+        delimiter: Delimiter for the output file.
+    """
+    data_to_write = {}
+    N = xyz_obj.traj.N
+
+    # Default columns if none specified
+    if columns is None:
+        columns = [
+            'tt', 'lat', 'lon', 'alt', 'vn', 've', 'vd', 'roll', 'pitch', 'yaw', # from traj/ins
+            'mag_1_uc', 'mag_1_c', 'diurnal', 'igrf', # scalar mags
+            'flux_a_x', 'flux_a_y', 'flux_a_z', 'flux_a_t', # vector mags
+            'flight', 'line', 'year', 'doy' # metadata
+        ]
+
+    # Populate data_to_write dictionary
+    # Trajectory data (prefer INS if available, fallback to TRAJ)
+    source_traj = xyz_obj.ins if hasattr(xyz_obj, 'ins') and xyz_obj.ins is not None else xyz_obj.traj
+    
+    # Euler angles might not be directly in Traj, but in INS or calculated
+    # For simplicity, assume roll, pitch, yaw are accessible if requested
+    # This part might need adjustment based on how Euler angles are stored/derived for XYZ0.traj
+    # If using xyz_obj.ins, it has roll, pitch, yaw via dcm2euler from its Cnb.
+    # If using xyz_obj.traj, its Cnb can be used.
+    
+    # Get Euler from source_traj.Cnb
+    if source_traj.Cnb is not None and source_traj.Cnb.ndim == 3 and source_traj.Cnb.shape[0] == N:
+        euler_angles_rad = dcm2euler(source_traj.Cnb, order='body2nav') # N x 3 (roll, pitch, yaw)
+        traj_roll_deg = np.rad2deg(euler_angles_rad[:, 0])
+        traj_pitch_deg = np.rad2deg(euler_angles_rad[:, 1])
+        traj_yaw_deg = np.rad2deg(euler_angles_rad[:, 2])
+    else: # Fallback if Cnb is not as expected
+        traj_roll_deg = np.full(N, np.nan)
+        traj_pitch_deg = np.full(N, np.nan)
+        traj_yaw_deg = np.full(N, np.nan)
+
+
+    possible_data = {
+        'tt': source_traj.tt,
+        'lat': np.rad2deg(source_traj.lat), # Convert to degrees for XYZ file
+        'lon': np.rad2deg(source_traj.lon), # Convert to degrees for XYZ file
+        'alt': source_traj.alt,
+        'vn': source_traj.vn,
+        've': source_traj.ve,
+        'vd': source_traj.vd,
+        'roll': traj_roll_deg,
+        'pitch': traj_pitch_deg,
+        'yaw': traj_yaw_deg,
+        'mag_1_uc': xyz_obj.mag_1_uc,
+        'mag_1_c': xyz_obj.mag_1_c,
+        'diurnal': xyz_obj.diurnal,
+        'igrf': xyz_obj.igrf,
+        'flux_a_x': xyz_obj.flux_a.x,
+        'flux_a_y': xyz_obj.flux_a.y,
+        'flux_a_z': xyz_obj.flux_a.z,
+        'flux_a_t': xyz_obj.flux_a.t,
+        'flight': xyz_obj.flights,
+        'line': xyz_obj.lines,
+        'year': xyz_obj.years,
+        'doy': xyz_obj.doys,
+        # Add more direct fields from traj if needed, e.g., fn, fe, fd
+        'fn': source_traj.fn,
+        'fe': source_traj.fe,
+        'fd': source_traj.fd,
+    }
+
+    for col_name in columns:
+        if col_name in possible_data:
+            data_to_write[col_name] = possible_data[col_name]
+        else:
+            print(f"Warning: Column '{col_name}' not found in XYZ0 data sources, skipping.")
+
+    df = pd.DataFrame(data_to_write)
+    df.to_csv(file_path, index=False, na_rep=na_rep, float_format=float_format, header=include_header, sep=delimiter)
+    print(f"XYZ data written to {file_path}")
+
+
+def read_xyz_file(file_path: str, delimiter: str = ",") -> pd.DataFrame:
+    """
+    Reads a text-based XYZ file into a pandas DataFrame.
+
+    Args:
+        file_path: Path to the input XYZ file.
+        delimiter: Delimiter used in the file.
+
+    Returns:
+        A pandas DataFrame containing the XYZ data.
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"XYZ file not found: {file_path}")
+    
+    df = pd.read_csv(file_path, sep=delimiter)
+    print(f"XYZ data read from {file_path}")
+    return df
+
+def create_xyz(
+    output_dir: str = ".",
+    flight: int = 1,
+    line: int = 1,
+    save_text_xyz: bool = True,
+    save_h5_xyz0: bool = False, # Consistent with create_xyz0's save_h5
+    xyz0_params: Optional[Dict[str, Any]] = None,
+    xyz_text_columns: Optional[List[str]] = None
+) -> Optional[XYZ0]:
+    """
+    Orchestrator function to create XYZ0 data object and optionally write it
+    to a text-based XYZ file and/or an HDF5 file.
+
+    Args:
+        output_dir: Directory to save output files.
+        flight: Flight number.
+        line: Line number.
+        save_text_xyz: If True, saves data to a text XYZ file.
+        save_h5_xyz0: If True, saves XYZ0 data to an HDF5 file (via create_xyz0).
+        xyz0_params: Dictionary of parameters to pass to create_xyz0.
+        xyz_text_columns: Specific columns to write to the text XYZ file.
+
+    Returns:
+        The created XYZ0 object, or None if creation fails.
+    """
+    if xyz0_params is None:
+        xyz0_params = {}
+
+    # Ensure flight, line, and save_h5 are passed to create_xyz0 if they are relevant
+    xyz0_params.setdefault('flight', flight)
+    xyz0_params.setdefault('line', line)
+    xyz0_params.setdefault('save_h5', save_h5_xyz0) # For HDF5 saving by create_xyz0
+    
+    if save_h5_xyz0 and 'xyz_h5' not in xyz0_params:
+         # Use a default HDF5 filename if saving to HDF5 and not specified
+        xyz0_params['xyz_h5'] = os.path.join(output_dir, f"xyz0_data_f{flight}_l{line}.h5")
+
+
+    xyz_object = create_xyz0(**xyz0_params)
+
+    if xyz_object and save_text_xyz:
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            print(f"Created output directory: {output_dir}")
+
+        txt_file = xyz_file_name(flight, line, output_dir=output_dir)
+        write_xyz(xyz_object, txt_file, columns=xyz_text_columns)
+        
+    return xyz_object
+
+
+# --- Placeholder functions from original Python file (not found in Julia's create_XYZ.jl) ---
 def get_xyz20(*args, **kwargs):
     """Placeholder for get_xyz20."""
-    raise NotImplementedError("get_xyz20 is not yet implemented.")
+    raise NotImplementedError("get_xyz20 is not yet implemented in this module.")
 
 def get_XYZ(*args, **kwargs):
-    """Placeholder for get_XYZ."""
-    raise NotImplementedError("get_XYZ is not yet implemented.")
+    """Placeholder for get_XYZ. This might load data from files."""
+    raise NotImplementedError("get_XYZ is not yet implemented in this module. Consider using read_xyz_file for text XYZ files.")
 
 def sgl_2020_train(*args, **kwargs):
     """Placeholder for sgl_2020_train."""
-    raise NotImplementedError("sgl_2020_train is not yet implemented.")
+    raise NotImplementedError("sgl_2020_train is not yet implemented in this module.")
 
 def sgl_2021_train(*args, **kwargs):
     """Placeholder for sgl_2021_train."""
-    raise NotImplementedError("sgl_2021_train is not yet implemented.")
+    raise NotImplementedError("sgl_2021_train is not yet implemented in this module.")

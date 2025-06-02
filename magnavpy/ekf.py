@@ -272,7 +272,7 @@ def process_ekf_rt_step(
 
     h_pred = get_h(current_itp_mapS_for_step, ekf_rt.x, lat_curr, lon_curr, alt_curr,
                    date=ekf_rt.date, core=ekf_rt.core, 
-                   der_map=current_der_mapS_for_step, map_alt=map_alt if map_alt != -1 else 0) # map_alt default in get_h?
+                   der_map=current_der_mapS_for_step, map_alt=map_alt if map_alt != -1 else 0) 
     
     if isinstance(h_pred, (float, int, np.number)): h_pred = np.array([h_pred])
     if h_pred.ndim == 1: h_pred = h_pred.reshape(-1,1) # to (1,1)

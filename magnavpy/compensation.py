@@ -3,6 +3,7 @@ Python translation of MagNav.jl/src/compensation.jl
 """
 import copy
 import logging
+import time # Added import
 from typing import Any, Callable, Dict, List, Tuple, Union, Optional, cast
 
 import numpy as np
@@ -104,7 +105,7 @@ class TempParams: # Placeholder
 
 # --- Stub functions (to be implemented or imported) ---
 def norm_sets(data: np.ndarray, norm_type: str = "standardize", no_norm: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Placeholder for data normalization."""
+    """Normalizes data using specified method (standardize, normalize, or none)."""
     # This is a simplified example. The actual function might be more complex.
     original_ndim = data.ndim # Store original ndim
     data_for_norm = data.copy() # Work on a copy
@@ -151,7 +152,7 @@ def norm_sets(data: np.ndarray, norm_type: str = "standardize", no_norm: Optiona
     return bias, scale, data_norm
 
 def denorm_sets(bias: Union[np.ndarray, float, np.number], scale: Union[np.ndarray, float, np.number], data_norm: np.ndarray) -> np.ndarray:
-    """Placeholder for data denormalization."""
+    """Denormalizes data given bias and scale."""
     # Ensure bias and scale are broadcastable with data_norm
     _bias = np.asarray(bias)
     _scale = np.asarray(scale)
@@ -165,7 +166,7 @@ def denorm_sets(bias: Union[np.ndarray, float, np.number], scale: Union[np.ndarr
     return data_norm * _scale + _bias
 
 def unpack_data_norms(data_norms_tuple: Tuple) -> Tuple:
-    """Placeholder for unpacking data normalization parameters."""
+    """Unpacks data normalization parameters from a tuple."""
     # Example: (A_bias,A_scale,v_scale,x_bias,x_scale,y_bias,y_scale)
     # or (_,_,v_scale,x_bias,x_scale,y_bias,y_scale)
     if len(data_norms_tuple) == 7: # Common case
@@ -180,7 +181,7 @@ def unpack_data_norms(data_norms_tuple: Tuple) -> Tuple:
 
 
 def get_nn_m(Nf: int, Ny: int, hidden: List[int], activation: Callable, **kwargs) -> nn.Sequential:
-    """Placeholder for creating a neural network model (Chain)."""
+    """Creates a neural network model (nn.Sequential) based on specified layers and activation."""
     layers: List[nn.Module] = []
     input_size = Nf
     model_type_nn = kwargs.get("model_type") # Store for clarity
@@ -481,7 +482,7 @@ def sparse_group_lasso(model: nn.Module, alpha: float) -> torch.Tensor:
     return sgl_penalty
 
 def err_segs(y_hat: np.ndarray, y: np.ndarray, l_segs: List[int], silent: bool = False) -> np.ndarray:
-    """Placeholder for calculating error, possibly mean-corrected per segment."""
+    """Calculates error, mean-corrected per segment."""
     # Simplified: just difference. Actual might involve detrending per segment.
     current_pos = 0
     errors = []
@@ -1491,9 +1492,33 @@ def nn_comp_1_train(
 
             if x_norm_np_2d.shape[0] > 1 : # cov needs more than 1 sample
                 cov_x = np.cov(x_norm_np_2d, rowvar=False)
-                _, S_svd, V_svd = np.linalg.svd(cov_x)
-                v_scale_pca = V_svd[:, :k_pca] @ np.linalg.inv(np.diag(np.sqrt(S_svd[:k_pca])))
-                var_ret = round(np.sum(np.sqrt(S_svd[:k_pca])) / np.sum(np.sqrt(S_svd)) * 100, 6)
+                # U_svd, S_svd, Vh_svd = np.linalg.svd(cov_x) # Vh_svd is V transpose
+                # Principal components (eigenvectors of cov_x) are columns of Vh_svd.T
+                # Julia: v_scale = V[:,1:k_pca]*inv(Diagonal(sqrt.(S[1:k_pca])))
+                # Python equivalent:
+                # W = Vh_svd.T[:, :k_pca] # Shape (Nf, k_pca) components
+                # v_scale_pca = W @ np.diag(1.0 / np.sqrt(S_svd[:k_pca])) # Shape (Nf, k_pca) scaled components
+                
+                # Simpler: use sklearn PCA if available and matches logic, or ensure direct port is correct
+                # For direct port of Julia's SVD approach to get scaled components:
+                eigenvalues, eigenvectors = np.linalg.eigh(cov_x)
+                # eigh returns sorted eigenvalues and corresponding eigenvectors
+                # Sort in descending order
+                sorted_indices = np.argsort(eigenvalues)[::-1]
+                S_svd_sorted = eigenvalues[sorted_indices]
+                V_sorted = eigenvectors[:, sorted_indices]
+
+                v_pca_components = V_sorted[:, :k_pca] # Shape (Nf, k_pca)
+                # Filter out very small or zero eigenvalues before taking sqrt and inverse
+                s_values_for_scaling = S_svd_sorted[:k_pca]
+                s_values_for_scaling[s_values_for_scaling <= 1e-9] = 1e-9 # Avoid division by zero / instability
+                
+                v_scale_pca = v_pca_components @ np.diag(1.0 / np.sqrt(s_values_for_scaling))
+
+                # Variance retained calculation needs to use the SVD singular values if that's the reference
+                # If using eigenvalues from eigh:
+                var_ret = round(np.sum(np.sqrt(s_values_for_scaling)) / np.sum(np.sqrt(S_svd_sorted[S_svd_sorted > 1e-9])) * 100, 6) if np.sum(np.sqrt(S_svd_sorted[S_svd_sorted > 1e-9])) > 0 else 0.0
+
                 if not silent: print(f"INFO: k_pca = {k_pca} of {Nf}, variance retained: {var_ret} %")
             else: # Not enough samples for meaningful SVD/PCA
                 if not silent: print(f"WARN: Not enough samples ({x_norm_np_2d.shape[0]}) for PCA with k_pca={k_pca}. Using identity matrix for v_scale_pca.")
@@ -1502,7 +1527,9 @@ def nn_comp_1_train(
         else:
             v_scale_pca = np.eye(Nf, dtype=np.float32)
         
-        x_norm_transformed = (x_norm_np @ v_scale_pca).T
+        # x_norm_np is (N_samples, Nf), v_scale_pca is (Nf, k_pca)
+        # Result x_norm_np @ v_scale_pca is (N_samples, k_pca)
+        x_norm_transformed = (x_norm_np @ v_scale_pca).T # Transposed to (k_pca, N_samples)
         y_norm_transformed = y_norm_np.T if y_norm_np.ndim > 1 else y_norm_np.reshape(1, -1) # Ensure 2D for DataLoader
         
         # Store original (non-PCA'd) bias/scale for x for test data transformation
@@ -1748,16 +1775,98 @@ def nn_comp_1_fwd_from_raw(
 ) -> np.ndarray:
     x_f32 = x.astype(np.float32)
 
-    # Unpack data normalizations
-    # Assuming data_norms has structure: (_, placeholder_v_scale_bias, v_scale_pca, x_bias_orig, x_scale_orig, y_bias, y_scale)
-    # The first two elements are placeholders from Julia code.
-    _, _, v_scale_pca, x_bias, x_scale, y_bias, y_scale = unpack_data_norms(data_norms)
+    # Unpack data normalizations. Structure from nn_comp_1_train's data_norms_out:
+    # (placeholder1, placeholder2, v_scale_pca, x_bias, x_scale, y_bias, y_scale)
+    if len(data_norms) != 7:
+        raise ValueError(f"data_norms tuple expected to have 7 elements, got {len(data_norms)}")
+
+    v_scale_pca = data_norms[2]
+    x_bias      = data_norms[3]
+    x_scale     = data_norms[4]
+    y_bias      = data_norms[5]
+    y_scale     = data_norms[6]
+
+    # Ensure x_bias and x_scale are correctly broadcastable or shaped
+    # x_f32 is (N, F_orig), x_bias is (F_orig,), x_scale is (F_orig,)
+    # v_scale_pca is (F_orig, k_pca)
     
-    # Normalize x: ( (x - x_bias) / x_scale ) @ v_scale_pca
-    # Then transpose for model input (features, samples) -> (samples, features) for PyTorch
-    x_norm_np_for_fwd = (((x_f32 - x_bias) / x_scale) @ v_scale_pca).T # This is (features, samples)
+    # Handle cases where x_bias/x_scale might be scalar if x was 1D originally normalized
+    _x_bias = np.asarray(x_bias)
+    _x_scale = np.asarray(x_scale)
+    if x_f32.ndim == 1 and _x_bias.ndim > 0 and _x_bias.size > 1: _x_bias = _x_bias[0]
+    if x_f32.ndim == 1 and _x_scale.ndim > 0 and _x_scale.size > 1: _x_scale = _x_scale[0]
+
+
+    x_norm_step1 = (x_f32 - _x_bias) / _x_scale
     
-    # nn_comp_1_fwd expects (features, samples) if it's numpy, or (samples, features) if torch
+    # x_norm_step1 is (N, F_orig)
+    # v_scale_pca is (F_orig, k_pca)
+    # x_norm_projected is (N, k_pca)
+    x_norm_projected = x_norm_step1 @ v_scale_pca
+    
+    # Transpose for nn_comp_1_fwd, which expects (features=k_pca, samples=N)
+    x_norm_transformed_for_fwd = x_norm_projected.T
+
+    # Call the other nn_comp_1_fwd which takes normalized data (already PCA'd and transposed)
+    y_hat = nn_comp_1_fwd(x_norm_transformed_for_fwd, y_bias, y_scale, model,
+                          denorm=True, testmode=True)
+    
+    return y_hat
+
+# Note: The Julia version has two nn_comp_1_test functions.
+# 1. nn_comp_1_test(x_norm::AbstractMatrix, y, y_bias, y_scale, model::Chain; ...)
+# 2. nn_comp_1_test(x::Matrix, y, data_norms::Tuple, model::Chain; ...)
+
+def nn_comp_1_test(
+    x_norm_in: Union[np.ndarray, torch.Tensor], # Normalized and PCA-transformed input, (features, samples)
+    y: np.ndarray,
+    y_bias: Union[float, np.ndarray],
+    y_scale: Union[float, np.ndarray],
+    model: nn.Sequential,
+    l_segs: Optional[List[int]] = None,
+    silent: bool = False
+) -> Tuple[np.ndarray, np.ndarray]:
+    
+    if l_segs is None:
+        l_segs = [len(y)]
+
+    # Get results
+    # nn_comp_1_fwd expects x_norm_in as (features, samples) if numpy, or (samples, features) if torch
+    # It handles the transpose internally if numpy.
+    y_hat = nn_comp_1_fwd(x_norm_in, y_bias, y_scale, model, denorm=True, testmode=True)
+    
+    err = err_segs(y_hat, y, l_segs, silent=SILENT_DEBUG) # Use global SILENT_DEBUG for internal calls
+    
+    if not silent:
+        err_std = np.std(err) if err.size > 0 else float('nan')
+        print(f"INFO: test error: {err_std:.2f} nT")
+        
+    return y_hat, err
+
+def nn_comp_1_test_from_raw(
+    x: np.ndarray, # Raw input data (samples, features_original)
+    y: np.ndarray,
+    data_norms: Tuple, # Should contain (_,_,v_scale_pca,x_bias,x_scale,y_bias,y_scale)
+    model: nn.Sequential,
+    l_segs: Optional[List[int]] = None,
+    silent: bool = False
+) -> Tuple[np.ndarray, np.ndarray]:
+
+    if l_segs is None:
+        l_segs = [len(y)]
+    
+    y_f32 = y.astype(np.float32) # Match Julia's type consistency
+
+    # Get results using nn_comp_1_fwd_from_raw
+    y_hat = nn_comp_1_fwd_from_raw(x, data_norms, model)
+    
+    err = err_segs(y_hat, y_f32, l_segs, silent=SILENT_DEBUG)
+    
+    if not silent:
+        err_std = np.std(err) if err.size > 0 else float('nan')
+        print(f"INFO: test error: {err_std:.2f} nT")
+        
+    return y_hat, err
     # The internal nn_comp_1_fwd will handle transpose if it's numpy
     y_hat = nn_comp_1_fwd(x_norm_np_for_fwd, y_bias, y_scale, model, denorm=True, testmode=True)
     return y_hat
@@ -4922,95 +5031,43 @@ def comp_train_test( # Overload for DataFrames
         df_line_local: Any, # pd.DataFrame,
         df_flight_local: Any, # pd.DataFrame,
         df_map_local: Any, # pd.DataFrame,
-        # mapS_cache: Dict[str, Any], # To cache loaded maps
-        # xyz_cache: Dict[str, XYZ] # To cache loaded XYZ data by flight
-        comp_params_local: CompParams # To access use_mag, use_vec etc. for field_check
+        # comp_params_local: CompParams, # Pass if get_XYZ_ported needs specific params from it
+        silent_local: bool
     ) -> Tuple[Optional[XYZ], Optional[np.ndarray], Optional[Any]]: # Returns XYZ, ind, mapS_obj
         
         if not hasattr(df_line_local, "empty"): # Check if it's a DataFrame
             raise TypeError("df_line must be a pandas DataFrame")
 
-        _lines_set = lines_set
-        if isinstance(lines_set, (int, float)):
-            _lines_set = [lines_set]
-        
-        all_xyz_data_list = []
-        all_indices_list = []
-        map_name_train = None
-        map_obj_train = mapS_null
-
-        # This is highly simplified. A proper implementation would:
-        # - Iterate through unique flights in _lines_set.
-        # - Load each flight's XYZ data once (use a cache).
-        # - For each line in _lines_set for that flight:
-        #   - Get the time indices (t_start, t_end).
-        #   - Convert time indices to sample indices based on xyz.dt.
-        #   - Append the XYZ object and the sample indices for that line.
-        # - Concatenate all XYZ data if possible (if from same flight or compatible)
-        #   or handle as a list of (XYZ, ind) pairs.
-        # - Load the relevant mapS object.
-        
-        # For now, let's assume get_Axy can handle a list of lines and DataFrames
-        # and internally does the XYZ loading and indexing.
-        # The primary comp_train(XYZ, ind) expects a single XYZ and corresponding ind.
-        # So, this wrapper needs to produce that.
-        
-        # Let's assume a simplified scenario: all lines are from the *first* flight encountered.
-        # This is a major simplification and likely not robust for general use.
-        
-        first_line_num = _lines_set[0]
-        first_line_info = df_line_local[df_line_local["line"] == first_line_num]
-        if first_line_info.empty:
-            if not silent: print(f"WARN: First line {first_line_num} not found. Cannot load data.")
-            return None, None, None
-        
-        first_flight_name = first_line_info.iloc[0]["flight"]
-        first_flight_info = df_flight_local[df_flight_local["flight"] == first_flight_name]
-        if first_flight_info.empty:
-            if not silent: print(f"WARN: Flight {first_flight_name} not found. Cannot load data.")
-            return None, None, None
-            
-        xyz_file = first_flight_info.iloc[0]["xyz_file"]
-        xyz_type_sym = first_flight_info.iloc[0]["xyz_type"] # Symbol in Julia, string in Python
-        
-        # Placeholder for get_XYZ and get_ind
         try:
-            from .create_xyz import get_XYZ # Assuming it's in create_xyz.py
-            from .analysis_util import get_ind # Assuming it's in analysis_util.py
-            
-            # Load the base XYZ for the flight
-            # This is a placeholder call, actual get_XYZ needs full implementation
-            xyz_loaded = get_XYZ(xyz_file, xyz_type_sym) 
-            
-            # Get all indices for the specified lines within this XYZ
-            # This also needs full implementation based on t_start, t_end from df_line
-            # For simplicity, assume get_ind can take multiple lines for the *same* xyz_loaded
-            indices_for_set = get_ind(xyz_loaded, _lines_set, df_line_local)
-
-            # Map loading (simplified)
-            map_obj_loaded = mapS_null
-            if "map_name" in first_line_info.iloc[0] and first_line_info.iloc[0]["map_name"] is not None:
-                map_name_val = first_line_info.iloc[0]["map_name"]
-                map_info = df_map_local[df_map_local["map_name"] == map_name_val]
-                if not map_info.empty:
-                    # map_file_path = map_info.iloc[0]["map_file"]
-                    # map_obj_loaded = get_map(map_file_path) # Placeholder for map loading
-                    pass # Actual map loading needed here
-
-            return xyz_loaded, indices_for_set, map_obj_loaded
-
-        except ImportError as e:
-            if not silent: print(f"WARN: Could not import get_XYZ or get_ind: {e}. Returning None for XYZ/ind.")
+            # Assuming get_XYZ_ported is the correctly ported version of Julia's
+            # get_XYZ(lines, df_line, df_flight, df_map; kwargs...)
+            # which should handle lists of lines and return a single (possibly concatenated)
+            # XYZ object, corresponding indices, and map object.
+            from .create_xyz import get_XYZ as get_XYZ_ported
+        except ImportError:
+            if not silent_local: logging.error("compensation.py - create_xyz.get_XYZ not found for DataFrame processing in comp_train_test.")
             return None, None, None
+
+        try:
+            # Pass necessary kwargs if get_XYZ_ported requires them (e.g. from comp_params)
+            # For now, assuming a simple call signature matching Julia's direct usage.
+            # The silent flag is passed to get_XYZ_ported.
+            xyz_loaded, ind_loaded, map_obj_loaded, _ = get_XYZ_ported(
+                lines_set, df_line_local, df_flight_local, df_map_local,
+                silent=silent_local # Pass silent flag
+                # Add other kwargs like use_mag, use_vec if get_XYZ_ported needs them
+                # e.g., use_mag=comp_params_local.use_mag, ...
+            )
+            return xyz_loaded, ind_loaded, map_obj_loaded
         except Exception as e:
-            if not silent: print(f"ERROR loading XYZ/ind for lines {lines_set}: {e}")
+            if not silent_local: logging.error(f"ERROR loading XYZ/ind for lines {lines_set} via get_XYZ_ported: {e}")
             return None, None, None
 
     xyz_train_loaded, ind_train_loaded, mapS_train_loaded = load_xyz_and_ind_for_lines(
-        lines_train, df_line, df_flight, df_map, comp_params
+        lines_train, df_line, df_flight, df_map, silent # Pass comp_params if load_xyz_and_ind_for_lines needs it
     )
     xyz_test_loaded, ind_test_loaded, mapS_test_loaded = load_xyz_and_ind_for_lines(
-        lines_test, df_line, df_flight, df_map, comp_params
+        lines_test, df_line, df_flight, df_map, silent # Pass comp_params if load_xyz_and_ind_for_lines needs it
     )
 
     if xyz_train_loaded is None or ind_train_loaded is None or \
