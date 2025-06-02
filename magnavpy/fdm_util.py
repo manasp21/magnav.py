@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Union
+from typing import Union, Callable
 
 def fdm(x: np.ndarray, dt: Union[float, np.ndarray] = 1.0, scheme: str = "central") -> np.ndarray:
     """
@@ -60,3 +60,139 @@ def fdm(x: np.ndarray, dt: Union[float, np.ndarray] = 1.0, scheme: str = "centra
         raise ValueError(f"Unsupported finite difference scheme: {scheme}")
         
     return dx
+
+def fdm_gradient(func: Callable[[np.ndarray], float],
+                 x0: np.ndarray,
+                 h: float = 1e-6,
+                 method: str = "central") -> np.ndarray:
+    """
+    Computes the gradient of a scalar-valued function using finite differences.
+
+    Args:
+        func: The function R^n -> R to differentiate.
+        x0: The point (1D NumPy array) at which to compute the gradient.
+        h: Step size for finite differences. Default is 1e-6.
+        method: Finite difference method ('central', 'forward', 'backward').
+                Default is 'central'.
+
+    Returns:
+        np.ndarray: The gradient vector of the function at x0.
+    """
+    x0 = np.asarray(x0, dtype=float)
+    n = len(x0)
+    grad = np.zeros(n, dtype=float)
+
+    if method not in ["central", "forward", "backward"]:
+        raise ValueError("Method must be 'central', 'forward', or 'backward'.")
+
+    for i in range(n):
+        x_plus_h = x0.copy()
+        x_minus_h = x0.copy()
+        x_plus_h[i] += h
+        x_minus_h[i] -= h
+
+        if method == "central":
+            grad[i] = (func(x_plus_h) - func(x_minus_h)) / (2 * h)
+        elif method == "forward":
+            grad[i] = (func(x_plus_h) - func(x0)) / h
+        elif method == "backward":
+            grad[i] = (func(x0) - func(x_minus_h)) / h
+
+    return grad
+
+def fdm_jacobian(func: Callable[[np.ndarray], np.ndarray],
+                 x0: np.ndarray,
+                 h: float = 1e-6,
+                 method: str = "central") -> np.ndarray:
+    """
+    Computes the Jacobian of a vector-valued function using finite differences.
+
+    Args:
+        func: The function R^n -> R^m to differentiate.
+        x0: The point (1D NumPy array of size n) at which to compute the Jacobian.
+        h: Step size for finite differences. Default is 1e-6.
+        method: Finite difference method ('central', 'forward', 'backward') for gradient calculation.
+                Default is 'central'.
+
+    Returns:
+        np.ndarray: The Jacobian matrix (m x n) of the function at x0.
+    """
+    x0 = np.asarray(x0, dtype=float)
+    n_input = len(x0)
+
+    # Evaluate function at x0 to determine output dimension m
+    f_x0 = func(x0)
+    f_x0 = np.asarray(f_x0) # Ensure it's an array
+    if f_x0.ndim == 0: # Scalar output
+        m_output = 1
+        # Reshape to (1,) if it's a scalar, so jacobian is (1, n_input)
+        f_x0_reshaped = f_x0.reshape(1)
+    elif f_x0.ndim == 1: # Vector output
+        m_output = len(f_x0)
+        f_x0_reshaped = f_x0
+    else:
+        raise ValueError("Function output must be scalar or 1D array.")
+
+    jacobian = np.zeros((m_output, n_input), dtype=float)
+
+    if method not in ["central", "forward", "backward"]:
+        raise ValueError("Method must be 'central', 'forward', or 'backward'.")
+
+    for j in range(n_input): # Iterate over input variables x_j
+        x_plus_h = x0.copy()
+        x_minus_h = x0.copy()
+        x_plus_h[j] += h
+        x_minus_h[j] -= h
+
+        if method == "central":
+            f_plus_h = np.asarray(func(x_plus_h)).reshape(m_output)
+            f_minus_h = np.asarray(func(x_minus_h)).reshape(m_output)
+            jacobian[:, j] = (f_plus_h - f_minus_h) / (2 * h)
+        elif method == "forward":
+            f_plus_h = np.asarray(func(x_plus_h)).reshape(m_output)
+            jacobian[:, j] = (f_plus_h - f_x0_reshaped) / h
+        elif method == "backward":
+            f_minus_h = np.asarray(func(x_minus_h)).reshape(m_output)
+            jacobian[:, j] = (f_x0_reshaped - f_minus_h) / h
+
+    return jacobian
+
+def fdm_hessian(func: Callable[[np.ndarray], float],
+                x0: np.ndarray,
+                h: float = 1e-5) -> np.ndarray:
+    """
+    Computes the Hessian of a scalar-valued function using central finite differences.
+
+    Args:
+        func: The function R^n -> R to differentiate.
+        x0: The point (1D NumPy array) at which to compute the Hessian.
+        h: Step size for finite differences. Default is 1e-5.
+
+    Returns:
+        np.ndarray: The Hessian matrix (n x n) of the function at x0.
+    """
+    x0 = np.asarray(x0, dtype=float)
+    n = len(x0)
+    hessian = np.zeros((n, n), dtype=float)
+    fx0 = func(x0)
+
+    for i in range(n):
+        # Diagonal elements: d^2f / dx_i^2
+        x_plus_h_i = x0.copy()
+        x_plus_h_i[i] += h
+        x_minus_h_i = x0.copy()
+        x_minus_h_i[i] -= h
+        hessian[i, i] = (func(x_plus_h_i) - 2 * fx0 + func(x_minus_h_i)) / (h**2)
+
+        # Off-diagonal elements: d^2f / dx_i dx_j
+        for j in range(i + 1, n):
+            x_pp = x0.copy(); x_pp[i] += h; x_pp[j] += h
+            x_pm = x0.copy(); x_pm[i] += h; x_pm[j] -= h
+            x_mp = x0.copy(); x_mp[i] -= h; x_mp[j] += h
+            x_mm = x0.copy(); x_mm[i] -= h; x_mm[j] -= h
+
+            val = (func(x_pp) - func(x_pm) - func(x_mp) + func(x_mm)) / (4 * h**2)
+            hessian[i, j] = val
+            hessian[j, i] = val # Hessian is symmetric
+
+    return hessian
