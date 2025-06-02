@@ -4,6 +4,9 @@ Python translation of MagNav.jl/src/compensation.jl
 import copy
 import logging
 import time # Added import
+import pickle
+import joblib
+import os
 from typing import Any, Callable, Dict, List, Tuple, Union, Optional, cast
 
 import numpy as np
@@ -73,7 +76,9 @@ class LinCompParams(CompParams): # Placeholder
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.k_plsr: int = kwargs.get("k_plsr", 0) # Assuming 0 means use all features if not specified
-        self.λ_TL: float = kwargs.get("λ_TL", 0.0)
+        self.λ_TL: float = kwargs.get("λ_TL", 0.0) # For Tolles-Lawson (ridge)
+        self.lambda_elastic: float = kwargs.get("lambda_elastic", 1.0) # Strength for ElasticNet
+        self.l1_ratio_elastic: float = kwargs.get("l1_ratio_elastic", 0.5) # Mixin_g for ElasticNet (0=Ridge, 1=Lasso)
 
 
 class XYZ: # Placeholder
@@ -1344,16 +1349,122 @@ def linear_test(
         
     return y_hat, err_val
 
-def save_comp_params(comp_params: CompParams, filename: str):
-    """Placeholder for saving compensation parameters."""
-    # In Python, might use pickle, joblib, or torch.save for model parts
-    print(f"Placeholder: Saving comp_params to {filename}")
+def save_comp_params(comp_params: CompParams, base_filename: str, silent: bool = False):
+    """
+    Saves compensation parameters.
+    - Main CompParams object (without model) is saved to base_filename.pkl.
+    - PyTorch model state_dict saved to base_filename.pt.
+    - Scikit-learn model saved to base_filename.joblib.
+    - NumPy array model saved to base_filename_coeffs.npy
+    """
+    import os # Ensure os is imported
+    params_to_save = copy.deepcopy(comp_params)
+    model_obj = params_to_save.model
+    params_to_save.model = None # Don't pickle the model object directly
 
-def get_comp_params(filename: str, silent: bool = False) -> CompParams:
-    """Placeholder for loading compensation parameters."""
-    print(f"Placeholder: Loading comp_params from {filename}")
-    # Return a default CompParams object for now
-    return NNCompParams() if "nn" in filename.lower() or "m1" in filename.lower() or "m2" in filename.lower() or "m3" in filename.lower() else LinCompParams()
+    pkl_filename = base_filename + ".pkl"
+    try:
+        with open(pkl_filename, 'wb') as f:
+            pickle.dump(params_to_save, f)
+        if not silent and not SILENT_DEBUG: print(f"INFO: Base CompParams saved to {pkl_filename}")
+    except Exception as e:
+        print(f"ERROR: Failed to save CompParams to {pkl_filename}: {e}")
+        return
+
+    if model_obj is not None:
+        if isinstance(model_obj, nn.Module): # PyTorch model
+            pt_filename = base_filename + ".pt"
+            try:
+                torch.save(model_obj.state_dict(), pt_filename)
+                if not silent and not SILENT_DEBUG: print(f"INFO: PyTorch model state_dict saved to {pt_filename}")
+            except Exception as e:
+                print(f"ERROR: Failed to save PyTorch model to {pt_filename}: {e}")
+        # Check for scikit-learn base estimators
+        elif hasattr(model_obj, 'get_params') and hasattr(model_obj, 'predict'): # Heuristic for sklearn
+            joblib_filename = base_filename + ".joblib"
+            try:
+                joblib.dump(model_obj, joblib_filename)
+                if not silent and not SILENT_DEBUG: print(f"INFO: Scikit-learn model saved to {joblib_filename}")
+            except Exception as e:
+                print(f"ERROR: Failed to save Scikit-learn model to {joblib_filename}: {e}")
+        elif isinstance(model_obj, np.ndarray): # For simple coefficient arrays (e.g. from basic TL)
+             np_filename = base_filename + "_coeffs.npy"
+             try:
+                 np.save(np_filename, model_obj)
+                 if not silent and not SILENT_DEBUG: print(f"INFO: NumPy coefficients saved to {np_filename}")
+             except Exception as e:
+                 print(f"ERROR: Failed to save NumPy coefficients to {np_filename}: {e}")
+        else:
+            if not silent: print(f"WARN: Model type {type(model_obj)} not recognized for specific saving. Model not saved.")
+
+def get_comp_params(base_filename: str, silent: bool = False) -> Optional[CompParams]:
+    """
+    Loads compensation parameters.
+    - Main CompParams from base_filename.pkl.
+    - Model from .pt, .joblib, or .npy (if found).
+    """
+    import os # Ensure os is imported
+    pkl_filename = base_filename + ".pkl"
+    comp_params: Optional[CompParams] = None
+    try:
+        with open(pkl_filename, 'rb') as f:
+            comp_params = pickle.load(f)
+        if not silent and not SILENT_DEBUG: print(f"INFO: Base CompParams loaded from {pkl_filename}")
+    except FileNotFoundError:
+        if not silent: print(f"ERROR: CompParams file not found: {pkl_filename}")
+        return None
+    except Exception as e:
+        print(f"ERROR: Failed to load CompParams from {pkl_filename}: {e}")
+        return None
+
+    if comp_params is None: return None
+
+    # Try to load model
+    pt_filename = base_filename + ".pt"
+    joblib_filename = base_filename + ".joblib"
+    np_filename = base_filename + "_coeffs.npy"
+
+    loaded_model = False
+    # Attempt to load PyTorch model state_dict
+    if os.path.exists(pt_filename):
+        try:
+            # The user of get_comp_params will need to instantiate the correct model architecture
+            # and then load this state_dict into it.
+            state_dict = torch.load(pt_filename)
+            comp_params.model = state_dict
+            if not silent and not SILENT_DEBUG: print(f"INFO: PyTorch model state_dict loaded from {pt_filename}. Assign to instantiated model.")
+            loaded_model = True
+        except Exception as e:
+            if not silent: print(f"INFO: Could not load PyTorch model from {pt_filename}: {e}")
+
+    # Attempt to load Scikit-learn model if PyTorch model not loaded
+    if not loaded_model and os.path.exists(joblib_filename):
+        try:
+            comp_params.model = joblib.load(joblib_filename)
+            if not silent and not SILENT_DEBUG: print(f"INFO: Scikit-learn model loaded from {joblib_filename}")
+            loaded_model = True
+        except Exception as e:
+            if not silent: print(f"INFO: Could not load Scikit-learn model from {joblib_filename}: {e}")
+
+    # Attempt to load NumPy coefficients if other models not loaded
+    if not loaded_model and os.path.exists(np_filename):
+        try:
+            comp_params.model = np.load(np_filename)
+            if not silent and not SILENT_DEBUG: print(f"INFO: NumPy coefficients loaded from {np_filename}")
+            loaded_model = True
+        except Exception as e:
+            if not silent: print(f"INFO: Could not load NumPy coefficients from {np_filename}: {e}")
+            
+    if not loaded_model and not silent:
+        # Check if any model files existed to provide a more specific message
+        model_file_existed = os.path.exists(pt_filename) or os.path.exists(joblib_filename) or os.path.exists(np_filename)
+        if model_file_existed:
+             # Specific load errors would have been printed above
+            pass
+        else:
+            print(f"INFO: No model file (.pt, .joblib, or _coeffs.npy) found for base {base_filename}.")
+        
+    return comp_params
 
 def field_check(xyz: XYZ, field_name: str, expected_type: Any):
     """Placeholder for checking if a field exists in XYZ struct."""
@@ -1375,6 +1486,118 @@ def linreg(y_norm: np.ndarray, x_norm: np.ndarray, λ: float = 0.0) -> np.ndarra
         I = np.eye(x_norm.shape[1])
         coeffs = np.linalg.solve(x_norm.T @ x_norm + λ * I, x_norm.T @ y_norm)
         return coeffs.flatten()
+
+def plsr_fit(
+    x: np.ndarray,
+    y: np.ndarray,
+    k_plsr: int, # Number of PLS components
+    no_norm: Optional[np.ndarray] = None,
+    norm_type_x: str = "standardize",
+    norm_type_y: str = "standardize", # Changed from :none in Julia to allow denormalization
+    data_norms_in: Optional[Tuple] = None,
+    l_segs: Optional[List[int]] = None,
+    silent: bool = False
+) -> Tuple[PLSRegression, Tuple, np.ndarray, np.ndarray]:
+    """
+    Fit Partial Least Squares Regression (PLSR) model.
+    """
+    if y.ndim > 1 and y.shape[1] > 1: y = y.flatten()
+    if no_norm is None: no_norm = np.zeros(x.shape[1], dtype=bool)
+    if l_segs is None: l_segs = [len(y)]
+
+    x_bias, x_scale, y_bias, y_scale = np.array([0.0]),np.array([1.0]),np.array([0.0]),np.array([1.0])
+
+    if data_norms_in is None or (len(data_norms_in) >=4 and np.sum(np.abs(data_norms_in[3])) == 0) : # y_scale is index 3
+        x_bias, x_scale, x_norm = norm_sets(x, norm_type=norm_type_x, no_norm=no_norm)
+        y_bias, y_scale, y_norm = norm_sets(y, norm_type=norm_type_y)
+        data_norms_out = (x_bias, x_scale, y_bias, y_scale)
+    else:
+        x_bias, x_scale, y_bias, y_scale = unpack_data_norms(data_norms_in) # type: ignore
+        x_norm = (x - x_bias) / (x_scale if np.all(x_scale != 0) else 1.0)
+        y_norm = (y - y_bias) / (y_scale if y_scale != 0 else 1.0)
+        data_norms_out = data_norms_in
+    
+    actual_k_plsr = k_plsr
+    if actual_k_plsr <= 0 or actual_k_plsr > x_norm.shape[1]:
+        actual_k_plsr = x_norm.shape[1] # Use all features if k_plsr is invalid
+    actual_k_plsr = min(actual_k_plsr, x_norm.shape[0]) # Cannot exceed number of samples
+
+    if actual_k_plsr == 0: # No features or no samples to fit
+        if not silent: print("WARN: PLSR k_plsr is 0, returning a dummy model and zero predictions.")
+        # Create a dummy model that can be queried for coef_ but won't do much
+        model = PLSRegression(n_components=1)
+        # Fit on a tiny piece of data to initialize attributes like coef_
+        if x_norm.shape[0] > 0 and x_norm.shape[1] > 0:
+             model.fit(x_norm[:1,:1] if x_norm.shape[1]>0 else np.zeros((1,1)), y_norm[:1] if y_norm.size>0 else np.zeros(1))
+        else: # Cannot even fit a dummy
+             pass # model.coef_ might not exist
+        y_hat_norm = np.zeros_like(y_norm)
+    else:
+        model = PLSRegression(n_components=actual_k_plsr)
+        model.fit(x_norm, y_norm)
+        y_hat_norm = model.predict(x_norm).flatten()
+
+    y_hat = denorm_sets(y_bias, y_scale, y_hat_norm)
+    err = err_segs(y_hat, y, l_segs, silent=SILENT_DEBUG)
+
+    if not silent:
+        err_std = np.std(err) if err.size > 0 else float('nan')
+        print(f"INFO: PLSR (k={actual_k_plsr}) train error: {err_std:.2f} nT")
+        
+    return model, data_norms_out, y_hat, err
+
+def elasticnet_fit(
+    x: np.ndarray,
+    y: np.ndarray,
+    alpha: float = 1.0, # Corresponds to alpha in sklearn's ElasticNet (overall strength)
+    l1_ratio: float = 0.5, # Mixing parameter (0=Ridge, 1=Lasso)
+    no_norm: Optional[np.ndarray] = None,
+    norm_type_x: str = "standardize",
+    norm_type_y: str = "standardize", # Changed from :none
+    data_norms_in: Optional[Tuple] = None,
+    l_segs: Optional[List[int]] = None,
+    silent: bool = False
+) -> Tuple[ElasticNet, Tuple, np.ndarray, np.ndarray]:
+    """
+    Fit ElasticNet model.
+    """
+    if y.ndim > 1 and y.shape[1] > 1: y = y.flatten()
+    if no_norm is None: no_norm = np.zeros(x.shape[1], dtype=bool)
+    if l_segs is None: l_segs = [len(y)]
+
+    x_bias, x_scale, y_bias, y_scale = np.array([0.0]),np.array([1.0]),np.array([0.0]),np.array([1.0])
+
+    if data_norms_in is None or (len(data_norms_in) >=4 and np.sum(np.abs(data_norms_in[3])) == 0) :
+        x_bias, x_scale, x_norm = norm_sets(x, norm_type=norm_type_x, no_norm=no_norm)
+        y_bias, y_scale, y_norm = norm_sets(y, norm_type=norm_type_y)
+        data_norms_out = (x_bias, x_scale, y_bias, y_scale)
+    else:
+        x_bias, x_scale, y_bias, y_scale = unpack_data_norms(data_norms_in) # type: ignore
+        x_norm = (x - x_bias) / (x_scale if np.all(x_scale != 0) else 1.0)
+        y_norm = (y - y_bias) / (y_scale if y_scale != 0 else 1.0)
+        data_norms_out = data_norms_in
+
+    if x_norm.shape[0] == 0: # No data
+         if not silent: print("WARN: ElasticNet fit with no data. Returning dummy model.")
+         model = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, fit_intercept=False)
+         # Try to fit on minimal data to initialize attributes if possible
+         if x_norm.shape[1] > 0:
+             try: model.fit(np.zeros((1, x_norm.shape[1])), np.zeros(1))
+             except: pass # If it fails, it's a dummy anyway
+         y_hat_norm = np.zeros_like(y_norm)
+    else:
+        model = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, fit_intercept=False) # Assuming data is centered by norm_sets
+        model.fit(x_norm, y_norm)
+        y_hat_norm = model.predict(x_norm)
+
+    y_hat = denorm_sets(y_bias, y_scale, y_hat_norm)
+    err = err_segs(y_hat, y, l_segs, silent=SILENT_DEBUG)
+
+    if not silent:
+        err_std = np.std(err) if err.size > 0 else float('nan')
+        print(f"INFO: ElasticNet (alpha={alpha}, l1_ratio={l1_ratio}) train error: {err_std:.2f} nT")
+        
+    return model, data_norms_out, y_hat, err
 
 # --- Struct to Class Translations ---
 
@@ -1817,79 +2040,31 @@ def nn_comp_1_fwd_from_raw(
 # 1. nn_comp_1_test(x_norm::AbstractMatrix, y, y_bias, y_scale, model::Chain; ...)
 # 2. nn_comp_1_test(x::Matrix, y, data_norms::Tuple, model::Chain; ...)
 
+# Consolidated and corrected nn_comp_1_test and nn_comp_1_test_from_raw
+
 def nn_comp_1_test(
-    x_norm_in: Union[np.ndarray, torch.Tensor], # Normalized and PCA-transformed input, (features, samples)
-    y: np.ndarray,
+    x_norm_in: Union[np.ndarray, torch.Tensor], # Normalized & PCA'd: (features_pca, samples) if np, (samples, features_pca) if torch
+    y: np.ndarray,                              # Raw y values (samples,)
     y_bias: Union[float, np.ndarray],
     y_scale: Union[float, np.ndarray],
     model: nn.Sequential,
     l_segs: Optional[List[int]] = None,
     silent: bool = False
 ) -> Tuple[np.ndarray, np.ndarray]:
-    
-    if l_segs is None:
-        l_segs = [len(y)]
-
-    # Get results
-    # nn_comp_1_fwd expects x_norm_in as (features, samples) if numpy, or (samples, features) if torch
-    # It handles the transpose internally if numpy.
-    y_hat = nn_comp_1_fwd(x_norm_in, y_bias, y_scale, model, denorm=True, testmode=True)
-    
-    err = err_segs(y_hat, y, l_segs, silent=SILENT_DEBUG) # Use global SILENT_DEBUG for internal calls
-    
-    if not silent:
-        err_std = np.std(err) if err.size > 0 else float('nan')
-        print(f"INFO: test error: {err_std:.2f} nT")
-        
-    return y_hat, err
-
-def nn_comp_1_test_from_raw(
-    x: np.ndarray, # Raw input data (samples, features_original)
-    y: np.ndarray,
-    data_norms: Tuple, # Should contain (_,_,v_scale_pca,x_bias,x_scale,y_bias,y_scale)
-    model: nn.Sequential,
-    l_segs: Optional[List[int]] = None,
-    silent: bool = False
-) -> Tuple[np.ndarray, np.ndarray]:
-
-    if l_segs is None:
-        l_segs = [len(y)]
-    
-    y_f32 = y.astype(np.float32) # Match Julia's type consistency
-
-    # Get results using nn_comp_1_fwd_from_raw
-    y_hat = nn_comp_1_fwd_from_raw(x, data_norms, model)
-    
-    err = err_segs(y_hat, y_f32, l_segs, silent=SILENT_DEBUG)
-    
-    if not silent:
-        err_std = np.std(err) if err.size > 0 else float('nan')
-        print(f"INFO: test error: {err_std:.2f} nT")
-        
-    return y_hat, err
-    # The internal nn_comp_1_fwd will handle transpose if it's numpy
-    y_hat = nn_comp_1_fwd(x_norm_np_for_fwd, y_bias, y_scale, model, denorm=True, testmode=True)
-    return y_hat
-
-
-def nn_comp_1_test(
-    x_norm_in: Union[np.ndarray, torch.Tensor], # (features, samples) if numpy, (samples, features) if torch
-    y: np.ndarray, 
-    y_bias: Union[float, np.ndarray], 
-    y_scale: Union[float, np.ndarray], 
-    model: nn.Sequential,
-    l_segs: Optional[List[int]] = None,
-    silent: bool = False
-) -> Tuple[np.ndarray, np.ndarray]:
-
+    """
+    Evaluate performance of neural network-based aeromagnetic compensation, model 1.
+    Takes normalized and PCA-processed input features.
+    """
     if l_segs is None: l_segs = [len(y)]
     
+    # nn_comp_1_fwd handles transpose if x_norm_in is numpy (features, samples)
+    # and expects (samples, features) if x_norm_in is torch.
+    # It returns denormalized y_hat.
     y_hat = nn_comp_1_fwd(x_norm_in, y_bias, y_scale, model, denorm=True, testmode=True)
     
-    # Ensure l_segs is valid for the length of y_hat/y
     valid_l_segs = l_segs
     if sum(l_segs) != len(y):
-        if not silent: print(f"Warning: sum(l_segs)={sum(l_segs)} != len(y)={len(y)}. Using single segment.")
+        if not silent and not SILENT_DEBUG: print(f"Warning: nn_comp_1_test: sum(l_segs)={sum(l_segs)} != len(y)={len(y)}. Using single segment.")
         valid_l_segs = [len(y)]
         
     err = err_segs(y_hat, y, valid_l_segs, silent=SILENT_DEBUG)
@@ -1900,26 +2075,27 @@ def nn_comp_1_test(
         
     return y_hat, err
 
-# Overloaded version of nn_comp_1_test
 def nn_comp_1_test_from_raw(
-    x: np.ndarray, 
-    y: np.ndarray, 
-    data_norms: Tuple, 
+    x: np.ndarray,             # Raw x values (samples, features_original)
+    y: np.ndarray,             # Raw y values (samples,)
+    data_norms: Tuple,         # Normalization parameters including PCA transform
     model: nn.Sequential,
     l_segs: Optional[List[int]] = None,
     silent: bool = False
 ) -> Tuple[np.ndarray, np.ndarray]:
-    
+    """
+    Evaluate performance of neural network-based aeromagnetic compensation, model 1.
+    Takes raw input features and data normalization parameters.
+    """
     if l_segs is None: l_segs = [len(y)]
-    y_f32 = y.astype(np.float32)
+    y_f32 = y.astype(np.float32) # Match Julia's type consistency
 
-    # y_hat is already denormalized by nn_comp_1_fwd_from_raw
+    # nn_comp_1_fwd_from_raw handles normalization, PCA, and denormalization of y_hat
     y_hat = nn_comp_1_fwd_from_raw(x, data_norms, model)
     
-    # Ensure l_segs is valid
     valid_l_segs = l_segs
     if sum(l_segs) != len(y_f32):
-        if not silent: print(f"Warning: sum(l_segs)={sum(l_segs)} != len(y)={len(y_f32)}. Using single segment.")
+        if not silent and not SILENT_DEBUG: print(f"Warning: nn_comp_1_test_from_raw: sum(l_segs)={sum(l_segs)} != len(y)={len(y_f32)}. Using single segment.")
         valid_l_segs = [len(y_f32)]
 
     err = err_segs(y_hat, y_f32, valid_l_segs, silent=SILENT_DEBUG)
@@ -1930,142 +2106,145 @@ def nn_comp_1_test_from_raw(
         
     return y_hat, err
 
+# --- Model 2 Functions ---
+
 def nn_comp_2_fwd(
-    A_norm: Union[np.ndarray, torch.Tensor],      # (TL_terms, samples)
-    x_norm: Union[np.ndarray, torch.Tensor],      # (features, samples)
+    A_norm: Union[np.ndarray, torch.Tensor],      # Normalized TL matrix A: (TL_terms, samples)
+    x_norm: Union[np.ndarray, torch.Tensor],      # Normalized NN input X: (features_x, samples)
     y_bias: Union[float, np.ndarray],
     y_scale: Union[float, np.ndarray],
-    model_nn: nn.Sequential, # The core nn.Sequential model (s.m in Julia)
-    TL_coef_norm: Union[np.ndarray, torch.Tensor], # Normalized TL coefficients
-    model_type: str, # "m2a", "m2b", "m2c", "m2d"
+    model_nn: nn.Sequential,                      # The core nn.Sequential model (s.m in Julia)
+    TL_coef_norm: Union[np.ndarray, torch.Tensor],# Normalized TL coefficients (1D array/tensor)
+    model_type: str,                              # "m2a", "m2b", "m2c", "m2d"
     denorm: bool = True,
     testmode: bool = True
 ) -> np.ndarray:
     """
     Forward pass of neural network-based aeromagnetic compensation, model 2.
-    Assumes A_norm and x_norm are (features, samples) if numpy,
-    and expects model_nn to take (samples, features_x).
-    TL_coef_norm is expected to be a 1D array/tensor.
+    - A_norm: (TL_terms, samples).
+    - x_norm: (features_x, samples) if numpy, model_nn expects (samples, features_x).
+    - TL_coef_norm: 1D (n_TL_terms,).
     """
     if testmode:
         model_nn.eval()
     else:
-        # If called during training, ensure model is in train mode if it has dropout/batchnorm
-        # This is typically handled by the main training loop calling model.train()
-        pass 
+        model_nn.train()
 
-    is_torch_input = isinstance(x_norm, torch.Tensor)
-    
+    # --- Convert inputs to PyTorch tensors ---
     if isinstance(A_norm, np.ndarray):
-        A_norm_torch = torch.from_numpy(A_norm.astype(np.float32))
+        A_norm_torch = torch.from_numpy(A_norm.astype(np.float32)) # (TL_terms, samples)
     else:
         A_norm_torch = A_norm.float()
 
     if isinstance(x_norm, np.ndarray):
-        # PyTorch nn.Linear expects (batch/samples, features)
-        x_norm_torch = torch.from_numpy(x_norm.T.astype(np.float32))
-    else:
-        x_norm_torch = x_norm.T.float() # Assuming (features, samples) -> (samples, features)
+        x_norm_torch = torch.from_numpy(x_norm.astype(np.float32).T) # -> (samples, features_x) for model_nn
+    else: # Already torch tensor
+        # Check if x_norm is (features_x, samples) and needs transpose for (samples, features_x)
+        # This heuristic assumes model_nn[0] is a Linear layer and its in_features matches features_x
+        if len(model_nn) > 0 and isinstance(model_nn[0], nn.Linear) and \
+           x_norm.ndim == 2 and x_norm.shape[0] == model_nn[0].in_features and x_norm.shape[1] != model_nn[0].in_features:
+            x_norm_torch = x_norm.float().T
+        else: # Assume it's already (samples, features_x) or model handles it
+            x_norm_torch = x_norm.float()
+
 
     if isinstance(TL_coef_norm, np.ndarray):
         TL_coef_norm_torch = torch.from_numpy(TL_coef_norm.astype(np.float32))
     else:
         TL_coef_norm_torch = TL_coef_norm.float()
+    
+    if TL_coef_norm_torch.ndim == 1:
+        TL_coef_norm_torch = TL_coef_norm_torch.unsqueeze(1) # Ensure (n_TL_terms, 1) for matmul
 
     y_hat_norm_torch: torch.Tensor
 
-    with torch.no_grad() if testmode else torch.enable_grad(): # Ensure no_grad for pure inference
-        nn_output = model_nn(x_norm_torch) # (samples, nn_output_features)
+    with torch.no_grad() if testmode else torch.enable_grad():
+        nn_output_squeezed = model_nn(x_norm_torch).squeeze() # Expected (samples,) or (samples, nn_out_dim)
 
-        if model_type in ["m2a", "m2d"]:
-            # NN output shape should be (samples, num_TL_terms) for these models
-            # A_norm_torch is (TL_terms, samples)
-            # nn_output is (samples, TL_terms)
-            # We need element-wise product then sum over TL_terms
-            # (A_norm_torch.T * nn_output) -> (samples, TL_terms) element-wise
-            # sum over dim=1 -> (samples,)
-            if model_type == "m2a":
-                # y_hat = vec(sum(A_norm.*m(x_norm), dims=1))
-                # m(x_norm) shape is (num_TL_terms, samples) in Julia after transpose
-                # A_norm shape is (num_TL_terms, samples)
-                # Python: nn_output is (samples, num_TL_terms), A_norm_torch.T is (samples, num_TL_terms)
-                y_hat_norm_torch = torch.sum(A_norm_torch.T * nn_output, dim=1)
-            elif model_type == "m2d":
-                # y_hat = vec(sum(A_norm.*(m(x_norm) .+ TL_coef_norm), dims=1))
-                # m(x_norm) .+ TL_coef_norm -> TL_coef_norm needs to broadcast or match shape
-                # TL_coef_norm_torch is (num_TL_terms), nn_output is (samples, num_TL_terms)
-                # A_norm_torch.T is (samples, num_TL_terms)
-                combined_coeffs = nn_output + TL_coef_norm_torch # Broadcasting TL_coef_norm
-                y_hat_norm_torch = torch.sum(A_norm_torch.T * combined_coeffs, dim=1)
-        
-        elif model_type in ["m2b", "m2c"]:
-            # NN output shape is (samples, 1)
-            # y_hat = vec(m(x_norm)) + A_norm'*TL_coef_norm
-            # A_norm_torch is (TL_terms, samples), TL_coef_norm_torch is (TL_terms)
-            # A_norm_torch.T @ TL_coef_norm_torch -> (samples, TL_terms) @ (TL_terms) -> (samples,)
-            tl_effect = A_norm_torch.T @ TL_coef_norm_torch
-            y_hat_norm_torch = nn_output.squeeze() + tl_effect
+        if model_type == "m2a":
+            # y_hat_norm = A_norm' * TL_coef_norm + model(x_norm)'
+            # A_norm_torch: (TL_terms, samples), TL_coef_norm_torch: (TL_terms, 1)
+            # y_comp_TL: (samples, 1) -> squeeze -> (samples,)
+            y_comp_TL = torch.matmul(A_norm_torch.T, TL_coef_norm_torch).squeeze()
+            # nn_output_squeezed should be (samples,)
+            y_hat_norm_torch = y_comp_TL + nn_output_squeezed
+        elif model_type == "m2b":
+            # y_hat_norm = model(x_norm)' -> NN output is the prediction
+            y_hat_norm_torch = nn_output_squeezed
+        elif model_type == "m2c":
+            # NN predicts TL_coef_norm: nn_output_squeezed should be (n_TL_terms,) or (samples, n_TL_terms)
+            # Julia: y_hat_norm = s.m(x_norm)' * A_norm -> (1 x Ncoef) * (Ncoef x N) = (1 x N)
+            # This means s.m(x_norm) is (Ncoef x 1) or (Ncoef x N_samples_in_batch)
+            # If nn_output_squeezed is (samples, n_TL_terms):
+            if nn_output_squeezed.ndim == 2 and nn_output_squeezed.shape[1] == A_norm_torch.shape[0]: # (samples, n_TL_terms)
+                 # Element-wise product of A_norm_torch.T (samples, n_TL_terms) and nn_output_squeezed (samples, n_TL_terms) then sum
+                y_hat_norm_torch = torch.sum(A_norm_torch.T * nn_output_squeezed, dim=1)
+            elif nn_output_squeezed.ndim == 1 and nn_output_squeezed.shape[0] == A_norm_torch.shape[0]: # (n_TL_terms)
+                y_hat_norm_torch = torch.matmul(A_norm_torch.T, nn_output_squeezed.unsqueeze(1)).squeeze()
+            else:
+                raise ValueError(f"M2C: nn_output shape {nn_output_squeezed.shape} incompatible with A_norm {A_norm_torch.shape}")
+        elif model_type == "m2d":
+            # y_hat_norm = A_norm' * TL_coef_norm (NN output is not used in this model_type's forward pass for y_hat)
+            y_hat_norm_torch = torch.matmul(A_norm_torch.T, TL_coef_norm_torch).squeeze()
         else:
             raise ValueError(f"Unknown model_type for nn_comp_2_fwd: {model_type}")
 
-    y_hat_norm_np = y_hat_norm_torch.cpu().detach().numpy() if is_torch_input or testmode else y_hat_norm_torch.cpu().numpy()
-
+    y_hat_norm_np = y_hat_norm_torch.cpu().numpy()
 
     y_hat_np: np.ndarray
     if denorm:
-        _y_bias = np.array(y_bias) if isinstance(y_bias, (float,int)) else y_bias
-        _y_scale = np.array(y_scale) if isinstance(y_scale, (float,int)) else y_scale
-        y_hat_np = denorm_sets(_y_bias, _y_scale, y_hat_norm_np)
+        y_hat_np = denorm_sets(np.array(y_bias), np.array(y_scale), y_hat_norm_np)
     else:
         y_hat_np = y_hat_norm_np
-        
+            
     return y_hat_np.flatten()
 
 def nn_comp_2_fwd_from_raw(
-    A_raw: np.ndarray,      # (samples, TL_terms)
-    x_raw: np.ndarray,      # (samples, features)
-    data_norms: Tuple,      # (A_bias, A_scale, v_scale_pca, x_bias, x_scale, y_bias, y_scale)
+    A: np.ndarray,      # Raw TL matrix A (samples, TL_terms)
+    x: np.ndarray,      # Raw NN input X (samples, features_x_original)
+    data_norms: Tuple,  # (A_bias, A_scale, v_scale_pca, x_bias, x_scale, y_bias, y_scale)
     model_nn: nn.Sequential,
+    TL_coef: np.ndarray, # Raw TL_coefficients (1D, n_TL_terms)
     model_type: str,
-    TL_coef: np.ndarray     # Raw (not normalized) TL coefficients
+    norm_type_A: str = "none",
+    norm_type_x: str = "standardize",
+    norm_type_y: str = "none" # y_type for y normalization, not directly used for y_hat if y_bias/scale are from data_norms
 ) -> np.ndarray:
     """
-    Forward pass of neural network-based aeromagnetic compensation, model 2, from raw inputs.
+    Forward pass for model 2, taking raw inputs and normalization parameters.
     """
-    A_raw_f32 = A_raw.astype(np.float32)
-    x_raw_f32 = x_raw.astype(np.float32)
+    A_f32 = A.astype(np.float32)
+    x_f32 = x.astype(np.float32)
     TL_coef_f32 = TL_coef.astype(np.float32)
 
-    A_bias, A_scale, v_scale_pca, x_bias, x_scale, y_bias, y_scale = unpack_data_norms(data_norms)
-
-    # Normalize A: ((A_raw - A_bias) / A_scale).T -> (TL_terms, samples)
-    A_norm_np = ((A_raw_f32 - A_bias.reshape(1,-1)) / np.where(A_scale.reshape(1,-1) == 0, 1.0, A_scale.reshape(1,-1))).T
+    if len(data_norms) != 7:
+        raise ValueError(f"data_norms tuple expected to have 7 elements, got {len(data_norms)}")
     
-    # Normalize x: (((x_raw - x_bias) / x_scale) @ v_scale_pca).T -> (PCA_features, samples)
-    x_norm_step1 = (x_raw_f32 - x_bias.reshape(1,-1)) / np.where(x_scale.reshape(1,-1) == 0, 1.0, x_scale.reshape(1,-1))
-    x_norm_np = (x_norm_step1 @ v_scale_pca).T
+    A_b, A_s, v_pca, x_b, x_s, y_b, y_s = data_norms
 
-    # Normalize TL_coef: TL_coef / y_scale
-    # Ensure y_scale is not zero
-    y_scale_eff = y_scale if isinstance(y_scale, np.ndarray) and y_scale.size > 0 and y_scale[0] != 0 else (y_scale if isinstance(y_scale, (float, int)) and y_scale !=0 else 1.0)
-    if isinstance(y_scale_eff, np.ndarray) and y_scale_eff.size > 1: # Should be scalar for this context
-        y_scale_val = y_scale_eff[0] if y_scale_eff[0] != 0 else 1.0
-    elif isinstance(y_scale_eff, np.ndarray):
-         y_scale_val = y_scale_eff[0] if y_scale_eff.size > 0 and y_scale_eff[0] != 0 else 1.0
-    else: # float
-        y_scale_val = y_scale_eff if y_scale_eff != 0 else 1.0
+    # Normalize A: (samples, TL_terms) -> (TL_terms, samples) for nn_comp_2_fwd
+    _, _, A_norm_np = norm_sets(A_f32, norm_type=norm_type_A, no_norm=None)
+    A_norm_transposed = A_norm_np.T
 
-    TL_coef_norm_np = TL_coef_f32 / y_scale_val
+    # Normalize x (with PCA): (samples, features_orig) -> (k_pca, samples) for nn_comp_2_fwd
+    x_norm_step1 = (x_f32 - np.asarray(x_b)) / np.asarray(x_s)
+    x_norm_projected = x_norm_step1 @ np.asarray(v_pca)
+    x_norm_transposed = x_norm_projected.T
 
-    y_hat = nn_comp_2_fwd(
-        A_norm_np, x_norm_np, y_bias, y_scale, model_nn,
-        TL_coef_norm_np, model_type, denorm=True, testmode=True
-    )
+    # Normalize TL_coef: (TL_terms,)
+    # y_s is scalar or 1-element array. Ensure it's treated as scalar for division.
+    _y_s = np.asarray(y_s).item() if isinstance(y_s, (np.ndarray, list)) and np.size(y_s)==1 else np.asarray(y_s)
+    if _y_s == 0: _y_s = 1.0 # Avoid division by zero, though ideally y_scale shouldn't be zero
+    TL_coef_norm_np = TL_coef_f32 / _y_s
+
+    y_hat = nn_comp_2_fwd(A_norm_transposed, x_norm_transposed, y_b, y_s, model_nn,
+                          TL_coef_norm_np, model_type, denorm=True, testmode=True)
     return y_hat
+
 def nn_comp_2_test(
-    A_norm: Union[np.ndarray, torch.Tensor],      # (TL_terms, samples)
-    x_norm: Union[np.ndarray, torch.Tensor],      # (features, samples)
-    y: np.ndarray,                                # Raw target vector (samples,)
+    A_norm: Union[np.ndarray, torch.Tensor],
+    x_norm: Union[np.ndarray, torch.Tensor],
+    y: np.ndarray,
     y_bias: Union[float, np.ndarray],
     y_scale: Union[float, np.ndarray],
     model_nn: nn.Sequential,
@@ -2074,102 +2253,691 @@ def nn_comp_2_test(
     l_segs: Optional[List[int]] = None,
     silent: bool = False
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Evaluate performance of neural network-based aeromagnetic compensation, model 2.
-    """
-    y_flat = y.flatten()
-    if l_segs is None:
-        l_segs = [len(y_flat)]
 
-    y_hat = nn_comp_2_fwd(
-        A_norm, x_norm, y_bias, y_scale, model_nn,
-        TL_coef_norm, model_type, denorm=True, testmode=True
-    )
+    if l_segs is None: l_segs = [len(y)]
+    
+    y_hat = nn_comp_2_fwd(A_norm, x_norm, y_bias, y_scale, model_nn, TL_coef_norm,
+                          model_type, denorm=True, testmode=True)
     
     valid_l_segs = l_segs
-    if sum(l_segs) != len(y_flat):
-        if not silent: print(f"Warning: sum(l_segs)={sum(l_segs)} != len(y)={len(y_flat)}. Using single segment.")
-        valid_l_segs = [len(y_flat)]
+    if sum(l_segs) != len(y):
+        if not silent and not SILENT_DEBUG: print(f"Warning: nn_comp_2_test: sum(l_segs)={sum(l_segs)} != len(y)={len(y)}. Using single segment.")
+        valid_l_segs = [len(y)]
 
-    err_val = err_segs(y_hat, y_flat, valid_l_segs, silent=SILENT_DEBUG)
+    err = err_segs(y_hat, y, valid_l_segs, silent=SILENT_DEBUG)
     
     if not silent:
-        err_std = np.std(err_val) if err_val.size > 0 else float('nan')
-        print(f"INFO: test error: {err_std:.2f} nT")
+        err_std = np.std(err) if err.size > 0 else float('nan')
+        print(f"INFO: test error ({model_type}): {err_std:.2f} nT")
         
-    return y_hat, err_val
+    return y_hat, err
 
 def nn_comp_2_test_from_raw(
-    A_raw: np.ndarray,      # (samples, TL_terms)
-    x_raw: np.ndarray,      # (samples, features)
-    y_raw: np.ndarray,      # (samples,)
-    data_norms: Tuple,      # (A_bias, A_scale, v_scale_pca, x_bias, x_scale, y_bias, y_scale)
+    A: np.ndarray,
+    x: np.ndarray,
+    y: np.ndarray,
+    data_norms: Tuple,
     model_nn: nn.Sequential,
+    TL_coef: np.ndarray,
     model_type: str,
-    TL_coef: np.ndarray,    # Raw (not normalized) TL coefficients
     l_segs: Optional[List[int]] = None,
-    silent: bool = False
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Evaluate performance of neural network-based aeromagnetic compensation, model 2, from raw inputs.
-    """
-    y_raw_flat = y_raw.astype(np.float32).flatten()
-    if l_segs is None:
-        l_segs = [len(y_raw_flat)]
-
-    y_hat = nn_comp_2_fwd_from_raw(
-        A_raw, x_raw, data_norms, model_nn, model_type, TL_coef
-    )
-    
-    valid_l_segs = l_segs
-    if sum(l_segs) != len(y_raw_flat):
-        if not silent: print(f"Warning: sum(l_segs)={sum(l_segs)} != len(y)={len(y_raw_flat)}. Using single segment.")
-        valid_l_segs = [len(y_raw_flat)]
-        
-    err_val = err_segs(y_hat, y_raw_flat, valid_l_segs, silent=SILENT_DEBUG)
-    
-    if not silent:
-        err_std = np.std(err_val) if err_val.size > 0 else float('nan')
-        print(f"INFO: test error: {err_std:.2f} nT")
-        
-    return y_hat, err_val
-def nn_comp_2_train(
-    A: np.ndarray,      # (samples, TL_terms)
-    x: np.ndarray,      # (samples, features)
-    y: np.ndarray,      # (samples,)
-    no_norm: Optional[np.ndarray] = None,
-    model_type: str = "m2a", # :m2a, :m2b, :m2c, :m2d
+    silent: bool = False,
     norm_type_A: str = "none",
     norm_type_x: str = "standardize",
-    norm_type_y: str = "none", # Note: Julia default is :none for y in m2
-    TL_coef_in: Optional[np.ndarray] = None, # Renamed from TL_coef
+    norm_type_y: str = "none"
+) -> Tuple[np.ndarray, np.ndarray]:
+
+    if l_segs is None: l_segs = [len(y)]
+    y_f32 = y.astype(np.float32)
+
+    y_hat = nn_comp_2_fwd_from_raw(A, x, data_norms, model_nn, TL_coef, model_type,
+                                   norm_type_A=norm_type_A, norm_type_x=norm_type_x, norm_type_y=norm_type_y)
+    
+    valid_l_segs = l_segs
+    if sum(l_segs) != len(y_f32):
+        if not silent and not SILENT_DEBUG: print(f"Warning: nn_comp_2_test_from_raw: sum(l_segs)={sum(l_segs)} != len(y)={len(y_f32)}. Using single segment.")
+        valid_l_segs = [len(y_f32)]
+        
+    err = err_segs(y_hat, y_f32, valid_l_segs, silent=SILENT_DEBUG)
+
+    if not silent:
+        err_std = np.std(err) if err.size > 0 else float('nan')
+        print(f"INFO: test error ({model_type}): {err_std:.2f} nT")
+        
+    return y_hat, err
+
+# --- Model 3 Functions ---
+# Based on Julia: m3_struct, nn_comp_3_train, nn_comp_3_fwd, nn_comp_3_test
+
+def nn_comp_3_fwd(
+    A_norm: Union[np.ndarray, torch.Tensor],      # (TL_terms, samples)
+    x_norm: Union[np.ndarray, torch.Tensor],      # (features_x, samples) or (features_x, l_window, samples)
+    y_bias: Union[float, np.ndarray],
+    y_scale: Union[float, np.ndarray],
+    model_struct: M3Struct, # Contains NN model (m) and trainable TL_p, TL_i, TL_e
+    model_type: str, # "m3a", "m3b", "m3c", "m3d", "m3e", "m3f", "m3g", "m3h", "m3i", "m3j", "m3k", "m3w", "m3tf"
+    use_TL: bool,
+    use_NN: bool,
+    denorm: bool = True,
+    testmode: bool = True,
+    terms_A: Optional[List[str]] = None,
+    Bt_scale_factor: float = 50000.0
+):
+    """
+    Forward pass for model 3.
+    x_norm can be (features, samples) or (features, l_window, samples) for temporal models.
+    model_struct.m is the nn.Sequential.
+    model_struct.TL_p, TL_i, TL_e are trainable parameters.
+    """
+    if terms_A is None:
+        terms_A = ["permanent", "induced", "eddy"]
+
+    if testmode:
+        model_struct.eval()
+    else:
+        model_struct.train()
+
+    # Convert inputs to PyTorch tensors
+    if isinstance(A_norm, np.ndarray):
+        A_norm_torch = torch.from_numpy(A_norm.astype(np.float32)) # (TL_terms, samples)
+    else:
+        A_norm_torch = A_norm.float()
+
+    # x_norm handling
+    if isinstance(x_norm, np.ndarray):
+        if x_norm.ndim == 2: # (features_x, samples)
+            x_norm_torch = torch.from_numpy(x_norm.astype(np.float32).T) # (samples, features_x)
+        elif x_norm.ndim == 3: # (features_x, l_window, samples)
+            x_norm_torch = torch.from_numpy(x_norm.transpose(2, 1, 0).astype(np.float32)) # (samples, l_window, features_x)
+        else:
+            raise ValueError(f"x_norm (numpy) has unexpected ndim: {x_norm.ndim}")
+    else: # Already a torch tensor
+        # Assume x_norm_torch is already (samples, features_x) or (samples, seq_len, features_x)
+        x_norm_torch = x_norm.float()
+        # Heuristic for 2D case: if model_struct.m[0] is Linear and shape looks like (features, samples)
+        if x_norm_torch.ndim == 2 and len(model_struct.m) > 0 and isinstance(model_struct.m[0], nn.Linear) and \
+           x_norm_torch.shape[0] == model_struct.m[0].in_features and x_norm_torch.shape[1] != model_struct.m[0].in_features:
+            x_norm_torch = x_norm_torch.T
+
+
+    TL_p = model_struct.TL_p
+    TL_i_flat = model_struct.TL_i.flatten() # Assuming TL_i is stored flat or as a vector
+    TL_e_flat = model_struct.TL_e.flatten() # Assuming TL_e is stored flat or as a vector
+
+    y_hat_norm_torch: torch.Tensor
+    
+    with torch.no_grad() if testmode else torch.enable_grad():
+        y_comp_TL = torch.tensor(0.0, device=A_norm_torch.device, dtype=A_norm_torch.dtype)
+        if use_TL:
+            # This logic needs to precisely match how TL coefficients are formed from TL_p, TL_i, TL_e
+            # and how A_norm is structured.
+            # Julia: TL_coef = [s.TL_p; s.TL_i[:]; s.TL_e[:]]
+            # A_norm is (N_terms, N_samples)
+            # TL_coef is (N_terms, 1)
+            # y_comp_TL = (A_norm' * TL_coef)' -> (1, N_samples) -> squeeze
+            
+            # Reconstruct the full TL coefficient vector from parts
+            # The exact number of elements for permanent, induced, eddy terms is needed.
+            # Standard Tolles-Lawson has 3 permanent, 9 induced (3x3 matrix), 6 eddy (symmetric 3x3 matrix upper/lower triangle)
+            # This implies TL_p is 3, TL_i_flat is 9, TL_e_flat is 6 (or 9 if full matrix stored and then taken unique elements)
+            # For now, assume direct concatenation based on typical structure.
+            current_TL_coef_parts = []
+            if "permanent" in terms_A: current_TL_coef_parts.append(TL_p)
+            if "induced" in terms_A: current_TL_coef_parts.append(TL_i_flat)
+            if "eddy" in terms_A: current_TL_coef_parts.append(TL_e_flat)
+            
+            if not current_TL_coef_parts:
+                 if not SILENT_DEBUG: print("Warning: use_TL is true, but no TL terms selected based on terms_A.")
+            else:
+                current_TL_coef_norm = torch.cat(current_TL_coef_parts)
+                if current_TL_coef_norm.ndim == 1:
+                    current_TL_coef_norm = current_TL_coef_norm.unsqueeze(1) # (N_tl_terms, 1)
+                
+                # Ensure A_norm_torch has the right number of rows (TL_terms)
+                if A_norm_torch.shape[0] == current_TL_coef_norm.shape[0]:
+                    y_comp_TL = torch.matmul(A_norm_torch.T, current_TL_coef_norm).squeeze() # (samples,)
+                else:
+                    if not SILENT_DEBUG: print(f"Warning: Mismatch in TL terms for matmul. A_norm_torch terms: {A_norm_torch.shape[0]}, current_TL_coef_norm terms: {current_TL_coef_norm.shape[0]}")
+
+
+        y_comp_NN = torch.tensor(0.0, device=x_norm_torch.device, dtype=x_norm_torch.dtype)
+        if use_NN:
+            nn_raw_output = model_struct.m(x_norm_torch) # (samples, nn_out_dim) or (samples, seq_len, nn_out_dim)
+            
+            # If temporal output (samples, seq_len, nn_out_dim), take last time step or mean
+            if nn_raw_output.ndim == 3:
+                nn_raw_output = nn_raw_output[:, -1, :] # Take last time step (samples, nn_out_dim)
+            
+            nn_output_squeezed = nn_raw_output.squeeze() # Aim for (samples,) or (samples, specific_dim_for_coefs)
+
+
+        # Combine based on model_type (simplified logic from Julia's loss functions)
+        if model_type == "m3a": # y_hat = TL_comp + NN_comp (NN predicts correction to y)
+            y_hat_norm_torch = y_comp_TL + (nn_output_squeezed if use_NN else 0.0)
+        elif model_type == "m3b": # NN predicts correction to TL_p
+            TL_p_corrected = TL_p + (nn_output_squeezed if use_NN else 0.0) # Assuming nn_output matches TL_p shape
+            _TL_coef_mod_parts = []
+            if "permanent" in terms_A: _TL_coef_mod_parts.append(TL_p_corrected)
+            if "induced" in terms_A: _TL_coef_mod_parts.append(TL_i_flat)
+            if "eddy" in terms_A: _TL_coef_mod_parts.append(TL_e_flat)
+            _TL_coef_mod = torch.cat(_TL_coef_mod_parts).unsqueeze(1)
+            y_hat_norm_torch = torch.matmul(A_norm_torch.T, _TL_coef_mod).squeeze() if _TL_coef_mod_parts else y_comp_TL
+        elif model_type == "m3c": # NN predicts correction to TL_i & TL_e
+            # This is complex: nn_output_squeezed needs to be split and added to TL_i_flat and TL_e_flat
+            # Placeholder: treat as additive to y_comp_TL for now
+            y_hat_norm_torch = y_comp_TL + (nn_output_squeezed if use_NN else 0.0)
+        elif model_type == "m3d": # NN predicts all TL_coefs
+            # nn_output_squeezed should be (N_tl_terms,) or (samples, N_tl_terms)
+            _TL_coef_mod = nn_output_squeezed if use_NN else torch.cat([TL_p, TL_i_flat, TL_e_flat])
+            if _TL_coef_mod.ndim == 1: _TL_coef_mod = _TL_coef_mod.unsqueeze(1)
+            if _TL_coef_mod.ndim == 2 and _TL_coef_mod.shape[1] == 1: # (N_terms, 1)
+                 y_hat_norm_torch = torch.matmul(A_norm_torch.T, _TL_coef_mod).squeeze()
+            elif _TL_coef_mod.ndim == 2 and _TL_coef_mod.shape[0] == A_norm_torch.shape[1]: # (samples, N_terms)
+                 y_hat_norm_torch = torch.sum(A_norm_torch.T * _TL_coef_mod, dim=1)
+            else:
+                 y_hat_norm_torch = y_comp_TL # Fallback
+        elif model_type == "m3e": # NN only
+            y_hat_norm_torch = nn_output_squeezed if use_NN else torch.zeros_like(y_comp_TL)
+        # Add more m3 types based on Julia logic...
+        # m3w, m3tf (temporal) usually y_comp_TL + NN_correction
+        elif model_type in ["m3w", "m3tf", "m3f", "m3g", "m3h", "m3i", "m3j", "m3k"]:
+            y_hat_norm_torch = y_comp_TL + (nn_output_squeezed if use_NN else 0.0)
+        else:
+            raise ValueError(f"Unknown model_type for nn_comp_3_fwd combination: {model_type}")
+
+    y_hat_norm_np = y_hat_norm_torch.cpu().numpy()
+
+    y_hat_np: np.ndarray
+    if denorm:
+        y_hat_np = denorm_sets(np.array(y_bias), np.array(y_scale), y_hat_norm_np)
+    else:
+        y_hat_np = y_hat_norm_np
+            
+    return y_hat_np.flatten()
+
+
+def nn_comp_3_fwd_from_raw(
+    A: np.ndarray,
+    x: np.ndarray,
+    data_norms: Tuple,
+    model_struct: M3Struct,
+    model_type: str,
+    use_TL: bool,
+    use_NN: bool,
+    norm_type_A: str = "none",
+    norm_type_x: str = "standardize",
+    l_segs_x: Optional[List[int]] = None,
+    l_window_x: Optional[int] = None,
+    terms_A: Optional[List[str]] = None,
+    Bt_scale_factor: float = 50000.0
+) -> np.ndarray:
+
+    A_f32 = A.astype(np.float32)
+    x_f32 = x.astype(np.float32)
+
+    if len(data_norms) < 7: # Basic norms: A_b, A_s, v_pca, x_b, x_s, y_b, y_s
+        raise ValueError(f"data_norms tuple expected to have at least 7 elements, got {len(data_norms)}")
+    
+    A_b, A_s, v_pca, x_b, x_s, y_b, y_s = data_norms[:7]
+
+    # Normalize A
+    _, _, A_norm_np = norm_sets(A_f32, norm_type=norm_type_A)
+    A_norm_transposed = A_norm_np.T # (TL_terms, samples)
+
+    # Normalize x
+    x_norm_step1: np.ndarray
+    if x_f32.ndim == 2: # (samples, features_orig)
+        x_norm_step1 = (x_f32 - np.asarray(x_b)) / np.asarray(x_s)
+        x_norm_projected = x_norm_step1 @ np.asarray(v_pca) # (samples, k_pca)
+        x_norm_processed_transposed = x_norm_projected.T    # (k_pca, samples)
+    elif x_f32.ndim == 3: # Temporal (samples, l_window, features_orig)
+        # Apply bias and scale to features_orig
+        x_norm_step1_temporal = (x_f32 - np.asarray(x_b)[None, None, :]) / np.asarray(x_s)[None, None, :]
+        # Apply PCA
+        x_norm_projected_temporal = np.einsum('nlf,fk->nlk', x_norm_step1_temporal, np.asarray(v_pca))
+        # Transpose for nn_comp_3_fwd: (k_pca, l_window, samples)
+        x_norm_processed_transposed = x_norm_projected_temporal.transpose(2, 1, 0)
+    else: # If x_f32 is from get_x, it might be (features, samples) or (features, l_window, samples)
+        # This case needs to align with get_x output format. Assuming get_x returns (features, [l_window,] samples)
+        # And that bias/scale/v_pca are compatible.
+        # This part is tricky if x_f32 is already feature-first.
+        # For now, assuming x input to _from_raw is (samples, ...)
+        raise ValueError(f"x input has unexpected ndim for _from_raw: {x_f32.ndim}")
+
+
+    # TL_coef are part of model_struct and are assumed to be in their "normalized" form w.r.t y_scale
+    # if they are trained parameters.
+    y_hat = nn_comp_3_fwd(A_norm_transposed, x_norm_processed_transposed, y_b, y_s,
+                          model_struct, model_type, use_TL, use_NN,
+                          denorm=True, testmode=True, terms_A=terms_A, Bt_scale_factor=Bt_scale_factor)
+    return y_hat
+
+
+def nn_comp_3_test(
+    A_norm: Union[np.ndarray, torch.Tensor],
+    x_norm: Union[np.ndarray, torch.Tensor],
+    y: np.ndarray,
+    y_bias: Union[float, np.ndarray],
+    y_scale: Union[float, np.ndarray],
+    model_struct: M3Struct,
+    model_type: str,
+    use_TL: bool,
+    use_NN: bool,
+    l_segs: Optional[List[int]] = None,
+    silent: bool = False,
+    terms_A: Optional[List[str]] = None,
+    Bt_scale_factor: float = 50000.0
+) -> Tuple[np.ndarray, np.ndarray]:
+
+    if l_segs is None: l_segs = [len(y)]
+    
+    y_hat = nn_comp_3_fwd(A_norm, x_norm, y_bias, y_scale, model_struct, model_type,
+                          use_TL, use_NN, denorm=True, testmode=True,
+                          terms_A=terms_A, Bt_scale_factor=Bt_scale_factor)
+    
+    valid_l_segs = l_segs
+    if sum(l_segs) != len(y):
+        if not silent and not SILENT_DEBUG: print(f"Warning: nn_comp_3_test: sum(l_segs)={sum(l_segs)} != len(y)={len(y)}. Using single segment.")
+        valid_l_segs = [len(y)]
+
+    err = err_segs(y_hat, y, valid_l_segs, silent=SILENT_DEBUG)
+    
+    if not silent:
+        err_std = np.std(err) if err.size > 0 else float('nan')
+        print(f"INFO: test error ({model_type}, TL:{use_TL}, NN:{use_NN}): {err_std:.2f} nT")
+        
+    return y_hat, err
+
+def nn_comp_3_test_from_raw(
+    A: np.ndarray,
+    x: np.ndarray,
+    y: np.ndarray,
+    data_norms: Tuple,
+    model_struct: M3Struct,
+    model_type: str,
+    use_TL: bool,
+    use_NN: bool,
+    l_segs: Optional[List[int]] = None,
+    silent: bool = False,
+    norm_type_A: str = "none",
+    norm_type_x: str = "standardize",
+    l_segs_x: Optional[List[int]] = None,
+    l_window_x: Optional[int] = None,
+    terms_A: Optional[List[str]] = None,
+    Bt_scale_factor: float = 50000.0
+) -> Tuple[np.ndarray, np.ndarray]:
+
+    if l_segs is None: l_segs = [len(y)]
+    y_f32 = y.astype(np.float32)
+
+    y_hat = nn_comp_3_fwd_from_raw(A, x, data_norms, model_struct, model_type, use_TL, use_NN,
+                                   norm_type_A=norm_type_A, norm_type_x=norm_type_x,
+                                   l_segs_x=l_segs_x, l_window_x=l_window_x,
+                                   terms_A=terms_A, Bt_scale_factor=Bt_scale_factor)
+    
+    valid_l_segs = l_segs
+    if sum(l_segs) != len(y_f32):
+        if not silent and not SILENT_DEBUG: print(f"Warning: nn_comp_3_test_from_raw: sum(l_segs)={sum(l_segs)} != len(y)={len(y_f32)}. Using single segment.")
+        valid_l_segs = [len(y_f32)]
+        
+    err = err_segs(y_hat, y_f32, valid_l_segs, silent=SILENT_DEBUG)
+
+    if not silent:
+        err_std = np.std(err) if err.size > 0 else float('nan')
+        print(f"INFO: test error ({model_type}, TL:{use_TL}, NN:{use_NN}): {err_std:.2f} nT")
+        
+    return y_hat, err
+
+# --- Training functions (nn_comp_2_train, nn_comp_3_train) ---
+# These are more complex and will be handled next.
+
+def nn_comp_2_train(
+    A: np.ndarray,      # Raw TL matrix (samples, TL_terms)
+    x: np.ndarray,      # Raw NN input features (samples, features_x_original)
+    y: np.ndarray,      # Raw target values (samples,)
+    no_norm: Optional[np.ndarray] = None, # Boolean array indicating features in x not to normalize
+    model_type: str = "m2a",    # "m2a", "m2b", "m2c", "m2d"
+    norm_type_A: str = "none",
+    norm_type_x: str = "standardize",
+    norm_type_y: str = "none",  # Typically "none" for model 2 as y is often residual
+    TL_coef_in: Optional[np.ndarray] = None, # Raw TL coefficients (18 elements or specific to terms_A)
     eta_adam: float = 0.001,
     epoch_adam: int = 5,
     epoch_lbfgs: int = 0,
-    hidden: List[int] = [8],
-    activation: Callable = nn.SiLU, # swish
-    loss_fn: Callable = nn.MSELoss(), # Renamed from loss
+    hidden: List[int] = [8], # type: ignore
+    activation: Callable = nn.SiLU,
+    loss_fn: Callable = nn.MSELoss(),
     batchsize: int = 2048,
     frac_train: float = 14/17,
     alpha_sgl: float = 1.0,
     lambda_sgl: float = 0.0,
     k_pca: int = -1,
-    data_norms_in: Optional[Tuple] = None, # (A_bias,A_scale,v_scale_pca,x_bias,x_scale,y_bias,y_scale)
+    data_norms_in: Optional[Tuple] = None,
     model_in: Optional[nn.Sequential] = None,
     l_segs: Optional[List[int]] = None,
-    A_test_raw: Optional[np.ndarray] = None, # Renamed from A_test
-    x_test_raw: Optional[np.ndarray] = None, # Renamed from x_test
-    y_test_raw: Optional[np.ndarray] = None, # Renamed from y_test
+    A_test_in: Optional[np.ndarray] = None,
+    x_test_in: Optional[np.ndarray] = None,
+    y_test_in: Optional[np.ndarray] = None,
     l_segs_test: Optional[List[int]] = None,
     silent: bool = False
-) -> Tuple[nn.Sequential, np.ndarray, Tuple, np.ndarray, np.ndarray]:
-    """
-    Train neural network-based aeromagnetic compensation, model 2.
-    """
-    if TL_coef_in is None:
-        # Determine number of TL terms from A matrix if possible, else default (e.g. 18)
-        num_tl_terms = A.shape[1] if A.ndim == 2 and A.shape[1] > 0 else 18
-        TL_coef_in = np.zeros(num_tl_terms, dtype=np.float32)
+) -> Union[Tuple[nn.Sequential, Tuple, np.ndarray, np.ndarray, np.ndarray],
+           Tuple[nn.Sequential, Tuple, np.ndarray, np.ndarray]]: # TL_coef_norm is conditional
+
+    # --- Argument Defaults and Initialization ---
+    if no_norm is None and x is not None: no_norm = np.zeros(x.shape[1], dtype=bool)
+    if l_segs is None and y is not None: l_segs = [len(y)]
+    
+    # Handle empty test inputs
+    if A_test_in is None: A_test_in = np.empty((0, A.shape[1] if A.ndim == 2 else 0), dtype=A.dtype if A is not None else np.float32)
+    if x_test_in is None: x_test_in = np.empty((0, x.shape[1] if x.ndim == 2 else 0), dtype=x.dtype if x is not None else np.float32)
+    if y_test_in is None: y_test_in = np.empty(0, dtype=y.dtype if y is not None else np.float32)
+    if l_segs_test is None: l_segs_test = [len(y_test_in)]
+    
+    if TL_coef_in is None: TL_coef_in = np.zeros(18, dtype=np.float32) # Default from Julia
+
+    # Default data_norms_in if not provided (matches Julia's structure for nn_comp_2)
+    if data_norms_in is None:
+        data_norms_in = (
+            np.zeros((1,1),dtype=np.float32), np.ones((1,1),dtype=np.float32), # A_bias, A_scale
+            np.eye(x.shape[1] if x.ndim==2 and k_pca <=0 else (k_pca if k_pca > 0 else 1), dtype=np.float32), # v_scale_pca
+            np.zeros((1,x.shape[1] if x.ndim==2 else 1),dtype=np.float32), np.ones((1,x.shape[1] if x.ndim==2 else 1),dtype=np.float32), # x_bias, x_scale
+            np.array([0.0],dtype=np.float32), np.array([1.0],dtype=np.float32) # y_bias, y_scale
+        )
+        # Mark that these are default and should be computed
+        data_norms_are_default = True
+    else:
+        # Check if the y_scale part of data_norms_in suggests it's a default/uninitialized one
+        # Accessing data_norms_in[-1] (y_scale) and data_norms_in[-2] (y_bias)
+        # Ensure data_norms_in is not empty and has enough elements
+        if len(data_norms_in) >= 2:
+            y_scale_check = data_norms_in[-1]
+            y_bias_check = data_norms_in[-2]
+            # Check if y_scale is effectively 0 (or 1 for default scale) and y_bias is 0
+            # This logic might need refinement based on how "default" is truly indicated.
+            # Julia checks sum of last element. If it's a scalar/1-element array, sum(abs(y_scale)) == 0 (if y_scale is 0)
+            # or sum(abs(y_scale)) == 1 (if y_scale is 1 and y_bias is 0).
+            # A simple check for y_bias == 0 and y_scale == 1 (or close to it for floats)
+            is_y_bias_zero = np.allclose(np.asarray(y_bias_check), 0.0)
+            is_y_scale_one_or_zero = np.allclose(np.asarray(y_scale_check), 1.0) or np.allclose(np.asarray(y_scale_check), 0.0)
+            data_norms_are_default = is_y_bias_zero and is_y_scale_one_or_zero
+        else:
+            data_norms_are_default = True # Treat as default if tuple is too short
+
+
+    # --- Type Conversions ---
+    A_f32 = A.astype(np.float32)
+    x_f32 = x.astype(np.float32)
+    y_f32 = y.astype(np.float32)
+    alpha = np.float32(alpha_sgl)
+    lambda_ = np.float32(lambda_sgl)
+    A_test_f32 = A_test_in.astype(np.float32)
+    x_test_f32 = x_test_in.astype(np.float32)
+    y_test_f32 = y_test_in.astype(np.float32)
+    TL_coef_f32 = TL_coef_in.astype(np.float32)
+
+    Nf_x = x_f32.shape[1] # Number of features in x
+
+    # --- Data Normalization ---
+    v_scale_pca: np.ndarray
+    A_bias, A_scale, x_bias, x_scale, y_bias, y_scale = [None]*6 # Initialize
+
+    if data_norms_are_default: # Compute norms
+        A_bias, A_scale, A_norm_np = norm_sets(A_f32, norm_type=norm_type_A)
+        x_bias, x_scale, x_norm_np_orig = norm_sets(x_f32, norm_type=norm_type_x, no_norm=no_norm)
+        y_bias, y_scale, y_norm_np = norm_sets(y_f32, norm_type=norm_type_y)
+
+        if k_pca > 0:
+            if k_pca > Nf_x:
+                if not silent: print(f"INFO: reducing k_pca from {k_pca} to {Nf_x}")
+                k_pca = Nf_x
+            
+            if x_norm_np_orig.shape[0] > 1:
+                cov_x = np.cov(x_norm_np_orig, rowvar=False)
+                eigenvalues, eigenvectors = np.linalg.eigh(cov_x)
+                sorted_indices = np.argsort(eigenvalues)[::-1]
+                S_svd_sorted = eigenvalues[sorted_indices]
+                V_sorted = eigenvectors[:, sorted_indices]
+                v_pca_components = V_sorted[:, :k_pca]
+                s_values_for_scaling = S_svd_sorted[:k_pca]
+                s_values_for_scaling[s_values_for_scaling <= 1e-9] = 1e-9
+                v_scale_pca = v_pca_components @ np.diag(1.0 / np.sqrt(s_values_for_scaling))
+                var_ret = round(np.sum(np.sqrt(s_values_for_scaling)) / np.sum(np.sqrt(S_svd_sorted[S_svd_sorted > 1e-9])) * 100, 6) if np.sum(np.sqrt(S_svd_sorted[S_svd_sorted > 1e-9])) > 0 else 0.0
+                if not silent: print(f"INFO: k_pca = {k_pca} of {Nf_x}, variance retained: {var_ret} %")
+            else:
+                if not silent: print(f"WARN: Not enough samples for PCA. Using identity for v_scale_pca.")
+                v_scale_pca = np.eye(Nf_x, dtype=np.float32)
+        else:
+            v_scale_pca = np.eye(Nf_x, dtype=np.float32)
+        
+        A_norm_transposed = A_norm_np.T # (TL_terms, samples)
+        x_norm_transformed = (x_norm_np_orig @ v_scale_pca).T # (k_pca, samples)
+        y_norm_transposed = y_norm_np.T if y_norm_np.ndim > 1 else y_norm_np.reshape(1, -1)
+
+        data_norms_out = (A_bias, A_scale, v_scale_pca, x_bias, x_scale, y_bias, y_scale)
+    else: # Unpack provided data_norms_in
+        A_bias, A_scale, v_scale_pca, x_bias, x_scale, y_bias, y_scale = unpack_data_norms(cast(Tuple, data_norms_in))
+        A_norm_transposed = ((A_f32 - A_bias) / A_scale).T
+        x_norm_transformed = (((x_f32 - x_bias) / x_scale) @ v_scale_pca).T
+        y_norm_transposed = ((y_f32 - y_bias) / y_scale).T if y_f32.ndim > 1 else ((y_f32 - y_bias) / y_scale).reshape(1,-1)
+        data_norms_out = cast(Tuple, data_norms_in)
+
+    # Normalize TL_coef (using y_scale as in Julia)
+    _y_s_scalar = np.asarray(y_scale).item() if isinstance(y_scale, (np.ndarray, list)) and np.size(y_scale)==1 else np.asarray(y_scale)
+    if _y_s_scalar == 0: _y_s_scalar = 1.0
+    TL_coef_norm_np = TL_coef_f32 / _y_s_scalar
+
+    # --- Normalize Test Data (if provided) ---
+    A_test_norm_tr, x_test_norm_tr = None, None
+    if A_test_f32.size > 0: A_test_norm_tr = ((A_test_f32 - A_bias) / A_scale).T
+    if x_test_f32.size > 0: x_test_norm_tr = (((x_test_f32 - x_bias) / x_scale) @ v_scale_pca).T
+        
+    # --- Prepare PyTorch DataLoaders ---
+    A_norm_torch = torch.from_numpy(A_norm_transposed.astype(np.float32))
+    x_norm_torch = torch.from_numpy(x_norm_transformed.astype(np.float32))
+    y_norm_torch = torch.from_numpy(y_norm_transposed.astype(np.float32)).squeeze()
+
+    if frac_train < 1:
+        num_samples = x_norm_torch.shape[1]
+        indices = np.random.permutation(num_samples)
+        split_idx = int(np.floor(num_samples * frac_train))
+        train_indices, val_indices = indices[:split_idx], indices[split_idx:]
+        
+        # DataLoader expects (samples, features)
+        train_dataset = TensorDataset(A_norm_torch[:, train_indices].T, x_norm_torch[:, train_indices].T, y_norm_torch[train_indices])
+        val_dataset = TensorDataset(A_norm_torch[:, val_indices].T, x_norm_torch[:, val_indices].T, y_norm_torch[val_indices])
+    else:
+        train_dataset = TensorDataset(A_norm_torch.T, x_norm_torch.T, y_norm_torch)
+        val_dataset = train_dataset
+
+    train_loader = DataLoader(train_dataset, batch_size=batchsize, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batchsize, shuffle=False)
+
+    # --- Setup NN Model ---
+    current_nn_model: nn.Sequential
+    nn_input_features = v_scale_pca.shape[1] # k_pca or Nf_x
+    
+    # Output size of NN depends on model_type
+    # m2a, m2d: NN output is combined with TL term, so NN output is scalar (correcting y)
+    # m2b: NN output is y_hat directly, scalar
+    # m2c: NN predicts TL_coef_norm, so output size is num_TL_terms
+    Ny_nn = 1
+    if model_type == "m2c":
+        Ny_nn = TL_coef_norm_np.shape[0] # Number of TL coefficients
+    elif model_type == "m2a": # Julia: Ny = size(A_norm,1) if model_type in [:m2a,:m2d] else 1
+         Ny_nn = A_norm_torch.shape[0] # Number of TL terms, as NN output is multiplied by A_norm
+
+    if model_in is None or not list(model_in.children()):
+        current_nn_model = get_nn_m(nn_input_features, Ny_nn, hidden=hidden, activation=activation)
+    else:
+        current_nn_model = copy.deepcopy(model_in)
+
+    # Wrap model in M2Struct or M2StructMOnly
+    s_model: Union[M2Struct, M2StructMOnly]
+    tl_coef_for_struct = torch.from_numpy(TL_coef_norm_np.astype(np.float32))
+    if model_type == "m2c": # TL_coef_norm is trained
+        s_model = M2Struct(current_nn_model, tl_coef_for_struct)
+    else: # TL_coef_norm is fixed (buffer)
+        s_model = M2StructMOnly(current_nn_model, tl_coef_for_struct)
+
+    # --- Loss Function ---
+    def compute_loss_val_m2(model_wrapper: Union[M2Struct, M2StructMOnly], loader: DataLoader) -> float:
+        model_wrapper.eval()
+        total_loss_val = 0.0
+        count = 0
+        with torch.no_grad():
+            for A_b_norm, x_b_norm, y_b_norm in loader: # Batches are (batch_size, features)
+                # Transpose A_b_norm and x_b_norm for nn_comp_2_fwd: (features, batch_size)
+                y_hat_b_norm = nn_comp_2_fwd(
+                    A_b_norm.T, x_b_norm.T,
+                    cast(np.ndarray,y_bias), cast(np.ndarray,y_scale),
+                    model_wrapper.m, model_wrapper.TL_coef_norm,
+                    model_type, denorm=False, testmode=True
+                )
+                y_hat_b_norm_torch = torch.from_numpy(y_hat_b_norm.astype(np.float32))
+                
+                current_loss = loss_fn(y_hat_b_norm_torch, y_b_norm)
+                # SGL penalty
+                sgl_term = torch.tensor(0.0, device=current_loss.device)
+                if lambda_ > 0:
+                    sgl_term = lambda_ * sparse_group_lasso(model_wrapper.m, alpha)
+                
+                total_loss_val += (current_loss + sgl_term).item() * A_b_norm.size(0)
+                count += A_b_norm.size(0)
+        return total_loss_val / count if count > 0 else 0.0
+
+    # --- Optimizer ---
+    optimizer_adam = optim.Adam(s_model.parameters(), lr=eta_adam)
+
+    # --- Training Loop (Adam) ---
+    best_model_state = copy.deepcopy(s_model.state_dict())
+    best_loss_val = compute_loss_val_m2(s_model, val_loader)
+    best_test_error_std: Optional[float] = None
+
+    if x_test_norm_tr is not None and y_test_f32.size > 0 and A_test_norm_tr is not None:
+        valid_l_segs_test = l_segs_test if l_segs_test and sum(l_segs_test) == len(y_test_f32) else [len(y_test_f32)]
+        _, err_test_init = nn_comp_2_test(
+            A_test_norm_tr, x_test_norm_tr, y_test_f32,
+            cast(np.ndarray,y_bias), cast(np.ndarray,y_scale),
+            s_model.m, s_model.TL_coef_norm, model_type,
+            l_segs=valid_l_segs_test, silent=SILENT_DEBUG
+        )
+        best_test_error_std = np.std(err_test_init) if err_test_init.size > 0 else float('inf')
+
+    if not silent: print(f"INFO: M2 ({model_type}) epoch 0: loss = {best_loss_val:.6f}")
+
+    for i in range(1, epoch_adam + 1):
+        s_model.train()
+        for A_b_norm, x_b_norm, y_b_norm in train_loader:
+            optimizer_adam.zero_grad()
+            y_hat_b_norm = nn_comp_2_fwd(
+                A_b_norm.T, x_b_norm.T,
+                cast(np.ndarray,y_bias), cast(np.ndarray,y_scale),
+                s_model.m, s_model.TL_coef_norm,
+                model_type, denorm=False, testmode=False # testmode=False for training
+            )
+            y_hat_b_norm_torch = torch.from_numpy(y_hat_b_norm.astype(np.float32))
+            
+            loss_train_val = loss_fn(y_hat_b_norm_torch, y_b_norm)
+            sgl_term = torch.tensor(0.0, device=loss_train_val.device)
+            if lambda_ > 0:
+                sgl_term = lambda_ * sparse_group_lasso(s_model.m, alpha)
+            
+            total_loss_train = loss_train_val + sgl_term
+            total_loss_train.backward()
+            optimizer_adam.step()
+
+        current_val_loss = compute_loss_val_m2(s_model, val_loader)
+
+        if x_test_norm_tr is None or y_test_f32.size == 0 or A_test_norm_tr is None: # No test set
+            if current_val_loss < best_loss_val:
+                best_loss_val = current_val_loss
+                best_model_state = copy.deepcopy(s_model.state_dict())
+            if i % 5 == 0 and not silent:
+                print(f"INFO: M2 ({model_type}) epoch {i}: loss = {best_loss_val:.6f}")
+        else: # With test set
+            valid_l_segs_test = l_segs_test if l_segs_test and sum(l_segs_test) == len(y_test_f32) else [len(y_test_f32)]
+            _, err_test_curr = nn_comp_2_test(
+                A_test_norm_tr, x_test_norm_tr, y_test_f32,
+                cast(np.ndarray,y_bias), cast(np.ndarray,y_scale),
+                s_model.m, s_model.TL_coef_norm, model_type,
+                l_segs=valid_l_segs_test, silent=SILENT_DEBUG
+            )
+            current_test_err_std = np.std(err_test_curr) if err_test_curr.size > 0 else float('inf')
+            if best_test_error_std is not None and current_test_err_std < best_test_error_std:
+                best_test_error_std = current_test_err_std
+                best_model_state = copy.deepcopy(s_model.state_dict())
+            if i % 5 == 0 and not silent:
+                print(f"INFO: M2 ({model_type}) epoch {i}: loss = {current_val_loss:.6f}, test error = {best_test_error_std:.2f} nT")
+    
+    s_model.load_state_dict(best_model_state)
+
+    # --- LBFGS Training (Optional) ---
+    if epoch_lbfgs > 0:
+        if not silent: print(f"INFO: M2 ({model_type}) LBFGS training started.")
+        optimizer_lbfgs = optim.LBFGS(s_model.parameters(), lr=0.1) # lr can be tuned
+
+        # Full dataset for LBFGS closure
+        full_A_train_torch = A_norm_torch.T # (samples, TL_terms)
+        full_x_train_torch = x_norm_torch.T # (samples, k_pca)
+        full_y_train_torch = y_norm_torch   # (samples,)
+
+        def closure_lbfgs_m2():
+            optimizer_lbfgs.zero_grad()
+            y_hat_norm_lbfgs = nn_comp_2_fwd(
+                full_A_train_torch.T, full_x_train_torch.T, # Pass as (features, samples)
+                cast(np.ndarray,y_bias), cast(np.ndarray,y_scale),
+                s_model.m, s_model.TL_coef_norm, model_type,
+                denorm=False, testmode=False
+            )
+            y_hat_norm_lbfgs_torch = torch.from_numpy(y_hat_norm_lbfgs.astype(np.float32))
+            
+            loss_val_lbfgs = loss_fn(y_hat_norm_lbfgs_torch, full_y_train_torch)
+            sgl_term_lbfgs = torch.tensor(0.0, device=loss_val_lbfgs.device)
+            if lambda_ > 0:
+                sgl_term_lbfgs = lambda_ * sparse_group_lasso(s_model.m, alpha)
+            
+            total_loss_lbfgs = loss_val_lbfgs + sgl_term_lbfgs
+            total_loss_lbfgs.backward()
+            return total_loss_lbfgs
+
+        for i_lbfgs in range(epoch_lbfgs):
+            optimizer_lbfgs.step(closure_lbfgs_m2)
+            if not silent and (i_lbfgs + 1) % 5 == 0:
+                current_lbfgs_loss = closure_lbfgs_m2().item()
+                print(f"INFO: M2 ({model_type}) LBFGS epoch {i_lbfgs+1}: loss = {current_lbfgs_loss:.6f}")
+        if not silent: print(f"INFO: M2 ({model_type}) LBFGS training finished.")
+
+    # --- Final Evaluation and Return ---
+    final_model_chain = s_model.m
+    final_TL_coef_norm = s_model.TL_coef_norm.detach().cpu().numpy()
+
+    valid_l_segs_final = l_segs if l_segs and sum(l_segs) == len(y_f32) else [len(y_f32)]
+    y_hat_final, err_final = nn_comp_2_test(
+        A_norm_torch, x_norm_torch, y_f32,
+        cast(np.ndarray,y_bias), cast(np.ndarray,y_scale),
+        final_model_chain, torch.from_numpy(final_TL_coef_norm), model_type,
+        l_segs=valid_l_segs_final, silent=True
+    )
+    if not silent:
+        err_std_final = np.std(err_final) if err_final.size > 0 else float('nan')
+        print(f"INFO: M2 ({model_type}) final train error: {err_std_final:.2f} nT")
+
+    if x_test_norm_tr is not None and y_test_f32.size > 0 and A_test_norm_tr is not None:
+        valid_l_segs_test_final = l_segs_test if l_segs_test and sum(l_segs_test) == len(y_test_f32) else [len(y_test_f32)]
+        nn_comp_2_test(
+            A_test_norm_tr, x_test_norm_tr, y_test_f32,
+            cast(np.ndarray,y_bias), cast(np.ndarray,y_scale),
+            final_model_chain, torch.from_numpy(final_TL_coef_norm), model_type,
+            l_segs=valid_l_segs_test_final, silent=silent
+        )
+    
+    if model_type == "m2c": # TL_coef_norm was trained
+        return final_model_chain, data_norms_out, final_TL_coef_norm, y_hat_final, err_final
+    else: # TL_coef_norm was fixed
+        return final_model_chain, data_norms_out, y_hat_final, err_final
+
+
+        
 
     # Convert to Float32
     A_f32 = A.astype(np.float32)
@@ -3795,10 +4563,14 @@ def comp_train(
         # perm_fi_csv = comp_params.perm_fi_csv
     elif isinstance(comp_params, LinCompParams):
         k_plsr = comp_params.k_plsr
-        lambda_TL = comp_params.λ_TL # This is lambda_ridge for linear_fit with TL
-        # Set defaults for NN params not in LinCompParams to avoid UnboundLocalError later if logic paths are complex
-        # Though ideally, these paths are mutually exclusive.
-        drop_fi = False 
+        lambda_TL = comp_params.λ_TL
+        lambda_elastic = comp_params.lambda_elastic
+        l1_ratio_elastic = comp_params.l1_ratio_elastic
+        # Set defaults for NN params not in LinCompParams
+        drop_fi = False
+        # To avoid UnboundLocalError if these are accessed in shared paths (though they shouldn't be)
+        eta_adam, epoch_adam, epoch_lbfgs, hidden, activation, loss, batchsize, frac_train, alpha_sgl, lambda_sgl, k_pca, TL_coef_nn = \
+            0.001, 0, 0, [], nn.Identity, nn.MSELoss(), 0, 0.0, 0.0, 0.0, -1, np.array([])
     else:
         raise TypeError("comp_params must be an instance of NNCompParams or LinCompParams")
 
@@ -4135,12 +4907,22 @@ def comp_train(
             comp_params.model = model_tuple # Store (coeffs, bias)
             comp_params.data_norms = data_norms_out_lin
         elif model_type == "elasticnet":
-            model_tuple, data_norms_out_lin, y_hat_np, err_np = elasticnet_fit(
-                x_np, y_np, alpha=0.99, no_norm=no_norm_out, # Default alpha from Julia
-                lambda_val= -1.0, # Default to CV
-                data_norms_in=data_norms, l_segs=l_segs_out, silent=silent
+            # Ensure LinCompParams has lambda_elastic and l1_ratio_elastic
+            if not isinstance(comp_params, LinCompParams):
+                raise TypeError("ElasticNet requires LinCompParams with lambda_elastic and l1_ratio_elastic.")
+            
+            model_obj, data_norms_out_lin, y_hat_np, err_np = elasticnet_fit(
+                x=x_np, y=y_np,
+                alpha=comp_params.lambda_elastic, # Strength parameter for ElasticNet
+                l1_ratio=comp_params.l1_ratio_elastic, # Mixing parameter
+                no_norm=no_norm_out,
+                norm_type_x=norm_type_x, # Pass relevant norm_types
+                norm_type_y=norm_type_y,
+                data_norms_in=data_norms,
+                l_segs=l_segs_out,
+                silent=silent
             )
-            comp_params.model = model_tuple
+            comp_params.model = model_obj # elasticnet_fit returns the model object
             comp_params.data_norms = data_norms_out_lin
         elif model_type == "plsr":
             model_tuple, data_norms_out_lin, y_hat_np, err_np = plsr_fit(
@@ -4646,22 +5428,24 @@ def comp_test(
                 # A_matrix_np, Bt_np, B_dot_np are from the full test data (xyz, ind)
                 # x_fi_test or x_fi_test_for_drop is used
                 # TL_coef is from current_comp_params
+                # A_matrix_np for M2 should be the design matrix.
                 if drop_fi:
-                    y_hat_iter, err_iter = nn_comp_2_test_from_raw(A_matrix_np, x_fi_test_for_drop, y_np, current_comp_params.data_norms, current_comp_params.model, current_comp_params.model_type, current_comp_params.TL_coef, l_segs_out, silent)
+                    y_hat_iter, err_iter = nn_comp_2_test_from_raw(A_matrix_np, x_fi_test_for_drop, y_np, current_comp_params.data_norms, current_comp_params.model, current_comp_params.model_type, current_comp_params.TL_coef, l_segs_out, silent, norm_type_A=comp_params.norm_type_A, norm_type_x=comp_params.norm_type_x, norm_type_y=comp_params.norm_type_y)
                 else: # perm_fi
-                     y_hat_iter, err_iter = nn_comp_2_test_from_raw(A_matrix_np, x_fi_test, y_np, current_comp_params.data_norms, current_comp_params.model, current_comp_params.model_type, current_comp_params.TL_coef, l_segs_out, silent)
+                     y_hat_iter, err_iter = nn_comp_2_test_from_raw(A_matrix_np, x_fi_test, y_np, current_comp_params.data_norms, current_comp_params.model, current_comp_params.model_type, current_comp_params.TL_coef, l_segs_out, silent, norm_type_A=comp_params.norm_type_A, norm_type_x=comp_params.norm_type_x, norm_type_y=comp_params.norm_type_y)
             
             elif current_comp_params.model_type.startswith("m3"):
+                # For M3, A_matrix_np is flux_components_for_m3
                 if drop_fi:
                     y_hat_iter, err_iter = nn_comp_3_test_from_raw(
-                        A_matrix_np, Bt_np, B_dot_np, x_fi_test_for_drop, y_np, current_comp_params.data_norms, current_comp_params.model,
-                        current_comp_params.model_type, original_y_type_for_get_y, # Use original y_type for consistency with how model was trained/tested
-                        current_comp_params.TL_coef, current_comp_params.terms_A, l_segs=l_segs_out, l_window=l_window, silent=silent)
+                        flux_components_for_m3, Bt_np, B_dot_np, x_fi_test_for_drop, y_np, current_comp_params.data_norms, current_comp_params.model, # type: ignore
+                        current_comp_params.model_type, original_y_type_for_get_y,
+                        current_comp_params.TL_coef, current_comp_params.terms_A, l_segs=l_segs_out, l_window=l_window, silent=silent, norm_type_A=comp_params.norm_type_A, norm_type_x=comp_params.norm_type_x)
                 else: # perm_fi
                      y_hat_iter, err_iter = nn_comp_3_test_from_raw(
-                        A_matrix_np, Bt_np, B_dot_np, x_fi_test, y_np, current_comp_params.data_norms, current_comp_params.model,
+                        flux_components_for_m3, Bt_np, B_dot_np, x_fi_test, y_np, current_comp_params.data_norms, current_comp_params.model, # type: ignore
                         current_comp_params.model_type, original_y_type_for_get_y,
-                        current_comp_params.TL_coef, current_comp_params.terms_A, l_segs=l_segs_out, l_window=l_window, silent=silent)
+                        current_comp_params.TL_coef, current_comp_params.terms_A, l_segs=l_segs_out, l_window=l_window, silent=silent, norm_type_A=comp_params.norm_type_A, norm_type_x=comp_params.norm_type_x)
             else:
                 if not silent: print(f"WARN: FI testing not implemented for model_type {current_comp_params.model_type}")
                 continue
@@ -4682,13 +5466,15 @@ def comp_test(
         if model_type == "m1":
             y_hat_np, err_np = nn_comp_1_test_from_raw(x_np, y_np, data_norms, model, l_segs=l_segs_out, silent=silent)
         elif model_type.startswith("m2"):
-            y_hat_np, err_np = nn_comp_2_test_from_raw(A_matrix_np, x_np, y_np, data_norms, model, model_type, TL_coef_val, l_segs=l_segs_out, silent=silent)
+            # A_matrix_np is the design matrix for M2
+            y_hat_np, err_np = nn_comp_2_test_from_raw(A_matrix_np, x_np, y_np, data_norms, model, model_type, TL_coef_val, l_segs=l_segs_out, silent=silent, norm_type_A=comp_params.norm_type_A, norm_type_x=comp_params.norm_type_x, norm_type_y=comp_params.norm_type_y)
         elif model_type.startswith("m3"):
+            # A_matrix_np is flux_components_for_m3 here
             y_hat_np, err_np = nn_comp_3_test_from_raw(
-                A_raw=A_matrix_np, Bt_raw=Bt_np, B_dot_raw=B_dot_np, # A_matrix_np is flux for M3
-                x_raw=x_np, y_raw=y_np, data_norms=data_norms, model_nn=model,
-                model_type=model_type, y_type=original_y_type_for_get_y, TL_coef_raw=TL_coef_val, terms_A=terms_A,
-                l_segs=l_segs_out, l_window=l_window, silent=silent
+                A_raw=flux_components_for_m3, Bt_raw=Bt_np, B_dot_raw=B_dot_np,
+                x_raw=x_np, y_raw=y_np, data_norms=data_norms, model_nn=model, # type: ignore
+                model_type=model_type, y_type=original_y_type_for_get_y, TL_coef_raw=TL_coef_val, terms_A=terms_A, # type: ignore
+                l_segs=l_segs_out, l_window=l_window, silent=silent, norm_type_A=comp_params.norm_type_A, norm_type_x=comp_params.norm_type_x
             )
         elif model_type in ["TL", "mod_TL", "map_TL"]:
             # linear_test expects normalized x (A_matrix_np here) and raw y (y_np)
