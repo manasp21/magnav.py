@@ -655,12 +655,12 @@ def get_x(xyz: XYZ,
             
     # Attitude features (dcm2euler, euler2dcm are external)
     if hasattr(xyz.ins, 'Cnb'):
-        Cnb_ind = xyz.ins.Cnb[:, :, ind] # Shape (3,3,N)
+        Cnb_ind = xyz.ins.Cnb[ind, :, :] # Apply boolean index to the first (N) axis
         # Assuming dcm2euler takes (3,3,N) and returns (N,), (N,), (N,) for roll, pitch, yaw
         roll, pitch, yaw = dcm2euler(Cnb_ind, order='body2nav') # Use appropriate order string
 
         # Assuming euler2dcm takes (N,) arrays and returns (N,3,3)
-        dcm_nav2body_N33 = euler2dcm(roll, pitch, yaw, order='nav2body')
+        dcm_nav2body_N33 = euler2dcm(roll, pitch, yaw, order='zyx') # Assuming 'zyx' is the correct sequence for nav to body
 
         # d["dcm"] feature: Nx9 matrix, each row is a flattened (Fortran order) 3x3 DCM
         d["dcm"] = np.array([m.flatten('F') for m in dcm_nav2body_N33])

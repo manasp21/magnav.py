@@ -24,6 +24,7 @@ from sklearn.cross_decomposition import PLSRegression # For plsr_fit
 # These would typically be imported from other modules or defined in detail.
 
 from .map_utils import get_map_val # Added import
+from .common_types import MagV # Import MagV for type checking
 
 SILENT_DEBUG = False # Global debug flag, similar to silent_debug in Julia
 
@@ -510,22 +511,51 @@ def err_segs(y_hat: np.ndarray, y: np.ndarray, l_segs: List[int], silent: bool =
     return np.concatenate(errors)
 
 
-def create_TL_A(vec_mag_data: np.ndarray, ind: Optional[np.ndarray] = None, terms: Optional[List[str]] = None, return_B: bool = False, **kwargs) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+def create_TL_A(vec_mag_data: Union[np.ndarray, MagV], ind: Optional[np.ndarray] = None, terms: Optional[List[str]] = None, return_B: bool = False, **kwargs) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray, np.ndarray]]:
     """Placeholder for creating Tolles-Lawson A matrix."""
-    # vec_mag_data: N x 3 (flux_a, flux_b, flux_c)
+    # vec_mag_data: N x 3 (flux_a, flux_b, flux_c) or MagV object
     # ind: indices to select from vec_mag_data
     # terms: list of TL terms like 'permanent', 'induced', 'eddy'
     # kwargs: Bt (scalar total field), etc.
-    
+
+    processed_vec_data: np.ndarray
+    if isinstance(vec_mag_data, MagV):
+        # Assuming MagV stores x, y, z as 1D arrays of the same length N
+        # We need to stack them to form an N x 3 array if that's what subsequent logic expects,
+        # or a 3 x N array if that's the convention (like B_earth_body in create_xyz.py).
+        # The comment at line 515 "vec_mag_data: N x 3" suggests N x 3.
+        # However, the create_TL_A in tolles_lawson.py expects Bx, By, Bz which are typically N (or 1D).
+        # Let's assume for this placeholder, if it's MagV, we extract components.
+        # The actual TL_A construction needs Bx, By, Bz.
+        # This placeholder is simplified and might not fully replicate the true TL_A logic.
+        # For now, let's prepare data that can be indexed by `ind`.
+        # If `ind` is applied to the first dimension (N), then data should be N x something.
+        # Let's assume we need Bx, By, Bz as columns for now if it's MagV.
+        _Bx = vec_mag_data.x
+        _By = vec_mag_data.y
+        _Bz = vec_mag_data.z
+        if not (_Bx.shape == _By.shape == _Bz.shape and _Bx.ndim == 1):
+            raise ValueError("MagV components x,y,z must be 1D arrays of the same length.")
+        processed_vec_data = np.column_stack((_Bx, _By, _Bz)) # Creates N x 3 array
+    elif isinstance(vec_mag_data, np.ndarray):
+        processed_vec_data = vec_mag_data
+    else:
+        raise TypeError("vec_mag_data must be a NumPy array or a MagV object.")
+
     # Robust handling of 'ind' for selecting data
     if ind is not None:
         _ind = np.asarray(ind) # Convert to numpy array to safely check size and handle lists
         if _ind.size > 0:
-            selected_data = vec_mag_data[_ind, :]
-        else: # ind was provided but resulted in an empty selection (e.g., empty list or array)
-            selected_data = np.empty((0, vec_mag_data.shape[1]), dtype=vec_mag_data.dtype)
+            if _ind.dtype == bool:
+                if _ind.shape[0] != processed_vec_data.shape[0]:
+                    raise IndexError(f"Boolean index size {_ind.shape[0]} does not match data size {processed_vec_data.shape[0]} along axis 0.")
+                selected_data = processed_vec_data[_ind, :]
+            else: # Integer index
+                selected_data = processed_vec_data[_ind, :]
+        else: # ind was provided but resulted in an empty selection
+            selected_data = np.empty((0, processed_vec_data.shape[1]), dtype=processed_vec_data.dtype)
     else: # ind is None, use all data
-        selected_data = vec_mag_data
+        selected_data = processed_vec_data
     
     if selected_data.shape[0] == 0:
         # Return empty arrays with expected number of columns based on terms
@@ -4669,7 +4699,7 @@ def comp_train(
         # For M3, create_TL_A returns A, Bt, B_dot
         # For others, it might just return A. The placeholder needs to handle this.
         # The fully implemented create_TL_A from tolles_lawson.py should handle return_B=True.
-        A_out = create_TL_A_fn(getattr(xyz, use_vec), ind, terms=terms_A, return_B=True, Bt_in=getattr(xyz,use_mag)[ind] if hasattr(xyz,use_mag) else None)
+        A_out = create_TL_A_fn(getattr(xyz, use_vec), ind, terms=terms_A, return_B=True, Bt=getattr(xyz,use_mag)[ind] if hasattr(xyz,use_mag) else None)
         if isinstance(A_out, tuple) and len(A_out) == 3:
             A_matrix_np, Bt_np, B_dot_np = A_out
         else: # Assuming it returned only A
@@ -4679,7 +4709,7 @@ def comp_train(
             # If M1/M2 need Bt/B_dot, this needs to be addressed.
             # The placeholder create_TL_A returns dummy Bt, B_dot if return_B=True.
 
-    fs = 1.0 / xyz.dt if xyz.dt > 0 else 10.0 # Default fs if dt is zero
+    fs = 1.0 / xyz.traj.dt if xyz.traj.dt > 0 else 10.0 # Default fs if dt is zero
     
     A_no_bpf_np = None
     if model_type in ["TL", "mod_TL"]: # Store A before BPF for these models
@@ -4714,13 +4744,13 @@ def comp_train(
     x_np, no_norm_out, features_out, l_segs_out = get_x_fn(
         xyz, ind, features_setup,
         features_no_norm=features_no_norm, terms=terms, # `terms` here refers to comp_params.terms (e.g. for specific feature construction)
-        sub_diurnal=sub_diurnal, sub_igrf=sub_igrf, bpf_mag=bpf_mag
+        sub_diurnal=sub_diurnal, sub_igrf=sub_igrf, bpf_mag_data=bpf_mag # Changed bpf_mag to bpf_mag_data
     )
 
     y_np = get_y_fn(
         xyz, ind, map_val_data,
-        y_type=y_type, use_mag=use_mag,
-        sub_diurnal=sub_diurnal, sub_igrf=sub_igrf, bpf_mag=bpf_mag, fs=fs # Pass fs for potential BPF in get_y
+        y_type=y_type, use_mag_str=use_mag, # Changed use_mag to use_mag_str
+        sub_diurnal=sub_diurnal, sub_igrf=sub_igrf, bpf_scalar_mag=bpf_mag, fs_override=fs # Changed bpf_mag and fs
     )
     
     y_no_bpf_np = None
@@ -4943,7 +4973,7 @@ def comp_train(
         print(f"INFO: comp_train completed in {elapsed_time:.1f} {time_unit}")
 
     return comp_params, y_np, y_hat_np, err_np, features_out
-def comp_train( # Overload for DataFrames
+def comp_train_df( # Overload for DataFrames, renamed from comp_train
     comp_params: CompParams,
     lines: Union[int, float, List[Union[int, float]], np.ndarray], # Can be single line or list/array of lines
     df_line: Any, # pandas.DataFrame

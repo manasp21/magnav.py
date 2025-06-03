@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 import math
 import random
 import os
+import sys # Added for accessing patched constants
 import importlib # Added for reloading constants
 import pandas as pd
 from scipy.stats import multivariate_normal
@@ -26,6 +27,28 @@ def map_check(m, la, lo) -> bool:
     # TODO: Implement actual map boundary/validity checks if necessary.
     return True
 
+@dataclass
+class Traj:
+    N: int
+    dt: float
+    tt: np.ndarray
+    lat: np.ndarray
+    lon: np.ndarray
+    alt: np.ndarray
+    vn: np.ndarray
+    ve: np.ndarray
+    vd: np.ndarray
+    fn: np.ndarray
+    fe: np.ndarray
+    fd: np.ndarray
+    Cnb: np.ndarray
+
+@dataclass
+class MagV:
+    x: np.ndarray
+    y: np.ndarray
+    z: np.ndarray
+    t: np.ndarray
 def utm_zone_from_latlon(lat_deg: float, lon_deg: float) -> tuple[int, bool]:
     """Calculates UTM zone number and hemisphere."""
     # Placeholder implementation from fallback block.
@@ -45,30 +68,23 @@ def create_dcm_from_vel(vn: np.ndarray, ve: np.ndarray, dt: float, order: str) -
     # TODO: Implement actual DCM creation logic.
     return np.array([np.eye(3)] * len(vn))
 
-def get_tolles_lawson_aircraft_field_vector(
-    ac_filter_coeffs: np.ndarray,
-    ac_filter_terms: np.ndarray,
-    Bt_scale: float,
-    flux_a: np.ndarray,
-    flux_b: np.ndarray,
-    flux_c: np.ndarray,
-    norm_flux_a: float,
-    norm_flux_b: float,
-    norm_flux_c: float,
-    dcm_data: np.ndarray,
-    igrf_bf: np.ndarray,
-    norm_igrf: bool = False
-) -> np.ndarray:
-    """
-    Placeholder for get_tolles_lawson_aircraft_field_vector.
-    Returns zeros matching expected output shape based on norm_igrf.
-    """
+def get_tolles_lawson_aircraft_field_vector(coeffs, terms, Bt_scale,
+                                            flux_c, norm_flux_a, norm_flux_b, norm_flux_c, dcm_data, igrf_bf,
+                                            **kwargs): # Added missing args and kwargs
+    """Local placeholder for get_tolles_lawson_aircraft_field_vector."""
     print(f"DEBUG_CREATE_XYZ: Using placeholder get_tolles_lawson_aircraft_field_vector")
-    num_points = dcm_data.shape[0]
-    if norm_igrf:
-        return np.zeros(num_points)
+    # Original placeholder logic:
+    # return (np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3)))
+    # The function in Julia returns a 3xN array, so let's return something like that.
+    # Determine N from one of the inputs if possible, e.g., flux_c.shape[1] or dcm_data.shape[0]
+    # For now, a generic placeholder:
+    if hasattr(dcm_data, 'shape') and len(dcm_data.shape) > 0 and dcm_data.shape[0] > 1: # dcm_data might be N x 3 x 3, ensure N is not 1 from a scalar-like input
+         N = dcm_data.shape[0]
+    elif hasattr(flux_c, 'shape') and len(flux_c.shape) > 1:
+        N = flux_c.shape[1]
     else:
-        return np.zeros((3, num_points))
+        N = 1 # Default if N cannot be determined
+    return np.zeros((3, N))
 def create_ins_model_matrices(dt: float, std_acc: np.ndarray, std_gyro: np.ndarray,
                                 tau_acc: np.ndarray, tau_gyro: np.ndarray,
                                 # traj_data_dict: Optional[Dict[str, Any]] = None, # Commented out if not used
@@ -268,11 +284,7 @@ except ImportError as e:
     @dataclass
     class MapV(BaseMap):pass
     @dataclass
-    class Traj: N: int; dt: float; tt: np.ndarray; lat: np.ndarray; lon: np.ndarray; alt: np.ndarray; vn: np.ndarray; ve: np.ndarray; vd: np.ndarray; fn: np.ndarray; fe: np.ndarray; fd: np.ndarray; Cnb: np.ndarray
-    @dataclass
     class INS(Traj): P: np.ndarray # Covariance matrices
-    @dataclass
-    class MagV: x: np.ndarray; y: np.ndarray; z: np.ndarray; t: np.ndarray
     @dataclass
     class XYZ0: info: str; traj: Traj; ins: INS; flux_a: MagV; flights: np.ndarray; lines: np.ndarray; years: np.ndarray; doys: np.ndarray; diurnal: np.ndarray; igrf: np.ndarray; mag_1_c: np.ndarray; mag_1_uc: np.ndarray
     Path = Union[Traj, INS]
@@ -367,40 +379,50 @@ def create_xyz0(
     fogm_tau: float = 600.0,
     save_h5: bool = False,
     xyz_h5: str = "xyz_data.h5",
-    silent: bool = False
+    silent: bool = False,
+    default_scalar_map_id_override: Optional[str] = None,
+    default_vector_map_id_override: Optional[str] = None
 ) -> XYZ0:
     """
     Create basic flight data (XYZ0 struct). Assumes constant altitude (2D flight).
     """
+    # Fetch constants module from sys.modules to access patched values
+    constants_module = sys.modules.get('magnavpy.constants', constants) # Fallback to imported if not in sys.modules
+    
+    # Determine scalar map ID to use
+    if default_scalar_map_id_override is not None:
+        mapS_name_to_use = default_scalar_map_id_override
+        print(f"DEBUG_CREATE_XYZ0: Using default_scalar_map_id_override for scalar map: '{mapS_name_to_use}'")
+    else:
+        mapS_name_to_use = constants_module.DEFAULT_SCALAR_MAP_ID
+        print(f"DEBUG_CREATE_XYZ0: Using constants.DEFAULT_SCALAR_MAP_ID (via sys.modules) for scalar map: '{mapS_name_to_use}'")
+
     if mapS is None:
         map_kwargs_scalar: Dict[str, Any] = {} # Define map_kwargs for scalar map call
-        # Explicitly set map_type="scalar" to avoid ambiguity if DEFAULT_SCALAR_MAP_ID points to a vector map path
-        mapS = get_map(constants.DEFAULT_SCALAR_MAP_ID, map_type="scalar", silent=silent, **map_kwargs_scalar)
+        # Explicitly set map_type="scalar" to avoid ambiguity if ID points to a vector map path
+        mapS = get_map(mapS_name_to_use, map_type="scalar", silent=silent, **map_kwargs_scalar)
     
     # Determine the default_map_id_override for create_flux
     # This value will be the potentially patched constants.DEFAULT_VECTOR_MAP_ID
-    # This is the value that create_xyz0 sees for the constant.
-    default_map_id_from_xyz0_scope = constants.DEFAULT_VECTOR_MAP_ID
-    print(f"DEBUG_CREATE_XYZ0: constants.DEFAULT_VECTOR_MAP_ID read in create_xyz0 scope: '{default_map_id_from_xyz0_scope}'")
-
-    # mapV_instance_for_flux will hold the MapV object if it's passed directly or loaded here.
-    # If mapV is passed as an argument, use it.
+    # mapV_instance_for_flux will hold the MapV object if it's passed directly.
     mapV_instance_for_flux: Optional[MapV] = mapV
     
-    # This will be the map_id passed to create_flux if mapV is None initially.
-    # It allows create_flux to use the (potentially patched) value from create_xyz0's scope.
+    # This will be the map_id passed to create_flux if mapV_instance_for_flux is None.
     map_id_to_pass_to_create_flux: Optional[str] = None
 
     if mapV_instance_for_flux is None:
-        # mapV was not provided, so create_flux will need to load it.
-        # We set map_id_to_pass_to_create_flux to the value of the constant
-        # as seen by create_xyz0.
-        map_id_to_pass_to_create_flux = default_map_id_from_xyz0_scope
-        map_kwargs_vector: Dict[str, Any] = {}
-        print(f"DEBUG_CREATE_XYZ0: mapV (mapV_instance_for_flux) is None. Will rely on create_flux to load map using override: '{map_id_to_pass_to_create_flux}'.")
-        # We do NOT load mapV here if it's None; create_flux will handle it using the override.
+        # mapV was not provided as an object, so create_flux will need to load it using an ID.
+        if default_vector_map_id_override is not None:
+            map_id_to_pass_to_create_flux = default_vector_map_id_override
+            print(f"DEBUG_CREATE_XYZ0: mapV is None. Using default_vector_map_id_override for create_flux: '{map_id_to_pass_to_create_flux}'")
+        else:
+            map_id_to_pass_to_create_flux = constants_module.DEFAULT_VECTOR_MAP_ID
+            print(f"DEBUG_CREATE_XYZ0: mapV is None. Using constants.DEFAULT_VECTOR_MAP_ID (via sys.modules) for create_flux: '{map_id_to_pass_to_create_flux}'")
+        # We do NOT load mapV here; create_flux will handle it using the map_id_to_pass_to_create_flux.
     else:
         print(f"DEBUG_CREATE_XYZ0: mapV (mapV_instance_for_flux) was provided directly. Type: {type(mapV_instance_for_flux)}")
+        # If mapV_instance_for_flux is provided, map_id_to_pass_to_create_flux remains None.
+        # create_flux will use the mapV_instance_for_flux object.
 
 
     xyz_h5 = add_extension(xyz_h5, ".h5")
@@ -447,7 +469,7 @@ def create_xyz0(
 
     # Create uncompensated (corrupted) scalar magnetometer measurements
     mag_1_uc, _, diurnal_effect = corrupt_mag(
-        mag_1_c, flux_a,
+        mag_1_c, flux_a, traj,
         dt=dt,
         cor_sigma=cor_sigma, cor_tau=cor_tau, cor_var=cor_var,
         cor_drift=cor_drift, cor_perm_mag=cor_perm_mag,
@@ -464,7 +486,7 @@ def create_xyz0(
     igrf_initial = np.zeros(num_points)
     
     xyz = XYZ0(info=info, traj=traj, ins=ins, flux_a=flux_a,
-               flights=flights, lines=lines, years=years, doys=doys,
+               flight=flights, line=lines, year=years, doy=doys, # Changed doys to doy
                diurnal=diurnal, igrf=igrf_initial,
                mag_1_c=mag_1_c, mag_1_uc=mag_1_uc)
 
@@ -765,9 +787,17 @@ def create_ins(
         Qd_chol = np.linalg.cholesky(Qd + np.eye(nx) * 1e-12)
 
     for k in range(N - 1):
+        lat_k = traj.lat[0] if len(traj.lat) == 1 else traj.lat[k]
+        vn_k  = traj.vn[0]  if len(traj.vn)  == 1 else traj.vn[k]
+        ve_k  = traj.ve[0]  if len(traj.ve)  == 1 else traj.ve[k]
+        vd_k  = traj.vd[0]  if len(traj.vd)  == 1 else traj.vd[k]
+        fn_k = traj.fn[0] if len(traj.fn) == 1 else traj.fn[k]
+        fe_k = traj.fe[0] if len(traj.fe) == 1 else traj.fe[k]
+        fd_k = traj.fd[0] if len(traj.fd) == 1 else traj.fd[k]
+        Cnb_k = traj.Cnb[0] if traj.Cnb.shape[0] == 1 else traj.Cnb[k]
         Phi_k = get_phi_matrix(
-            nx, traj.lat[k], traj.vn[k], traj.ve[k], traj.vd[k],
-            traj.fn[k], traj.fe[k], traj.fd[k], traj.Cnb[k,:,:], # Pass Cnb for current step
+            nx, lat_k, vn_k, ve_k, vd_k,
+            fn_k, fe_k, fd_k, Cnb_k, # Pass Cnb for current step
             baro_tau, acc_tau, gyro_tau, 0, dt, fogm_state=False
         )
         process_noise_k = Qd_chol @ np.random.randn(nx)
@@ -939,7 +969,7 @@ def create_mag_c(
         # END OF MODIFIED LOGIC
         
         map_val = get_map_val(map_to_use, path_or_lat.lat, path_or_lat.lon, path_or_lat.alt,
-                              alpha=map_resolution_scale, return_interpolator=False)
+                               return_interpolator=False)
 
     elif isinstance(path_or_lat, (np.ndarray, list)): # lat, lon, alt arrays provided
         _lat = np.asarray(path_or_lat)
@@ -1010,6 +1040,7 @@ def create_mag_c(
 def corrupt_mag(
     mag_c: np.ndarray,
     flux_a: MagV, # True vector field in aircraft body frame
+    traj_ideal: Traj,
     dt: float,
     cor_sigma: float = 1.0,
     cor_tau: float = 600.0,
@@ -1079,12 +1110,21 @@ def corrupt_mag(
     rand_e = (np.random.rand(9) - 0.5) * 2 * cor_eddy_mag
     c_e_rand = rand_e.reshape((3,3))
 
+    igrf_field_ideal_bf = get_igrf_magnetic_field(traj_ideal) # Pass the Traj object directly
     aircraft_field_vector = get_tolles_lawson_aircraft_field_vector(
-        B_earth_body, B_earth_body_dot, c_p_rand, c_i_rand, c_e_rand
-    ) 
+        B_earth_body,
+        B_earth_body_dot,
+        c_p_rand,
+        c_i_rand,
+        c_e_rand,
+        0.0,  # placeholder for norm_flux_b
+        0.0,  # placeholder for norm_flux_c
+        traj_ideal.Cnb,  # dcm_data
+        igrf_field_ideal_bf # igrf_bf
+        )
 
     B_norm = np.linalg.norm(B_earth_body, axis=0, keepdims=True)
-    B_norm[B_norm == 0] = 1e-9 
+    B_norm[B_norm == 0] = 1e-9
     unit_B_earth = B_earth_body / B_norm
     aircraft_field_scalar = np.sum(aircraft_field_vector * unit_B_earth, axis=0)
     
@@ -1195,8 +1235,7 @@ def create_flux(
         _alt_for_getmap = alt_arr if alt_arr is not None else (np.full_like(lat_arr, map_object_to_use.alt) if hasattr(map_object_to_use, 'alt') else np.zeros_like(lat_arr))
 
         map_vals_tuple = get_map_val(map_object_to_use, lat_arr, _lon_for_getmap, _alt_for_getmap,
-                                     alpha=map_resolution_scale, return_interpolator=False,
-                                     map_type_hint="vector", silent=silent)
+                                     return_interpolator=False)
         if isinstance(map_vals_tuple, tuple) and len(map_vals_tuple) == 3:
             map_val_x, map_val_y, map_val_z = map_vals_tuple
         else:

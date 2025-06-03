@@ -1147,14 +1147,14 @@ def get_map(map_name: str, variable_name: str = "map_data", *args, map_type: Opt
             dummy_data_shape = (dummy_yy.size, dummy_xx.size)
             return MapV(info="Dummy EMM720 Vector Map",
                         alt=0.0,
-                        x=np.zeros(dummy_data_shape),
-                        y=np.zeros(dummy_data_shape),
-                        z=np.zeros(dummy_data_shape),
+                        mapX=np.zeros(dummy_data_shape),
+                        mapY=np.zeros(dummy_data_shape),
+                        mapZ=np.zeros(dummy_data_shape),
                         xx=dummy_xx,
                         yy=dummy_yy,
                         mask=np.ones(dummy_data_shape, dtype=bool),
                         lat=np.array([]), # Placeholder
-                        lon=np.array([])  # Placeholder
+                        lon=np.array([]) # Placeholder
                         )
         else: # Corresponds to: if kwargs.get('map_type') == "vector"
             with open("debug_get_map.txt", "a") as f_debug:

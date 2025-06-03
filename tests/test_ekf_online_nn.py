@@ -7,15 +7,15 @@ import torch # For type hinting or if model is directly handled as PyTorch
 # MagNavPy imports
 from magnavpy.rt_comp_main import ekf_online_nn_setup, ekf_online_nn
 from magnavpy.magnav import (
-    XYZ0, Traj, INS, MapS, FILTres, NNCompParams, # As per instruction for NNCompParams
+    XYZ0, Traj, INS, MapS, FILTres, # NNCompParams removed from here
     CRLBout, INSout, FILTout # Assuming these are distinct and in magnav
 )
 from magnavpy.map_utils import get_map, map_interpolate
 from magnavpy.common_types import MapCache # Corrected case
 from magnavpy.create_xyz import create_xyz0 as get_XYZ0 # Corrected name and aliased
 # If NNCompParams is defined in compensation.py, this would be the import:
-# from magnavpy.compensation import NNCompParams, comp_train, create_TL_A
-from magnavpy.compensation import comp_train, create_TL_A
+from magnavpy.compensation import NNCompParams, comp_train, create_TL_A # NNCompParams imported here
+# from magnavpy.compensation import comp_train, create_TL_A # This line is now redundant
 from magnavpy.model_functions import create_model
 from magnavpy.compensation import norm_sets # Moved norm_sets
 # from magnavpy.ekf import run_filt # Not found
@@ -44,7 +44,7 @@ itp_mapS = map_interpolate(mapS)
 # Load trajectory data
 # xyz_data_mat = scipy.io.loadmat(TRAJ_FILE) # Option 1
 # xyz = get_XYZ0(xyz_data_mat, 'traj', 'none', silent=SILENT)
-xyz = get_XYZ0(mapS, silent=SILENT) # Option 2, corrected to pass MapS object
+xyz = get_XYZ0(mapS, silent=SILENT, default_vector_map_id_override="dummy_path_emm720") # Option 2, corrected to pass MapS object
 traj = xyz.traj
 ins = xyz.ins
 flux_a = xyz.flux_a
@@ -85,7 +85,7 @@ if nn_model is None:
                      "Ensure comp_train populates it or provide a placeholder model for testing.")
 
 # EKF NN Setup
-P0_nn, nn_sigma = ekf_online_nn_setup(x_norm, y_norm, nn_model, y_norms, N_sigma=10)
+P0_nn, nn_sigma = ekf_online_nn_setup(x_norm, y_norm, nn_model, y_norms, N_sigma_points=10)
 
 # Create EKF model parameters
 # Julia: traj.lat[1] -> Python: traj.lat[0]
