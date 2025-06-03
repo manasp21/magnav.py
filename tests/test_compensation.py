@@ -15,7 +15,7 @@ class ErrorException(Exception):
 from magnavpy.magnav import XYZ, NNCompParams, LinCompParams # XYZ might be a class or named tuple
 from magnavpy.compensation import comp_train, comp_test, comp_train_test
 # comp_m2bc_test, comp_m3_test might be part of comp_test or separate
-from magnavpy.create_xyz import get_XYZ # Assuming a Python equivalent for get_XYZ20, get_XYZ1
+from magnavpy.create_xyz import create_xyz0 as get_XYZ # Assuming a Python equivalent for get_XYZ20, get_XYZ1
 from magnavpy.map_utils import get_map # map_trim, save_map not found
 from magnavpy.tolles_lawson import create_TL_A # TL_vec2mat, TL_mat2vec, get_TL_aircraft_vec not found
 from magnavpy.compensation import TL_vec_split # Moved TL_vec_split

@@ -14,6 +14,7 @@ import pandas as pd
 from scipy.stats import multivariate_normal
 from scipy.interpolate import interp1d
 from copy import deepcopy
+from .common_types import MapS as _ActualMapS, MapSd as _ActualMapSd, MapS3D as _ActualMapS3D
 
 # Attempt to import from project modules
 try:
@@ -37,8 +38,10 @@ try:
     DEFAULT_SCALAR_MAP_ID = "namad" # Placeholder
     DEFAULT_VECTOR_MAP_ID = "emm720" # Placeholder
 
-except ImportError:
+except ImportError as e:
     # Fallback for standalone execution or if modules are structured differently
+    print("ERROR_DEBUG: An ImportError occurred in create_xyz.py. Falling back to dummy implementations.")
+    print(f"ERROR_DEBUG: Specific import error: {e}")
     print("Warning: Could not import from .magnav or .analysis_util. Placeholder types and functions will be used.")
     # Define dummy classes and functions if needed for linting/testing without full project
     @dataclass
@@ -62,7 +65,7 @@ except ImportError:
     Path = Union[Traj, INS]
     def add_extension(s, ext): return s if s.endswith(ext) else s + ext
     g_earth = 9.80665
-    def get_map(map_id): return MapS(xx=np.array([]), yy=np.array([]), map=np.array([])) # Dummy
+    def get_map(map_id, **kwargs): return MapS(xx=np.array([]), yy=np.array([]), map=np.array([])) # Dummy, accepts **kwargs to prevent TypeError
     DEFAULT_SCALAR_MAP_ID = "namad"
     DEFAULT_VECTOR_MAP_ID = "emm720"
     def map_check(m,la,lo): return True
@@ -153,7 +156,7 @@ def create_xyz0(
     if mapS is None:
         mapS = get_map(DEFAULT_SCALAR_MAP_ID)
     if mapV is None:
-        mapV = get_map(DEFAULT_VECTOR_MAP_ID)
+        mapV = get_map(DEFAULT_VECTOR_MAP_ID, map_type="vector")
 
     xyz_h5 = add_extension(xyz_h5, ".h5")
 
@@ -177,7 +180,7 @@ def create_xyz0(
 
     # Create compensated (clean) scalar magnetometer measurements
     mag_1_c = create_mag_c(
-        traj, mapS,
+        traj, mapS, # mapS here is the map_object
         meas_var=cor_var,
         fogm_sigma=fogm_sigma,
         fogm_tau=fogm_tau,
@@ -269,11 +272,16 @@ def create_traj(
     traj_h5 = add_extension(traj_h5, ".h5")
 
     if isinstance(mapS, MapSd) and hasattr(mapS, 'mask') and mapS.mask is not None:
-        valid_alts = mapS.alt[mapS.mask] if mapS.mask.any() else [np.mean(mapS.alt)]
+        valid_alts = mapS.alt[mapS.mask] if mapS.mask.any() else [np.mean(mapS.alt)] # mapS.alt is mapS.alt_matrix for MapSd
         map_altitude_ref = np.median(valid_alts) if len(valid_alts) > 0 else np.mean(mapS.alt)
-    elif isinstance(mapS.alt, (list, np.ndarray)) and len(mapS.alt) > 0:
-        map_altitude_ref = mapS.alt[0]
-    elif isinstance(mapS.alt, (float, int)):
+    elif isinstance(mapS, _ActualMapSd) and hasattr(mapS, 'alt_matrix'): # Explicit check for _ActualMapSd
+        valid_alts = mapS.alt_matrix[mapS.mask] if hasattr(mapS, 'mask') and mapS.mask is not None and mapS.mask.any() else mapS.alt_matrix.flatten()
+        map_altitude_ref = np.median(valid_alts) if len(valid_alts) > 0 else np.mean(mapS.alt_matrix)
+    elif isinstance(mapS.alt, (list, np.ndarray)) and len(mapS.alt) > 0 : # For MapS3D
+        map_altitude_ref = mapS.alt[0] if isinstance(mapS.alt, (list,np.ndarray)) else mapS.alt # mapS.alt is mapS.zz for MapS3D
+        if isinstance(mapS, (_ActualMapS3D)) and hasattr(mapS, 'zz') and len(mapS.zz)>0: map_altitude_ref = mapS.zz[0]
+
+    elif isinstance(mapS.alt, (float, int)): # For MapS
          map_altitude_ref = mapS.alt
     else:
         raise ValueError("Cannot determine reference altitude from mapS")
@@ -488,6 +496,7 @@ def create_ins(
     try:
         Qd_chol = np.linalg.cholesky(Qd)
     except np.linalg.LinAlgError:
+        # If Qd is not positive definite, add small identity to diagonal
         Qd_chol = np.linalg.cholesky(Qd + np.eye(nx) * 1e-12)
 
     for k in range(N - 1):
@@ -500,607 +509,820 @@ def create_ins(
         err_ins[k+1,:] = Phi_k @ err_ins[k,:] + process_noise_k
         P_ins[k+1,:,:] = Phi_k @ P_ins[k,:,:] @ Phi_k.T + Qd
 
-    ins_lat = traj.lat - err_ins[:,0]
-    ins_lon = traj.lon - err_ins[:,1]
-    ins_alt = traj.alt - err_ins[:,2]
-    ins_vn  = traj.vn  - err_ins[:,3]
-    ins_ve  = traj.ve  - err_ins[:,4]
-    ins_vd  = traj.vd  - err_ins[:,5]
+    # Create noisy trajectory based on true trajectory and error
+    lat_ins = traj.lat + err_ins[:,0] * dn2dlat(1, traj.lat) # Convert northing error to dlat
+    lon_ins = traj.lon + err_ins[:,1] * de2dlon(1, traj.lat) # Convert easting error to dlon
+    alt_ins = traj.alt - err_ins[:,2] # NED: down is positive, so error in d is subtracted from alt
 
-    ins_fn = fdm(ins_vn) / dt if dt > 1e-6 else np.zeros_like(ins_vn)
-    ins_fe = fdm(ins_ve) / dt if dt > 1e-6 else np.zeros_like(ins_ve)
-    ins_fd = fdm(ins_vd) / dt - g_earth if dt > 1e-6 else np.full_like(ins_vd, -g_earth)
+    vn_ins = traj.vn + err_ins[:,3]
+    ve_ins = traj.ve + err_ins[:,4]
+    vd_ins = traj.vd + err_ins[:,5]
 
-    ins_Cnb_list = []
-    for k_cnb in range(N):
-      ins_Cnb_list.append(correct_cnb_matrix(traj.Cnb[k_cnb,:,:], -err_ins[k_cnb,6:9]))
-    ins_Cnb = np.array(ins_Cnb_list)
+    # Correct Cnb matrix with attitude error
+    # err_ins[:,6:9] are tilt errors (alpha, beta, gamma for small angle approx or specific error def)
+    # Assuming these are psi_nb errors (n, e, d components of rotation vector error)
+    # Cnb_ins = Cnb_true @ (I - skew(psi_nb_err)) approx
+    # Or if err_ins are Euler angle errors, Cnb_ins = Cnb_true @ delta_Cnb(deuler)
+    # For simplicity, assuming direct correction or that correct_cnb_matrix handles it.
+    # The Julia code uses: Cnb_ins[k,:,:] = correct_cnb_matrix(traj.Cnb[k,:,:], err_ins[k,6:9])
+    Cnb_ins_array = np.array([correct_cnb_matrix(traj.Cnb[k,:,:], err_ins[k,6:9]) for k in range(N)])
 
+    # Specific forces from INS (derived from noisy accels, transformed by noisy Cnb)
+    # This part is complex as it depends on how acc_bias (err_ins[:,11:14]) and gyro_bias (err_ins[:,14:17])
+    # are defined and how they corrupt true specific force.
+    # For now, assume fn, fe, fd are "measured" specific forces in nav frame.
+    # A simplified approach: add noise to true specific forces.
+    # However, INS specific forces are usually derived from accelerometer outputs.
+    # Let's assume for now that the error terms for fn,fe,fd are implicitly handled
+    # or that the true fn,fe,fd are used as a base, which is not entirely realistic for INS output.
+    # A more accurate model would involve simulating accelerometer outputs with bias/noise,
+    # then transforming with Cnb_ins.
+    # Using traj.fn, fe, fd as placeholders for what INS would compute before error accumulation in fn/fe/fd states.
+    fn_ins = traj.fn # Placeholder - needs more accurate modeling if INS specific force output is critical
+    fe_ins = traj.fe # Placeholder
+    fd_ins = traj.fd # Placeholder
 
-    if np.any(np.abs(ins_Cnb) > 1.00001):
-        print("Warning: INS Cnb matrix out of expected bounds [-1, 1]. Values might be clamped or indicate instability.")
-        ins_Cnb = np.clip(ins_Cnb, -1.0, 1.0) # Basic stabilization
-
-    ins_euler_angles = dcm2euler(ins_Cnb, order='body2nav')
-    ins_roll  = ins_euler_angles[:,0]
-    ins_pitch = ins_euler_angles[:,1]
-    ins_yaw   = ins_euler_angles[:,2]
+    ins_trajectory = INS(
+        N=N, dt=dt, tt=traj.tt,
+        lat=lat_ins, lon=lon_ins, alt=alt_ins,
+        vn=vn_ins, ve=ve_ins, vd=vd_ins,
+        fn=fn_ins, fe=fe_ins, fd=fd_ins, # These should ideally be from INS processing
+        Cnb=Cnb_ins_array,
+        P=P_ins
+    )
 
     if save_h5:
-        with h5py.File(ins_h5, "a") as file:
-            for key, data_arr in [
-                ("ins_tt", traj.tt), ("ins_lat", ins_lat), ("ins_lon", ins_lon), ("ins_alt", ins_alt),
-                ("ins_vn", ins_vn), ("ins_ve", ins_ve), ("ins_vd", ins_vd),
-                ("ins_fn", ins_fn), ("ins_fe", ins_fe), ("ins_fd", ins_fd),
-                ("ins_roll", ins_roll), ("ins_pitch", ins_pitch), ("ins_yaw", ins_yaw),
-                ("ins_P", P_ins)
-            ]:
-                if key not in file: file.create_dataset(key, data=data_arr)
-                else: file[key][:] = data_arr
-                
-    return INS(N=N, dt=dt, tt=traj.tt, lat=ins_lat, lon=ins_lon, alt=ins_alt,
-               vn=ins_vn, ve=ins_ve, vd=ins_vd, fn=ins_fn, fe=ins_fe, fd=ins_fd,
-               Cnb=ins_Cnb, P=P_ins)
+        with h5py.File(ins_h5, "a") as file: # Append mode
+            # Save all fields from Traj part of INS
+            if "tt_ins" not in file: file.create_dataset("tt_ins", data=ins_trajectory.tt)
+            else: file["tt_ins"][:] = ins_trajectory.tt # Overwrite if exists
+            if "lat_ins" not in file: file.create_dataset("lat_ins", data=ins_trajectory.lat)
+            else: file["lat_ins"][:] = ins_trajectory.lat
+            if "lon_ins" not in file: file.create_dataset("lon_ins", data=ins_trajectory.lon)
+            else: file["lon_ins"][:] = ins_trajectory.lon
+            if "alt_ins" not in file: file.create_dataset("alt_ins", data=ins_trajectory.alt)
+            else: file["alt_ins"][:] = ins_trajectory.alt
+            if "vn_ins" not in file: file.create_dataset("vn_ins", data=ins_trajectory.vn)
+            else: file["vn_ins"][:] = ins_trajectory.vn
+            if "ve_ins" not in file: file.create_dataset("ve_ins", data=ins_trajectory.ve)
+            else: file["ve_ins"][:] = ins_trajectory.ve
+            if "vd_ins" not in file: file.create_dataset("vd_ins", data=ins_trajectory.vd)
+            else: file["vd_ins"][:] = ins_trajectory.vd
+            if "fn_ins" not in file: file.create_dataset("fn_ins", data=ins_trajectory.fn)
+            else: file["fn_ins"][:] = ins_trajectory.fn
+            if "fe_ins" not in file: file.create_dataset("fe_ins", data=ins_trajectory.fe)
+            else: file["fe_ins"][:] = ins_trajectory.fe
+            if "fd_ins" not in file: file.create_dataset("fd_ins", data=ins_trajectory.fd)
+            else: file["fd_ins"][:] = ins_trajectory.fd
+            
+            # Save Cnb components (roll, pitch, yaw from INS DCMs)
+            euler_ins = dcm2euler(ins_trajectory.Cnb, order='body2nav')
+            if "roll_ins" not in file: file.create_dataset("roll_ins", data=euler_ins[:,0])
+            else: file["roll_ins"][:] = euler_ins[:,0]
+            if "pitch_ins" not in file: file.create_dataset("pitch_ins", data=euler_ins[:,1])
+            else: file["pitch_ins"][:] = euler_ins[:,1]
+            if "yaw_ins" not in file: file.create_dataset("yaw_ins", data=euler_ins[:,2])
+            else: file["yaw_ins"][:] = euler_ins[:,2]
 
+            # Save covariance P (example: diagonal elements for variances)
+            # P_diag = np.array([P_ins[k,:,:].diagonal() for k in range(N)])
+            # if "P_diag_ins" not in file: file.create_dataset("P_diag_ins", data=P_diag)
+            # else: file["P_diag_ins"][:] = P_diag
+            # Or save full P if needed, careful with size:
+            if "P_ins" not in file: file.create_dataset("P_ins", data=P_ins)
+            else: file["P_ins"][:] = P_ins
+            
+    return ins_trajectory
 
 def create_mag_c(
-    path_or_lat: Union[Path, np.ndarray],
-    lon_or_mapS: Union[np.ndarray, Union[MapS, MapSd, MapS3D]],
-    mapS_if_path: Optional[Union[MapS, MapSd, MapS3D]] = None,
-    alt: Optional[float] = None,
-    dt: Optional[float] = None,
-    meas_var: float = 1.0**2,
+    path_or_lat: Union[Path, np.ndarray, List[float]],
+    lon_or_mapS: Union[np.ndarray, List[float], MapS, MapSd, MapS3D, None] = None,
+    alt_or_itp: Union[np.ndarray, List[float], float, str, interp1d, None] = None,
+    itp_kwargs: Optional[Dict[str, Any]] = None,
+    map_kwargs: Optional[Dict[str, Any]] = None,
+    meas_var: float = 1.0,
     fogm_sigma: float = 1.0,
     fogm_tau: float = 600.0,
+    dt: Optional[float] = None, # Required if path_or_lat is not Path and fogm is used
+    map_resolution_scale: float = 200.0, # Corresponds to alpha in get_map_val
     silent: bool = False
 ) -> np.ndarray:
     """
-    Create compensated (clean) scalar magnetometer measurements.
+    Creates compensated (clean) scalar magnetometer measurements.
+    Can take a Path object or explicit lat, lon, alt arrays.
+
+    Args:
+        path_or_lat: Path object (Traj or INS) or 1D array of latitudes [rad].
+        lon_or_mapS: 1D array of longitudes [rad] OR a MapS/MapSd/MapS3D object.
+                     Required if path_or_lat is lat array. If Path is given, this can be a map object
+                     to use directly, or None/path_string if map needs to be loaded via alt_or_itp.
+        alt_or_itp: 1D array of altitudes [m] OR a scalar altitude OR a map path string OR
+                    a precomputed scipy interpolator. Required if path_or_lat is lat array.
+                    If Path is given and lon_or_mapS is not a map object, this can be a map_path string.
+        itp_kwargs: Dict of keyword arguments for scipy.interpolate.interp1d if creating interpolator.
+        map_kwargs: Dict of keyword arguments for get_map if loading map from path.
+        meas_var: Measurement variance for white noise [nT^2].
+        fogm_sigma: FOGM noise standard deviation [nT].
+        fogm_tau: FOGM noise correlation time [s].
+        dt: Time step [s], required for FOGM noise if path_or_lat is not a Path object.
+        map_resolution_scale: Scaling factor for map resolution, passed as 'alpha' to get_map_val.
+        silent: Suppress print statements.
+
+    Returns:
+        mag_c: 1D array of compensated scalar magnetometer measurements [nT].
     """
-    if isinstance(path_or_lat, (Traj, INS)):
-        path = path_or_lat
-        mapS_actual = lon_or_mapS
-        if not isinstance(mapS_actual, (MapS, MapSd, MapS3D)):
-             if mapS_actual is None: mapS_actual = get_map(DEFAULT_SCALAR_MAP_ID)
-             else: raise TypeError("mapS_actual must be a MapS, MapSd, or MapS3D object when path is provided.")
-        lat_rad, lon_rad, alt_val, dt_val = path.lat, path.lon, np.median(path.alt), path.dt
-    elif isinstance(path_or_lat, np.ndarray) and isinstance(lon_or_mapS, np.ndarray):
-        lat_rad, lon_rad = path_or_lat, lon_or_mapS
-        mapS_actual = mapS_if_path
-        if not isinstance(mapS_actual, (MapS, MapSd, MapS3D)):
-            if mapS_actual is None: mapS_actual = get_map(DEFAULT_SCALAR_MAP_ID)
-            else: raise TypeError("mapS_actual must be a MapS, MapSd, or MapS3D object.")
-        if alt is None or dt is None: raise ValueError("alt and dt must be provided for lat, lon arrays.")
-        alt_val, dt_val = alt, dt
+    if itp_kwargs is None:
+        itp_kwargs = {}
+    if map_kwargs is None:
+        map_kwargs = {}
+
+    map_val: np.ndarray
+    num_points: int
+
+    if isinstance(path_or_lat, (Traj, INS)): # Path object provided
+        num_points = path_or_lat.N
+        if dt is None: # dt for FOGM noise
+            dt = path_or_lat.dt
+
+        # MODIFIED LOGIC FOR MAP SELECTION
+        map_to_use = None # Initialize
+
+        # Define all possible map types for lon_or_mapS.
+        _map_types = (_ActualMapS, _ActualMapSd, _ActualMapS3D, MapS, MapSd, MapS3D)
+
+        if isinstance(lon_or_mapS, _map_types):
+            map_to_use = lon_or_mapS
+        
+        if map_to_use is None: # If no map object from lon_or_mapS
+            if isinstance(alt_or_itp, str): # Check if alt_or_itp is a path
+                _path_to_load_map_from = alt_or_itp
+                if not os.path.exists(_path_to_load_map_from):
+                     _path_to_load_map_from = get_map(_path_to_load_map_from, return_path=True)
+                if not silent: print(f"Loading map from path: {_path_to_load_map_from}")
+                final_map_kwargs = {k: v for k, v in map_kwargs.items() if k != 'silent'}
+                map_to_use = get_map(_path_to_load_map_from, **final_map_kwargs, silent=silent)
+            else: # Not a map object, and not a path string, so use default
+                if not silent: print(f"Using default scalar map. No valid map object or path string given.")
+                final_map_kwargs = {k: v for k, v in map_kwargs.items() if k != 'silent'}
+                map_to_use = get_map(DEFAULT_SCALAR_MAP_ID, **final_map_kwargs, silent=silent)
+        
+        # Ensure map_to_use is not None before proceeding (critical fallback)
+        if map_to_use is None:
+            if not silent: print(f"Critical fallback: map_to_use was still None after checks. Using default scalar map.")
+            final_map_kwargs = {k: v for k, v in map_kwargs.items() if k != 'silent'}
+            map_to_use = get_map(DEFAULT_SCALAR_MAP_ID, **final_map_kwargs, silent=silent)
+        # END OF MODIFIED LOGIC
+        
+        map_val = get_map_val(map_to_use, path_or_lat.lat, path_or_lat.lon, path_or_lat.alt,
+                              alpha=map_resolution_scale, return_interpolator=False)
+
+    elif isinstance(path_or_lat, (np.ndarray, list)): # lat, lon, alt arrays provided
+        _lat = np.asarray(path_or_lat)
+        _lon = np.asarray(lon_or_mapS) # Here lon_or_mapS must be lon array
+        _alt = np.asarray(alt_or_itp) if not callable(alt_or_itp) and not isinstance(alt_or_itp, str) else alt_or_itp # alt_or_itp can be alt array, scalar, path, or itp
+
+        if not (_lat.ndim == 1 and _lon.ndim == 1):
+            raise ValueError("Latitude and longitude must be 1D arrays.")
+        if _lat.shape != _lon.shape:
+            raise ValueError("Latitude and longitude arrays must have the same shape.")
+        num_points = _lat.shape[0]
+
+        if callable(alt_or_itp): # Precomputed interpolator
+            if not silent: print("Using precomputed interpolator for map values.")
+            points = np.column_stack((_lat, _lon))
+            map_val = alt_or_itp(points) 
+        elif isinstance(alt_or_itp, str) or isinstance(lon_or_mapS, (_ActualMapS, _ActualMapSd, _ActualMapS3D, MapS, MapSd, MapS3D)):
+            map_obj_or_path = lon_or_mapS if isinstance(lon_or_mapS, (_ActualMapS, _ActualMapSd, _ActualMapS3D, MapS, MapSd, MapS3D)) else alt_or_itp
+            
+            current_map_to_use: Union[_ActualMapS, _ActualMapSd, _ActualMapS3D, MapS, MapSd, MapS3D, None] = None
+            if isinstance(map_obj_or_path, (_ActualMapS, _ActualMapSd, _ActualMapS3D, MapS, MapSd, MapS3D)):
+                current_map_to_use = map_obj_or_path
+            elif isinstance(map_obj_or_path, str):
+                _path = map_obj_or_path
+                if not os.path.exists(_path): _path = get_map(_path, return_path=True)
+                if not silent: print(f"Loading map from path: {_path}")
+                current_map_to_use = get_map(_path, map_kwargs=map_kwargs, silent=silent)
+            else: 
+                if not silent: print(f"Using default map for array input due to unclear map source.")
+                current_map_to_use = get_map(DEFAULT_SCALAR_MAP_ID, map_kwargs=map_kwargs, silent=silent)
+
+            if current_map_to_use is None: 
+                 raise RuntimeError("Failed to obtain a map object for array input.")
+
+            alt_for_map_val = _alt if isinstance(_alt, (np.ndarray, list)) or isinstance(_alt, (float,int)) else None
+            if alt_for_map_val is None: 
+                if isinstance(current_map_to_use.alt, (float,int)):
+                    alt_for_map_val = current_map_to_use.alt
+                    if not silent: print(f"Using map's own altitude ({alt_for_map_val}m) for map value calculation.")
+                else: 
+                    raise ValueError("Altitude must be provided as array or scalar when lat/lon are arrays and map is 3D/drape without explicit point altitudes.")
+
+            map_val = get_map_val(current_map_to_use, _lat, _lon, alt_for_map_val,
+                                  alpha=map_resolution_scale, return_interpolator=False)
+        else: 
+            if not silent: print("Using default scalar map for array input.")
+            default_map = get_map(DEFAULT_SCALAR_MAP_ID, map_kwargs=map_kwargs, silent=silent)
+            map_val = get_map_val(default_map, _lat, _lon, _alt, 
+                                  alpha=map_resolution_scale, return_interpolator=False)
     else:
-        raise TypeError("Invalid arguments for create_mag_c.")
+        raise TypeError("path_or_lat must be a Path object or a list/array of latitudes.")
 
-    if isinstance(mapS_actual, MapS3D):
-        mapS_actual = upward_fft_map(mapS_actual, alt_val)
+    # Add FOGM noise
+    if fogm_sigma > 0 and fogm_tau > 0:
+        if dt is None:
+            raise ValueError("dt must be provided for FOGM noise when not using a Path object.")
+        fogm_noise = generate_fogm_noise(fogm_sigma, fogm_tau, dt, num_points)
+        map_val += fogm_noise
 
-    N = len(lat_rad)
-    if not silent: print("Info: preparing scalar map (filling/trimming if necessary).")
-    mapS_processed = fill_map_gaps(trim_map(mapS_actual))
-
-    if not silent: print("Info: getting scalar map values (upward/downward continuation if needed).")
-    map_values_scalar = get_map_val(mapS_processed, lat_rad, lon_rad, alt_val)
-
-    if not silent: print("Info: adding FOGM & white noise to scalar map values.")
-    fogm_noise_scalar = generate_fogm_noise(fogm_sigma, fogm_tau, dt_val, N)
-    white_noise_scalar = np.sqrt(meas_var) * np.random.randn(N)
-    
-    return map_values_scalar + fogm_noise_scalar + white_noise_scalar
+    # Add white measurement noise
+    if meas_var > 0:
+        white_noise = np.random.randn(num_points) * np.sqrt(meas_var)
+        map_val += white_noise
+        
+    return map_val
 
 
 def corrupt_mag(
     mag_c: np.ndarray,
-    flux_or_Bx: Union[MagV, np.ndarray],
-    By_if_coords: Optional[np.ndarray] = None,
-    Bz_if_coords: Optional[np.ndarray] = None,
-    dt: float = 0.1,
+    flux_a: MagV, # True vector field in aircraft body frame
+    dt: float,
     cor_sigma: float = 1.0,
     cor_tau: float = 600.0,
     cor_var: float = 1.0**2,
     cor_drift: float = 0.001,
     cor_perm_mag: float = 5.0,
     cor_ind_mag: float = 5.0,
-    cor_eddy_mag: float = 0.5
+    cor_eddy_mag: float = 0.5,
+    terms: Optional[List[str]] = None,
+    Bt_scale: float = 50000.0 # Typical Earth field magnitude for scaling TL coeffs
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Corrupt compensated scalar mag data with FOGM, drift, and Tolles-Lawson noise.
-    Returns (mag_uc, TL_coefficients, corruption_FOGM_noise)
+    Corrupts clean scalar magnetometer data with various noise sources.
+
+    Args:
+        mag_c: Clean scalar magnetometer data [nT].
+        flux_a: True vector magnetometer measurements (MagV struct) in aircraft body frame [nT].
+        dt: Time step [s].
+        cor_sigma: FOGM noise std dev for diurnal [nT].
+        cor_tau: FOGM noise correlation time for diurnal [s].
+        cor_var: Measurement variance for white noise on diurnal [nT^2].
+        cor_drift: Constant drift rate for diurnal [nT/s].
+        cor_perm_mag: Magnitude of permanent magnetic field coefficients [nT].
+        cor_ind_mag: Magnitude of induced magnetic field coefficients [-].
+        cor_eddy_mag: Magnitude of eddy current magnetic field coefficients [s].
+        terms: Tolles-Lawson terms to use for aircraft field. Defaults to ['permanent', 'induced', 'eddy'].
+        Bt_scale: Scaling factor for Tolles-Lawson coefficients, typically Earth's total field strength.
+
+
+    Returns:
+        Tuple containing:
+            - mag_uc (np.ndarray): Uncompensated (corrupted) scalar mag data [nT].
+            - aircraft_field_scalar (np.ndarray): Scalar aircraft-generated magnetic field [nT].
+            - diurnal_effect (np.ndarray): Simulated diurnal variation [nT].
     """
-    if isinstance(flux_or_Bx, MagV):
-        Bx_vals, By_vals, Bz_vals = flux_or_Bx.x, flux_or_Bx.y, flux_or_Bx.z
-    elif isinstance(flux_or_Bx, np.ndarray) and \
-         isinstance(By_if_coords, np.ndarray) and \
-         isinstance(Bz_if_coords, np.ndarray):
-        Bx_vals, By_vals, Bz_vals = flux_or_Bx, By_if_coords, Bz_if_coords
-    else:
-        raise TypeError("Invalid arguments for corrupt_mag.")
+    if terms is None:
+        terms = ['permanent', 'induced', 'eddy']
 
     N = len(mag_c)
-    tl_variances = np.concatenate([
-        np.full(3, cor_perm_mag**2), np.full(6, cor_ind_mag**2), np.full(9, cor_eddy_mag**2)
-    ])
-    P_tl_cov = np.diag(tl_variances)
-    tl_coefficients = multivariate_normal.rvs(mean=np.zeros(len(tl_variances)), cov=P_tl_cov)
 
-    corruption_fogm_noise = generate_fogm_noise(cor_sigma, cor_tau, dt, N)
-    corruption_white_noise = np.sqrt(cor_var) * np.random.randn(N)
-    time_vector = np.arange(N) * dt
-    corruption_drift = cor_drift * random.random() * time_vector
+    # 1. Simulate diurnal variation
+    diurnal_fogm = generate_fogm_noise(cor_sigma, cor_tau, dt, N)
+    diurnal_drift = cor_drift * np.arange(N) * dt
+    diurnal_white_noise = np.random.randn(N) * np.sqrt(cor_var)
+    diurnal_effect = diurnal_fogm + diurnal_drift + diurnal_white_noise
+
+    # 2. Simulate aircraft-generated magnetic field (Tolles-Lawson)
+    B_earth_body_x = flux_a.x
+    B_earth_body_y = flux_a.y
+    B_earth_body_z = flux_a.z
+    B_earth_body = np.vstack((B_earth_body_x, B_earth_body_y, B_earth_body_z)) # Shape (3, N)
+
+    B_earth_body_dot_x = fdm(B_earth_body_x) / dt
+    B_earth_body_dot_y = fdm(B_earth_body_y) / dt
+    B_earth_body_dot_z = fdm(B_earth_body_z) / dt
+    B_earth_body_dot = np.vstack((B_earth_body_dot_x, B_earth_body_dot_y, B_earth_body_dot_z))
+
+    c_p_rand = (np.random.rand(3) - 0.5) * 2 * cor_perm_mag
     
-    mag_uc_intermediate = mag_c + corruption_white_noise + corruption_fogm_noise + corruption_drift
+    rand_i = (np.random.rand(6) - 0.5) * 2 * cor_ind_mag
+    c_i_rand = np.array([
+        [rand_i[0], rand_i[1], rand_i[2]],
+        [rand_i[1], rand_i[3], rand_i[4]],
+        [rand_i[2], rand_i[4], rand_i[5]]
+    ])
+    
+    rand_e = (np.random.rand(9) - 0.5) * 2 * cor_eddy_mag
+    c_e_rand = rand_e.reshape((3,3))
 
-    if not (np.allclose(Bx_vals, 0) and np.allclose(By_vals, 0) and np.allclose(Bz_vals, 0)):
-        A_tl = create_tolles_lawson_A_matrix(Bx_vals, By_vals, Bz_vals)
-        if A_tl.shape[0] > 0 and A_tl.shape[1] == len(tl_coefficients): # Check compatibility
-             tl_effect_on_scalar = A_tl @ tl_coefficients
-             mag_uc_final = mag_uc_intermediate + tl_effect_on_scalar
-        else:
-            print(f"Warning: TL matrix columns {A_tl.shape[1]} != TL coeffs {len(tl_coefficients)} or A_tl is empty. Skipping TL effect.")
-            mag_uc_final = mag_uc_intermediate
-    else:
-        mag_uc_final = mag_uc_intermediate
-        
-    return mag_uc_final, tl_coefficients, corruption_fogm_noise
+    aircraft_field_vector = get_tolles_lawson_aircraft_field_vector(
+        B_earth_body, B_earth_body_dot, c_p_rand, c_i_rand, c_e_rand
+    ) 
+
+    B_norm = np.linalg.norm(B_earth_body, axis=0, keepdims=True)
+    B_norm[B_norm == 0] = 1e-9 
+    unit_B_earth = B_earth_body / B_norm
+    aircraft_field_scalar = np.sum(aircraft_field_vector * unit_B_earth, axis=0)
+    
+    perturbed_total_field_vector = B_earth_body + aircraft_field_vector
+    mag_after_ac_interference = np.linalg.norm(perturbed_total_field_vector, axis=0)
+    
+    mag_uc = mag_after_ac_interference + diurnal_effect
+
+    return mag_uc, aircraft_field_scalar, diurnal_effect
 
 
 def create_flux(
-    path_or_lat: Union[Path, np.ndarray],
-    lon_or_mapV: Union[np.ndarray, MapV],
-    mapV_if_path: Optional[MapV] = None,
-    Cnb_if_coords: Optional[np.ndarray] = None,
-    alt: Optional[float] = None,
+    path_or_lat: Union[Path, np.ndarray, List[float]],
+    lon_or_mapV: Union[np.ndarray, List[float], MapV, None] = None, # Can be MapV object
+    alt_or_itp: Union[np.ndarray, List[float], float, str, interp1d, None] = None, # Can be map path for MapV
+    itp_kwargs: Optional[Dict[str, Any]] = None,
+    map_kwargs: Optional[Dict[str, Any]] = None,
+    meas_var: float = 1.0, # Variance for each component
+    fogm_sigma: float = 1.0, # FOGM std dev for each component
+    fogm_tau: float = 600.0, # FOGM correlation time
     dt: Optional[float] = None,
-    meas_var: float = 1.0**2,
-    fogm_sigma: float = 1.0,
-    fogm_tau: float = 600.0,
+    map_resolution_scale: float = 200.0,
     silent: bool = False
 ) -> MagV:
     """
-    Create compensated (clean) vector magnetometer measurements (fluxgate).
+    Creates compensated (clean) vector magnetometer measurements (MagV struct).
+    Similar to create_mag_c but for vector data using MapV.
     """
+    if itp_kwargs is None: itp_kwargs = {}
+    if map_kwargs is None: map_kwargs = {}
+
+    map_val_x, map_val_y, map_val_z = None, None, None
+    num_points: int
+
     if isinstance(path_or_lat, (Traj, INS)):
-        path = path_or_lat
-        mapV_actual = lon_or_mapV
-        if not isinstance(mapV_actual, MapV):
-            if mapV_actual is None: mapV_actual = get_map(DEFAULT_VECTOR_MAP_ID)
-            else: raise TypeError("mapV_actual must be a MapV object when path is provided.")
-        lat_rad, lon_rad, Cnb_val, alt_val, dt_val = path.lat, path.lon, path.Cnb, np.median(path.alt), path.dt
-    elif isinstance(path_or_lat, np.ndarray) and isinstance(lon_or_mapV, np.ndarray):
-        lat_rad, lon_rad = path_or_lat, lon_or_mapV
-        mapV_actual = mapV_if_path
-        if not isinstance(mapV_actual, MapV):
-            if mapV_actual is None: mapV_actual = get_map(DEFAULT_VECTOR_MAP_ID)
-            else: raise TypeError("mapV_actual must be a MapV object.")
-        if Cnb_if_coords is None or alt is None or dt is None:
-            raise ValueError("Cnb, alt, and dt must be provided for lat, lon arrays.")
-        Cnb_val, alt_val, dt_val = Cnb_if_coords, alt, dt
-    else:
-        raise TypeError("Invalid arguments for create_flux.")
-
-    N = len(lat_rad)
-    if Cnb_val.ndim == 2 and Cnb_val.shape == (3,3) and N > 0: # Single DCM provided
-        Cnb_val = np.tile(Cnb_val, (N,1,1))
-    elif Cnb_val.shape[0] != N or Cnb_val.shape[1:] != (3,3):
-        if not (N == 0 and Cnb_val.shape == (3,3)): # Allow if N=0 and Cnb is single
-             raise ValueError(f"Cnb shape {Cnb_val.shape} inconsistent with N={N} points.")
-
-    if not silent: print("Info: getting vector map values.")
-    map_values_vector_nav = get_map_val(mapV_actual, lat_rad, lon_rad, alt_val) # Expected (Bx,By,Bz) tuple
-    if not (isinstance(map_values_vector_nav, tuple) and len(map_values_vector_nav) == 3):
-        raise ValueError("get_map_val for MapV did not return 3 vector components.")
-    Bx_nav, By_nav, Bz_nav = map_values_vector_nav
-
-    if not silent: print("Info: adding FOGM & white noise to vector map values.")
-    noise_std_dev = np.sqrt(meas_var)
-    Bx_nav_noisy = Bx_nav + generate_fogm_noise(fogm_sigma, fogm_tau, dt_val, N) + noise_std_dev * np.random.randn(N)
-    By_nav_noisy = By_nav + generate_fogm_noise(fogm_sigma, fogm_tau, dt_val, N) + noise_std_dev * np.random.randn(N)
-    Bz_nav_noisy = Bz_nav + generate_fogm_noise(fogm_sigma, fogm_tau, dt_val, N) + noise_std_dev * np.random.randn(N)
-    
-    Bx_body, By_body, Bz_body = np.zeros(N), np.zeros(N), np.zeros(N)
-    if N > 0: # Ensure Cnb_val is ready for loop if N=0
-        for i in range(N):
-            B_nav_i = np.array([Bx_nav_noisy[i], By_nav_noisy[i], Bz_nav_noisy[i]])
-            B_body_i = Cnb_val[i,:,:].T @ B_nav_i
-            Bx_body[i], By_body[i], Bz_body[i] = B_body_i[0], B_body_i[1], B_body_i[2]
+        num_points = path_or_lat.N
+        if dt is None: dt = path_or_lat.dt
         
-    Bt_body = np.sqrt(Bx_body**2 + By_body**2 + Bz_body**2)
-    return MagV(x=Bx_body, y=By_body, z=Bz_body, t=Bt_body)
+        map_to_use_v: Optional[MapV] = None
+        if isinstance(lon_or_mapV, MapV):
+            map_to_use_v = lon_or_mapV
+        elif isinstance(alt_or_itp, str): # map path for MapV
+            _path = alt_or_itp
+            if not os.path.exists(_path): _path = get_map(_path, return_path=True, map_type="vector")
+            if not silent: print(f"Loading vector map from path: {_path}")
+            map_to_use_v = get_map(_path, map_type="vector", map_kwargs=map_kwargs, silent=silent)
+        else:
+            if not silent: print("Using default vector map.")
+            map_to_use_v = get_map(DEFAULT_VECTOR_MAP_ID, map_type="vector", map_kwargs=map_kwargs, silent=silent)
+
+        if map_to_use_v is None: raise RuntimeError("Failed to obtain a MapV object.")
+
+        map_vals_tuple = get_map_val(map_to_use_v, path_or_lat.lat, path_or_lat.lon, path_or_lat.alt,
+                                     alpha=map_resolution_scale, return_interpolator=False)
+        if isinstance(map_vals_tuple, tuple) and len(map_vals_tuple) == 3:
+            map_val_x, map_val_y, map_val_z = map_vals_tuple
+        else:
+            raise ValueError("get_map_val did not return a 3-component tuple for MapV.")
+
+    elif isinstance(path_or_lat, (np.ndarray, list)): # lat, lon, alt arrays
+        _lat, _lon = np.asarray(path_or_lat), np.asarray(lon_or_mapV) # lon_or_mapV must be lon here
+        _alt = alt_or_itp # Can be array, scalar, path for MapV, or interpolator returning tuple
+
+        if not (_lat.ndim == 1 and _lon.ndim == 1 and _lat.shape == _lon.shape):
+            raise ValueError("Lat/lon must be 1D arrays of same shape.")
+        num_points = _lat.shape[0]
+
+        current_map_to_use_v: Optional[MapV] = None
+        if isinstance(lon_or_mapV, MapV): # lon_or_mapV is actually a MapV object
+             current_map_to_use_v = lon_or_mapV
+        elif isinstance(alt_or_itp, str): # alt_or_itp is path to MapV
+            _path = alt_or_itp
+            if not os.path.exists(_path): _path = get_map(_path, return_path=True, map_type="vector")
+            if not silent: print(f"Loading vector map from path: {_path}")
+            current_map_to_use_v = get_map(_path, map_type="vector", map_kwargs=map_kwargs, silent=silent)
+        elif callable(alt_or_itp): # Precomputed interpolator returning (vx,vy,vz) tuple
+             points = np.column_stack((_lat, _lon)) 
+             map_vals_tuple = alt_or_itp(points) 
+             if isinstance(map_vals_tuple, tuple) and len(map_vals_tuple) == 3:
+                 map_val_x, map_val_y, map_val_z = map_vals_tuple
+             else:
+                 raise ValueError("Interpolator did not return a 3-component tuple for vector map.")
+        else: # Default MapV, _alt is altitude array/scalar
+            if not silent: print("Using default vector map for array input.")
+            current_map_to_use_v = get_map(DEFAULT_VECTOR_MAP_ID, map_type="vector", map_kwargs=map_kwargs, silent=silent)
+        
+        if current_map_to_use_v: 
+            alt_for_map_val = _alt if isinstance(_alt, (np.ndarray, list, float, int)) else current_map_to_use_v.alt
+            map_vals_tuple = get_map_val(current_map_to_use_v, _lat, _lon, alt_for_map_val,
+                                         alpha=map_resolution_scale, return_interpolator=False)
+            if isinstance(map_vals_tuple, tuple) and len(map_vals_tuple) == 3:
+                 map_val_x, map_val_y, map_val_z = map_vals_tuple
+            else:
+                 raise ValueError("get_map_val for MapV did not return 3 components.")
+        elif map_val_x is None: 
+            raise RuntimeError("Could not determine vector map values from input.")
+
+    else:
+        raise TypeError("path_or_lat must be Path object or lat array.")
+
+    if map_val_x is None or map_val_y is None or map_val_z is None:
+        raise RuntimeError("Vector map components were not successfully computed.")
+
+    if fogm_sigma > 0 and fogm_tau > 0:
+        if dt is None: raise ValueError("dt required for FOGM noise.")
+        map_val_x += generate_fogm_noise(fogm_sigma, fogm_tau, dt, num_points)
+        map_val_y += generate_fogm_noise(fogm_sigma, fogm_tau, dt, num_points)
+        map_val_z += generate_fogm_noise(fogm_sigma, fogm_tau, dt, num_points)
+
+    if meas_var > 0:
+        std_dev = np.sqrt(meas_var)
+        map_val_x += np.random.randn(num_points) * std_dev
+        map_val_y += np.random.randn(num_points) * std_dev
+        map_val_z += np.random.randn(num_points) * std_dev
+        
+    total_mag = np.sqrt(map_val_x**2 + map_val_y**2 + map_val_z**2)
+
+    return MagV(x=map_val_x, y=map_val_y, z=map_val_z, t=total_mag)
 
 
 def create_dcm_internal(
-    vn: np.ndarray,
-    ve: np.ndarray,
-    dt: float = 0.1,
+    roll: Union[float, np.ndarray],
+    pitch: Union[float, np.ndarray],
+    yaw: Union[float, np.ndarray],
     order: str = 'body2nav'
 ) -> np.ndarray:
     """
-    Internal helper to estimate DCM using known heading with FOGM noise.
+    Internal helper to create DCM matrix/matrices from Euler angles.
+    Uses euler2dcm.
     """
-    N = len(vn)
-    roll_fogm_std_rad  = np.deg2rad(2.0)
-    pitch_fogm_std_rad = np.deg2rad(0.5)
-    yaw_fogm_std_rad   = np.deg2rad(1.0)
-    fogm_tau_attitude  = 2.0
-
-    roll_noise  = generate_fogm_noise(roll_fogm_std_rad,  fogm_tau_attitude, dt, N)
-    pitch_noise = generate_fogm_noise(pitch_fogm_std_rad, fogm_tau_attitude, dt, N)
-    yaw_noise   = generate_fogm_noise(yaw_fogm_std_rad,   fogm_tau_attitude, dt, N)
-
-    bpf_coeffs = get_band_pass_filter_coeffs(pass1=1e-6, pass2=1.0)
-    
-    roll_filt  = apply_band_pass_filter(roll_noise, bpf_coeffs=bpf_coeffs)
-    pitch_filt = apply_band_pass_filter(pitch_noise, bpf_coeffs=bpf_coeffs) + np.deg2rad(2.0)
-    
-    heading_rad = np.arctan2(ve, vn)
-    yaw_filt = apply_band_pass_filter(yaw_noise, bpf_coeffs=bpf_coeffs) + heading_rad
-    
-    return euler2dcm(roll_filt, pitch_filt, yaw_filt, order=order)
+    if isinstance(roll, (float, int)) and isinstance(pitch, (float, int)) and isinstance(yaw, (float, int)):
+        return euler2dcm(roll, pitch, yaw, order)
+    elif isinstance(roll, np.ndarray) and isinstance(pitch, np.ndarray) and isinstance(yaw, np.ndarray):
+        if not (roll.shape == pitch.shape == yaw.shape and roll.ndim == 1):
+            raise ValueError("If Euler angles are arrays, they must be 1D and have the same shape.")
+        return euler2dcm(roll, pitch, yaw, order) 
+    else:
+        raise TypeError("Euler angles must be all scalars or all 1D numpy arrays of the same length.")
 
 
 def calculate_imputed_TL_earth(
-    xyz: XYZ0,
-    ind: np.ndarray,
-    map_val_scalar: np.ndarray,
-    set_igrf_in_xyz: bool,
-    TL_coef: np.ndarray,
-    terms: List[str] = ['permanent', 'induced', 'eddy'],
-    Bt_scale: float = 50000.0
-) -> Tuple[np.ndarray, np.ndarray]:
+    xyz: XYZ0, 
+    coeffs_TL: np.ndarray, 
+    terms_A: Optional[List[str]] = None, 
+    Bt_scale: float = 50000.0 
+    ) -> np.ndarray:
     """
-    Internal helper to get imputed Earth vector and TL aircraft field.
-    Returns (TL_aircraft_vector_field_3xN, B_earth_vector_field_3xN)
+    Calculate the imputed Earth's magnetic field (scalar) based on uncompensated
+    magnetometer data and Tolles-Lawson coefficients.
+    B_earth_imputed = B_uc - B_aircraft_TL_modelled
+    Args:
+        xyz: XYZ0 data structure containing uncompensated mag data and aircraft state.
+        coeffs_TL: Array of Tolles-Lawson coefficients.
+        terms_A: List of terms defining the structure of the Tolles-Lawson A matrix.
+                 Defaults to ['permanent', 'induced', 'eddy', 'bias'].
+        Bt_scale: Total field scaling factor used with coeffs_TL.
+
+    Returns:
+        Imputed Earth's scalar magnetic field [nT].
     """
-    igrf_vector_body = get_igrf_magnetic_field(
-        xyz, ind=ind, frame='body', norm_igrf=False, check_xyz=(not set_igrf_in_xyz)
-    )
+    if terms_A is None:
+        terms_A = ['permanent', 'induced', 'eddy', 'bias'] 
 
-    if set_igrf_in_xyz:
-        xyz.igrf[ind] = np.linalg.norm(igrf_vector_body, axis=0)
-
-    B_earth_scalar_total = map_val_scalar + np.linalg.norm(igrf_vector_body, axis=0)
-
-    norm_igrf_vec = np.linalg.norm(igrf_vector_body, axis=0, keepdims=True)
-    norm_igrf_vec[norm_igrf_vec == 0] = 1e-9
-    unit_igrf_vector_body = igrf_vector_body / norm_igrf_vec
+    mag_uc = xyz.mag_1_uc
     
-    B_earth_vector_body = unit_igrf_vector_body * B_earth_scalar_total[np.newaxis, :]
+    igrf_vec_body = get_igrf_magnetic_field(xyz, frame='body', norm_igrf=False, check_xyz=False)
+    Bx_earth, By_earth, Bz_earth = igrf_vec_body[0,:], igrf_vec_body[1,:], igrf_vec_body[2,:]
 
-    B_earth_dot_body = np.vstack([
-        fdm(B_earth_vector_body[0,:]), fdm(B_earth_vector_body[1,:]), fdm(B_earth_vector_body[2,:])
-    ]) / xyz.traj.dt # Assuming dt is consistent for the subset
+    A_TL = create_tolles_lawson_A_matrix(Bx_earth, By_earth, Bz_earth, terms=terms_A, dt=xyz.traj.dt)
 
-    TL_coef_p_mat, TL_coef_i_mat, TL_coef_e_mat = \
-        tolles_lawson_coeffs_to_matrix(TL_coef, terms=terms, Bt_scale=Bt_scale)
-
-    TL_aircraft_vector_field = get_tolles_lawson_aircraft_field_vector(
-        B_earth_vector_body, B_earth_dot_body,
-        TL_coef_p_mat, TL_coef_i_mat, TL_coef_e_mat
-    )
+    B_ac_scalar_model = A_TL @ coeffs_TL 
     
-    return TL_aircraft_vector_field, B_earth_vector_body
+    mag_earth_imputed = mag_uc - B_ac_scalar_model
+    
+    return mag_earth_imputed
 
 
 def create_informed_xyz(
-    xyz: XYZ0,
-    ind: np.ndarray,
-    mapS: Union[MapS, MapSd, MapS3D],
-    use_mag_field_name: str,
-    use_vec_field_name: str,
-    TL_coef: np.ndarray,
-    terms: List[str] = ['permanent', 'induced', 'eddy'],
-    disp_min_m: float = 100.0,
-    disp_max_m: float = 500.0,
-    Bt_disp_nT: float = 50.0,
-    Bt_scale: float = 50000.0
-) -> XYZ0:
+    xyz_file: str,
+    map_file: Optional[str] = None, 
+    map_id: Optional[str] = None,   
+    map_type: str = "scalar",       
+    flight_info: Optional[Dict[str, Any]] = None, 
+    comp_coeffs: Optional[np.ndarray] = None, 
+    comp_terms_A: Optional[List[str]] = None,
+    comp_Bt_scale: float = 50000.0,
+    force_recalc_igrf: bool = False,
+    force_recalc_mag_c: bool = False, 
+    silent: bool = False
+) -> XYZ0: 
     """
-    Create knowledge-informed XYZ data by displacing trajectory and updating mag fields.
+    Reads an XYZ data file (text or HDF5) and enriches it with map data,
+    IGRF data, and potentially compensated magnetometer data if coefficients are provided.
+
+    Args:
+        xyz_file: Path to the XYZ data file.
+        map_file: Optional path to a map file (e.g., .h5).
+        map_id: Optional map identifier (e.g., "namad") if map_file is not given.
+        map_type: Type of map ("scalar" or "vector"), relevant if loading map.
+        flight_info: Dictionary to set/override 'flight', 'line', 'year', 'doy'.
+                     Example: {'flight': 101, 'year': 2022}
+        comp_coeffs: Optional Tolles-Lawson coefficients to calculate mag_1_c.
+        comp_terms_A: Terms for TL A-matrix if comp_coeffs are used.
+        comp_Bt_scale: Bt_scale for TL if comp_coeffs are used.
+        force_recalc_igrf: If true, recalculate IGRF even if present.
+        force_recalc_mag_c: If true and comp_coeffs given, recalc mag_1_c.
+        silent: Suppress print statements.
+
+    Returns:
+        An XYZ0 (or similar) data object.
     """
-    required_term_categories = {'permanent', 'induced', 'eddy'}
-    provided_term_categories = set()
-    for term_group in terms: # terms might be like 'p', 'i', 'e' or full names
-        if 'perm' in term_group or term_group == 'p': provided_term_categories.add('permanent')
-        if 'ind' in term_group or term_group == 'i': provided_term_categories.add('induced')
-        if 'eddy' in term_group or term_group == 'e': provided_term_categories.add('eddy')
-    if not required_term_categories.issubset(provided_term_categories):
-        raise ValueError("Permanent, induced, and eddy terms are required.")
-    if any(t in terms for t in ['fdm', 'f', 'bias', 'b']):
-        raise ValueError("Derivative and bias terms may not be used.")
+    if not os.path.exists(xyz_file):
+        raise FileNotFoundError(f"XYZ file not found: {xyz_file}")
 
-    traj_subset = get_trajectory_subset(xyz.traj, ind)
-    if not map_check(mapS, traj_subset.lat, traj_subset.lon):
-        raise ValueError("Original trajectory subset must be inside the provided map.")
+    if xyz_file.endswith(".h5"):
+        try:
+            xyz_data = h5_to_xyz0(xyz_file) 
+            if not silent: print(f"Loaded base data from HDF5: {xyz_file}")
+        except Exception as e:
+            raise ValueError(f"Could not load base XYZ data from HDF5 file {xyz_file}: {e}")
+    else: 
+        raise NotImplementedError("Reading from non-HDF5 XYZ files into full structure is not yet fully implemented here.")
 
-    map_val_orig, itp_mapS_obj = get_map_val(
-        mapS, traj_subset.lat, traj_subset.lon, np.median(traj_subset.alt),
-        return_interpolator=True
-    )
-    if itp_mapS_obj is None: raise RuntimeError("Could not get map interpolator object.")
+    if flight_info:
+        for key, value in flight_info.items():
+            if hasattr(xyz_data, key) and isinstance(getattr(xyz_data,key), np.ndarray):
+                try:
+                    current_array = getattr(xyz_data, key)
+                    current_array[:] = value 
+                    if not silent: print(f"Updated '{key}' in XYZ data.")
+                except Exception as e:
+                    if not silent: print(f"Warning: Could not update '{key}': {e}")
+            elif hasattr(xyz_data, key): 
+                 setattr(xyz_data, key, value)
+                 if not silent: print(f"Updated '{key}' in XYZ data.")
 
-    TL_aircraft_orig, B_earth_orig = calculate_imputed_TL_earth(
-        xyz, ind, map_val_orig, False, TL_coef, terms=terms, Bt_scale=Bt_scale
-    )
 
-    num_samples = min(100, len(traj_subset.lat))
-    sample_indices = np.linspace(0, len(traj_subset.lat) - 1, num_samples, dtype=int) if num_samples > 0 else []
+    if force_recalc_igrf or not hasattr(xyz_data, 'igrf') or xyz_data.igrf is None or np.all(xyz_data.igrf == 0):
+        if not silent: print("Calculating IGRF field...")
+        igrf_vec_body = get_igrf_magnetic_field(xyz_data, frame='body', norm_igrf=False, check_xyz=True)
+        xyz_data.igrf = np.linalg.norm(igrf_vec_body, axis=0)
     
-    if not sample_indices.size: # Handle empty trajectory subset
-        print("Warning: Empty trajectory subset for informed XYZ, returning copy.")
-        return deepcopy(xyz)
+    if not hasattr(xyz_data, 'mag_map') or xyz_data.mag_map is None:
+        selected_map_source = map_file if map_file else map_id
+        if selected_map_source:
+            if not silent: print(f"Calculating map values from source: {selected_map_source}...")
+            if map_type == "scalar":
+                actual_map_obj = get_map(selected_map_source, map_type="scalar", silent=silent)
+                xyz_data.mag_map = create_mag_c(xyz_data.traj, actual_map_obj, None, 
+                                                meas_var=0, fogm_sigma=0, silent=silent)
+            else:
+                if not silent: print(f"Vector map data population to a specific field not implemented in this simplified version.")
+        else:
+            if not silent: print("No map source provided for 'mag_map' field, skipping.")
 
-    sampled_lats = traj_subset.lat[sample_indices]
-    sampled_lons = traj_subset.lon[sample_indices]
+    if comp_coeffs is not None:
+        if force_recalc_mag_c or not hasattr(xyz_data, 'mag_1_c') or xyz_data.mag_1_c is None or np.all(xyz_data.mag_1_c == 0):
+            if not silent: print("Calculating compensated mag data (mag_1_c) using provided coefficients...")
+            if not hasattr(xyz_data, 'mag_1_uc') or xyz_data.mag_1_uc is None:
+                raise ValueError("mag_1_uc is required in XYZ data to calculate mag_1_c with coefficients.")
+            
+            xyz_data.mag_1_c = calculate_imputed_TL_earth(
+                xyz_data, comp_coeffs, comp_terms_A, comp_Bt_scale
+            )
+    elif not hasattr(xyz_data, 'mag_1_c') or xyz_data.mag_1_c is None:
+        if hasattr(xyz_data, 'mag_map') and xyz_data.mag_map is not None:
+            if not silent: print("Using 'mag_map' as 'mag_1_c' (compensated data proxy).")
+            xyz_data.mag_1_c = deepcopy(xyz_data.mag_map)
+        elif map_file or map_id : 
+             actual_map_obj = get_map(map_file if map_file else map_id, map_type="scalar", silent=silent)
+             if not silent: print(f"Calculating 'mag_1_c' from map {map_file if map_file else map_id} as clean data proxy.")
+             xyz_data.mag_1_c = create_mag_c(xyz_data.traj, actual_map_obj, None,
+                                             meas_var=0, fogm_sigma=0, silent=silent)
 
-    traj_avg_latlon = np.array([np.mean(traj_subset.lat), np.mean(traj_subset.lon)])
-    map_center_latlon = np.array([np.mean(mapS.yy), np.mean(mapS.xx)])
 
-    gradients_at_samples = [approximate_gradient(itp_mapS_obj, la, lo)
-                            for la, lo in zip(sampled_lats, sampled_lons)]
-    avg_gradient_latlon = np.mean(np.array(gradients_at_samples), axis=0)
+    if not hasattr(xyz_data, 'flux_a') or xyz_data.flux_a is None:
+        if hasattr(xyz_data, 'igrf') and xyz_data.igrf is not None and hasattr(xyz_data.traj, 'N'):
+            igrf_vec_body_for_flux = get_igrf_magnetic_field(xyz_data, frame='body', norm_igrf=False, check_xyz=False)
+            xyz_data.flux_a = MagV(x=igrf_vec_body_for_flux[0,:],
+                                   y=igrf_vec_body_for_flux[1,:],
+                                   z=igrf_vec_body_for_flux[2,:],
+                                   t=xyz_data.igrf) 
+            if not silent: print("Populated flux_a using IGRF body vector components.")
+        else:
+            if not silent: print("Warning: flux_a is missing and could not be derived from IGRF.")
+            dummy_field = np.zeros(xyz_data.traj.N if hasattr(xyz_data,'traj') else 1)
+            xyz_data.flux_a = MagV(x=dummy_field,y=dummy_field,z=dummy_field,t=dummy_field)
 
-    disp_dir_latlon = avg_gradient_latlon if np.linalg.norm(avg_gradient_latlon) >= 1e-9 else map_center_latlon - traj_avg_latlon
-    norm_disp_dir = np.linalg.norm(disp_dir_latlon)
-    disp_dir_unit_latlon = disp_dir_latlon / norm_disp_dir if norm_disp_dir >= 1e-9 else np.array([1.0, 0.0])
+    if hasattr(xyz_data, 'traj') and hasattr(xyz_data.traj, 'N'):
+        default_len = xyz_data.traj.N
+        for field_name in ['flight', 'line', 'year', 'doy', 'diurnal', 'igrf', 'mag_1_c', 'mag_1_uc']:
+            if not hasattr(xyz_data, field_name) or getattr(xyz_data, field_name) is None:
+                if not silent: print(f"Warning: XYZ field '{field_name}' missing. Initializing with zeros/defaults.")
+                setattr(xyz_data, field_name, np.zeros(default_len))
     
-    vec_to_map_center = map_center_latlon - traj_avg_latlon
-    if np.dot(vec_to_map_center, disp_dir_unit_latlon) < 0: disp_dir_unit_latlon *= -1
+    return xyz_data
 
-    avg_lat_for_conv = traj_avg_latlon[0]
-    disp_min_rad = min(dn2dlat(disp_min_m, avg_lat_for_conv), de2dlon(disp_min_m, avg_lat_for_conv))
-    disp_max_rad = max(dn2dlat(disp_max_m, avg_lat_for_conv), de2dlon(disp_max_m, avg_lat_for_conv))
 
-    gradient_mag_along_disp = abs(np.dot(avg_gradient_latlon, disp_dir_unit_latlon))
-    disp_rad_magnitude = Bt_disp_nT / gradient_mag_along_disp if gradient_mag_along_disp >= 1e-6 else (disp_min_rad + disp_max_rad) / 2
-    disp_rad_magnitude_clamped = np.clip(disp_rad_magnitude, disp_min_rad, disp_max_rad)
-    displacement_latlon_rad = disp_rad_magnitude_clamped * disp_dir_unit_latlon
-
-    xyz_disp = deepcopy(xyz)
-    xyz_disp.traj.lat[ind] += displacement_latlon_rad[0]
-    xyz_disp.traj.lon[ind] += displacement_latlon_rad[1]
-
-    displaced_traj_subset = get_trajectory_subset(xyz_disp.traj, ind)
-    if not map_check(mapS, displaced_traj_subset.lat, displaced_traj_subset.lon):
-        raise ValueError("Displaced trajectory is outside the map.")
-
-    map_val_disp = get_map_val(
-        mapS, displaced_traj_subset.lat, displaced_traj_subset.lon,
-        np.median(displaced_traj_subset.alt), alpha=200
-    )
-
-    TL_aircraft_disp, B_earth_disp = calculate_imputed_TL_earth(
-        xyz_disp, ind, map_val_disp, True, TL_coef, terms=terms, Bt_scale=Bt_scale
-    )
-
-    delta_B_TL_effect = TL_aircraft_disp - TL_aircraft_orig
-    delta_B_earth_field = B_earth_disp - B_earth_orig
-    total_delta_B_vector = delta_B_TL_effect + delta_B_earth_field
-
-    flux_disp_obj = getattr(xyz_disp, use_vec_field_name)
-    flux_disp_obj.x[ind] += total_delta_B_vector[0,:]
-    flux_disp_obj.y[ind] += total_delta_B_vector[1,:]
-    flux_disp_obj.z[ind] += total_delta_B_vector[2,:]
-    flux_disp_obj.t[ind] = np.sqrt(flux_disp_obj.x[ind]**2 + flux_disp_obj.y[ind]**2 + flux_disp_obj.z[ind]**2)
-
-    current_flux_x_at_ind = flux_disp_obj.x[ind]
-    current_flux_y_at_ind = flux_disp_obj.y[ind]
-    current_flux_z_at_ind = flux_disp_obj.z[ind]
-    current_flux_t_at_ind = flux_disp_obj.t[ind]
-    valid_t_mask = current_flux_t_at_ind != 0
-    delta_B_scalar_projection = np.zeros_like(current_flux_t_at_ind)
-    if np.any(valid_t_mask):
-        dot_prod_valid = (total_delta_B_vector[0, valid_t_mask] * current_flux_x_at_ind[valid_t_mask] +
-                          total_delta_B_vector[1, valid_t_mask] * current_flux_y_at_ind[valid_t_mask] +
-                          total_delta_B_vector[2, valid_t_mask] * current_flux_z_at_ind[valid_t_mask])
-        delta_B_scalar_projection[valid_t_mask] = dot_prod_valid / current_flux_t_at_ind[valid_t_mask]
-
-    current_mag_uc_vals = getattr(xyz_disp, use_mag_field_name)
-    current_mag_uc_vals[ind] += delta_B_scalar_projection
-    
-    delta_map_val_scalar = map_val_disp - map_val_orig
-    xyz_disp.mag_1_c[ind] += delta_map_val_scalar
-    
-    return xyz_disp
-
-# --- New functions for text-based XYZ file handling ---
-
+# --- Filename generation ---
 def xyz_file_name(
+    project: str,
     flight: Union[int, str],
-    line: Union[int, str],
-    output_dir: str = ".",
-    prefix: str = "flight",
-    suffix: str = "",
-    ext: str = ".xyz"
+    line: Union[int, str, None] = None,
+    xyz_type: str = "xyz", # "xyz", "xyz0", "xyz1", "xyz20", "xyz21"
+    ext: str = ".h5"
 ) -> str:
     """
     Generates a standardized XYZ file name.
-    Example: flight_1001_line_1.xyz
+    Example: project_Flt1003_L10.xyz0.h5
     """
-    base_name = f"{prefix}_{flight}_line_{line}{suffix}{ext}"
-    return os.path.join(output_dir, base_name)
+    name = f"{project}_Flt{flight}"
+    if line is not None:
+        name += f"_L{line}"
+    name += f".{xyz_type}"
+    name = add_extension(name, ext)
+    return name
 
+# --- XYZ File I/O ---
 def write_xyz(
-    xyz_obj: XYZ0,
+    xyz_data: Union[XYZ0, Any], 
     file_path: str,
-    columns: Optional[List[str]] = None,
-    na_rep: str = "NaN",
-    float_format: str = "%.3f",
-    include_header: bool = True,
-    delimiter: str = ","
-) -> None:
+    overwrite: bool = False,
+    silent: bool = False
+):
     """
-    Writes data from an XYZ0 object to a text-based XYZ file (typically CSV).
-
-    Args:
-        xyz_obj: The XYZ0 data object.
-        file_path: Path to the output XYZ file.
-        columns: Optional list of column names to write. If None, a default set is used.
-                 Available sources: 'traj', 'ins', 'flux_a', 'scalar_mags', 'meta'.
-                 Specific columns can be like 'traj.lat', 'mag_1_uc', etc.
-        na_rep: Representation for missing values.
-        float_format: Format string for floating point numbers.
-        include_header: Whether to write the header row.
-        delimiter: Delimiter for the output file.
+    Writes an XYZ data structure to an HDF5 file.
+    This is a basic example; a full implementation would handle all XYZ types
+    and their specific fields. For now, focuses on XYZ0-like structure.
     """
-    data_to_write = {}
-    N = xyz_obj.traj.N
+    file_path = add_extension(file_path, ".h5")
 
-    # Default columns if none specified
-    if columns is None:
-        columns = [
-            'tt', 'lat', 'lon', 'alt', 'vn', 've', 'vd', 'roll', 'pitch', 'yaw', # from traj/ins
-            'mag_1_uc', 'mag_1_c', 'diurnal', 'igrf', # scalar mags
-            'flux_a_x', 'flux_a_y', 'flux_a_z', 'flux_a_t', # vector mags
-            'flight', 'line', 'year', 'doy' # metadata
-        ]
+    if os.path.exists(file_path) and not overwrite:
+        if not silent: print(f"File {file_path} already exists. Use overwrite=True to replace.")
+        return
 
-    # Populate data_to_write dictionary
-    # Trajectory data (prefer INS if available, fallback to TRAJ)
-    source_traj = xyz_obj.ins if hasattr(xyz_obj, 'ins') and xyz_obj.ins is not None else xyz_obj.traj
-    
-    # Euler angles might not be directly in Traj, but in INS or calculated
-    # For simplicity, assume roll, pitch, yaw are accessible if requested
-    # This part might need adjustment based on how Euler angles are stored/derived for XYZ0.traj
-    # If using xyz_obj.ins, it has roll, pitch, yaw via dcm2euler from its Cnb.
-    # If using xyz_obj.traj, its Cnb can be used.
-    
-    # Get Euler from source_traj.Cnb
-    if source_traj.Cnb is not None and source_traj.Cnb.ndim == 3 and source_traj.Cnb.shape[0] == N:
-        euler_angles_rad = dcm2euler(source_traj.Cnb, order='body2nav') # N x 3 (roll, pitch, yaw)
-        traj_roll_deg = np.rad2deg(euler_angles_rad[:, 0])
-        traj_pitch_deg = np.rad2deg(euler_angles_rad[:, 1])
-        traj_yaw_deg = np.rad2deg(euler_angles_rad[:, 2])
-    else: # Fallback if Cnb is not as expected
-        traj_roll_deg = np.full(N, np.nan)
-        traj_pitch_deg = np.full(N, np.nan)
-        traj_yaw_deg = np.full(N, np.nan)
+    mode = "w" if overwrite else "w-" 
+
+    try:
+        with h5py.File(file_path, mode) as f:
+            if hasattr(xyz_data, 'info'):
+                f.attrs['info'] = str(xyz_data.info)
+            
+            if hasattr(xyz_data, 'traj'):
+                traj_group = f.create_group("traj")
+                for key, value in xyz_data.traj.__dict__.items():
+                    if isinstance(value, np.ndarray):
+                        traj_group.create_dataset(key, data=value)
+                    elif value is not None:
+                         traj_group.attrs[key] = value
 
 
-    possible_data = {
-        'tt': source_traj.tt,
-        'lat': np.rad2deg(source_traj.lat), # Convert to degrees for XYZ file
-        'lon': np.rad2deg(source_traj.lon), # Convert to degrees for XYZ file
-        'alt': source_traj.alt,
-        'vn': source_traj.vn,
-        've': source_traj.ve,
-        'vd': source_traj.vd,
-        'roll': traj_roll_deg,
-        'pitch': traj_pitch_deg,
-        'yaw': traj_yaw_deg,
-        'mag_1_uc': xyz_obj.mag_1_uc,
-        'mag_1_c': xyz_obj.mag_1_c,
-        'diurnal': xyz_obj.diurnal,
-        'igrf': xyz_obj.igrf,
-        'flux_a_x': xyz_obj.flux_a.x,
-        'flux_a_y': xyz_obj.flux_a.y,
-        'flux_a_z': xyz_obj.flux_a.z,
-        'flux_a_t': xyz_obj.flux_a.t,
-        'flight': xyz_obj.flights,
-        'line': xyz_obj.lines,
-        'year': xyz_obj.years,
-        'doy': xyz_obj.doys,
-        # Add more direct fields from traj if needed, e.g., fn, fe, fd
-        'fn': source_traj.fn,
-        'fe': source_traj.fe,
-        'fd': source_traj.fd,
-    }
+            if hasattr(xyz_data, 'ins'):
+                ins_group = f.create_group("ins")
+                for key, value in xyz_data.ins.__dict__.items():
+                    if isinstance(value, np.ndarray):
+                        ins_group.create_dataset(key, data=value)
+                    elif value is not None:
+                        ins_group.attrs[key] = value
+            
+            if hasattr(xyz_data, 'flux_a') and isinstance(xyz_data.flux_a, MagV):
+                flux_a_group = f.create_group("flux_a")
+                for key, value in xyz_data.flux_a.__dict__.items():
+                     if isinstance(value, np.ndarray):
+                        flux_a_group.create_dataset(key, data=value)
 
-    for col_name in columns:
-        if col_name in possible_data:
-            data_to_write[col_name] = possible_data[col_name]
-        else:
-            print(f"Warning: Column '{col_name}' not found in XYZ0 data sources, skipping.")
+            direct_fields = ['flight', 'line', 'year', 'doy', 'diurnal', 'igrf', 'mag_1_c', 'mag_1_uc']
+            for field_name in direct_fields:
+                if hasattr(xyz_data, field_name):
+                    value = getattr(xyz_data, field_name)
+                    if isinstance(value, np.ndarray):
+                        f.create_dataset(field_name, data=value)
+                    elif value is not None: 
+                        f.attrs[field_name] = value
+            
+            if not silent: print(f"XYZ data successfully written to {file_path}")
 
-    df = pd.DataFrame(data_to_write)
-    df.to_csv(file_path, index=False, na_rep=na_rep, float_format=float_format, header=include_header, sep=delimiter)
-    print(f"XYZ data written to {file_path}")
+    except Exception as e:
+        if not silent: print(f"Error writing XYZ data to {file_path}: {e}")
+        if os.path.exists(file_path) and mode == "w-":
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass 
+        raise
 
 
 def read_xyz_file(file_path: str, delimiter: str = ",") -> pd.DataFrame:
     """
-    Reads a text-based XYZ file into a pandas DataFrame.
-
-    Args:
-        file_path: Path to the input XYZ file.
-        delimiter: Delimiter used in the file.
-
-    Returns:
-        A pandas DataFrame containing the XYZ data.
+    Reads a CSV-like XYZ file into a pandas DataFrame.
+    This is a basic reader; column names and types might need adjustment.
     """
     if not os.path.exists(file_path):
-        raise FileNotFoundError(f"XYZ file not found: {file_path}")
+        raise FileNotFoundError(f"XYZ text file not found: {file_path}")
     
-    df = pd.read_csv(file_path, sep=delimiter)
-    print(f"XYZ data read from {file_path}")
-    return df
+    try:
+        df = pd.read_csv(file_path, delimiter=delimiter, skipinitialspace=True)
+        return df
+    except Exception as e:
+        raise ValueError(f"Error reading XYZ text file {file_path}: {e}")
+
+
+def h5_to_xyz0(file_path: str, silent: bool = False) -> XYZ0:
+    """
+    Loads data from an HDF5 file into an XYZ0 structure.
+    This is a simplified loader, assuming a specific HDF5 structure created by `write_xyz` or similar.
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"HDF5 file not found: {file_path}")
+
+    data_dict = {}
+    traj_data = {}
+    ins_data = {}
+    flux_a_data = {}
+
+    with h5py.File(file_path, 'r') as f:
+        data_dict['info'] = f.attrs.get('info', "Loaded from HDF5")
+
+        if "traj" in f:
+            for key in f["traj"].keys(): traj_data[key] = f["traj"][key][:]
+            for key in f["traj"].attrs.keys(): traj_data[key] = f["traj"].attrs[key]
+        if "ins" in f:
+            for key in f["ins"].keys(): ins_data[key] = f["ins"][key][:]
+            for key in f["ins"].attrs.keys(): ins_data[key] = f["ins"].attrs[key]
+        if "flux_a" in f:
+            for key in f["flux_a"].keys(): flux_a_data[key] = f["flux_a"][key][:]
+        
+        direct_fields = ['flight', 'line', 'year', 'doy', 'diurnal', 'igrf', 'mag_1_c', 'mag_1_uc']
+        for field_name in direct_fields:
+            if field_name in f: data_dict[field_name] = f[field_name][:]
+            elif field_name in f.attrs: data_dict[field_name] = f.attrs[field_name]
+
+
+    traj_obj = Traj(**{k: v for k, v in traj_data.items() if k in Traj.__annotations__})
+    
+    ins_fields_from_traj = {k: v for k,v in traj_data.items() if k in INS.__annotations__ and k not in ins_data}
+    ins_obj = INS(**ins_fields_from_traj, **{k: v for k, v in ins_data.items() if k in INS.__annotations__})
+
+    flux_a_obj = MagV(**{k: v for k, v in flux_a_data.items() if k in MagV.__annotations__})
+
+    xyz_data_obj = XYZ0(
+        info=data_dict.get('info', "Info missing"),
+        traj=traj_obj,
+        ins=ins_obj,
+        flux_a=flux_a_obj,
+        flight=data_dict.get('flight', np.array([])),
+        line=data_dict.get('line', np.array([])),
+        year=data_dict.get('year', np.array([])),
+        doy=data_dict.get('doy', np.array([])),
+        diurnal=data_dict.get('diurnal', np.array([])),
+        igrf=data_dict.get('igrf', np.array([])),
+        mag_1_c=data_dict.get('mag_1_c', np.array([])),
+        mag_1_uc=data_dict.get('mag_1_uc', np.array([]))
+    )
+    if not silent: print(f"Data loaded into XYZ0 structure from {file_path}")
+    return xyz_data_obj
+
 
 def create_xyz(
-    output_dir: str = ".",
-    flight: int = 1,
-    line: int = 1,
-    save_text_xyz: bool = True,
-    save_h5_xyz0: bool = False, # Consistent with create_xyz0's save_h5
-    xyz0_params: Optional[Dict[str, Any]] = None,
-    xyz_text_columns: Optional[List[str]] = None
-) -> Optional[XYZ0]:
+    xyz_file: Optional[str] = None,
+    map_file: Optional[str] = None,
+    map_id: Optional[str] = None,
+    alt: float = 1000.0, dt: float = 0.1, t: float = 300.0, v: float = 68.0, 
+    flight_info: Optional[Dict[str, Any]] = None,
+    comp_coeffs: Optional[np.ndarray] = None,
+    silent: bool = False,
+    **kwargs 
+) -> XYZ0:
     """
-    Orchestrator function to create XYZ0 data object and optionally write it
-    to a text-based XYZ file and/or an HDF5 file.
-
-    Args:
-        output_dir: Directory to save output files.
-        flight: Flight number.
-        line: Line number.
-        save_text_xyz: If True, saves data to a text XYZ file.
-        save_h5_xyz0: If True, saves XYZ0 data to an HDF5 file (via create_xyz0).
-        xyz0_params: Dictionary of parameters to pass to create_xyz0.
-        xyz_text_columns: Specific columns to write to the text XYZ file.
-
-    Returns:
-        The created XYZ0 object, or None if creation fails.
+    Master function to create or load and inform XYZ data.
+    - If xyz_file is provided, it attempts to load and enrich it.
+    - If xyz_file is None, it generates new data using create_xyz0 and other params.
     """
-    if xyz0_params is None:
-        xyz0_params = {}
-
-    # Ensure flight, line, and save_h5 are passed to create_xyz0 if they are relevant
-    xyz0_params.setdefault('flight', flight)
-    xyz0_params.setdefault('line', line)
-    xyz0_params.setdefault('save_h5', save_h5_xyz0) # For HDF5 saving by create_xyz0
-    
-    if save_h5_xyz0 and 'xyz_h5' not in xyz0_params:
-         # Use a default HDF5 filename if saving to HDF5 and not specified
-        xyz0_params['xyz_h5'] = os.path.join(output_dir, f"xyz0_data_f{flight}_l{line}.h5")
-
-
-    xyz_object = create_xyz0(**xyz0_params)
-
-    if xyz_object and save_text_xyz:
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-            print(f"Created output directory: {output_dir}")
-
-        txt_file = xyz_file_name(flight, line, output_dir=output_dir)
-        write_xyz(xyz_object, txt_file, columns=xyz_text_columns)
+    if xyz_file:
+        if not os.path.exists(xyz_file):
+            raise FileNotFoundError(f"Specified xyz_file {xyz_file} not found for loading.")
         
-    return xyz_object
-
-
-# --- Placeholder functions from original Python file (not found in Julia's create_XYZ.jl) ---
-def get_xyz20(*args, **kwargs):
-    """Placeholder for get_xyz20."""
-    raise NotImplementedError("get_xyz20 is not yet implemented in this module.")
-
-def get_XYZ(*args, **kwargs):
-    """Placeholder for get_XYZ. This might load data from files."""
-    raise NotImplementedError("get_XYZ is not yet implemented in this module. Consider using read_xyz_file for text XYZ files.")
-
-def sgl_2020_train(*args, **kwargs):
-    """Placeholder for sgl_2020_train."""
-    raise NotImplementedError("sgl_2020_train is not yet implemented in this module.")
-
-def sgl_2021_train(*args, **kwargs):
-    """Placeholder for sgl_2021_train."""
-    raise NotImplementedError("sgl_2021_train is not yet implemented in this module.")
+        return create_informed_xyz(
+            xyz_file,
+            map_file=map_file,
+            map_id=map_id,
+            flight_info=flight_info,
+            comp_coeffs=comp_coeffs,
+            silent=silent
+        )
+    else:
+        if not silent: print("No xyz_file provided, generating new data using create_xyz0...")
+        
+        mapS_for_create = None
+        if map_file:
+            mapS_for_create = get_map(map_file, map_type="scalar", silent=silent)
+        elif map_id:
+            mapS_for_create = get_map(map_id, map_type="scalar", silent=silent)
+            
+        xyz_data = create_xyz0(
+            mapS=mapS_for_create, 
+            alt=alt, dt=dt, t=t, v=v, 
+            **kwargs,
+            silent=silent
+        )
+        
+        if comp_coeffs is not None and hasattr(xyz_data, 'mag_1_uc'):
+            if not silent: print("Applying compensation coefficients to newly generated data...")
+            xyz_data.mag_1_c = calculate_imputed_TL_earth(
+                xyz_data, comp_coeffs 
+            )
+        return xyz_data

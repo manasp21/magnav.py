@@ -16,6 +16,7 @@ import torch.nn as nn # For nn.SiLU
 from magnavpy import tolles_lawson
 from magnavpy import plot_functions
 
+from magnavpy import model_functions
 # Helper to define the path to the original Julia test data
 # This path is relative to this test file (MagNavPy/tests/test_analysis_util.py)
 BASE_TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "MagNav.jl", "test", "test_data")

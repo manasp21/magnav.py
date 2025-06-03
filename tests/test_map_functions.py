@@ -12,9 +12,10 @@ from magnavpy.map_utils import (
     # map_get_gxf, # Not found
     # map_lla_lim, # Not found
     # map_correct_igrf, # Not found
-    get_lim, map_trim # Removed map_border
+    map_trim # Removed map_border
 )
 from magnavpy.create_xyz import create_traj # Changed get_traj to create_traj
+from magnavpy.analysis_util import get_lim # Added import for get_lim
 from magnavpy.core_utils import get_years # Added get_years
     # Assuming these internal/utility functions are also available if tested directly:
     # map_border_clean, map_border_sort (prefixed with MagNav in Julia, might be private)
@@ -58,7 +59,7 @@ itp_mapS = map_interpolate(mapS, method="linear")
 
 # Load traj
 traj_file_path = os.path.join(TEST_DATA_DIR, "test_data_traj.mat")
-traj = create_traj(mapS, traj_h5=traj_file_path, silent=True) # Adjusted to use create_traj
+traj = create_traj(mapS, traj_h5=traj_file_path) # Adjusted to use create_traj
 
 # --- Data for specific map types (gxf, emm720) ---
 # This section relies on MagNavPy providing equivalents for Julia's data accessors

@@ -17,7 +17,8 @@ import copy # For deepcopy
 # workspace_root = current_script_path.parent.parent.parent
 # sys.path.append(str(workspace_root / "MagNavPy/src"))
 
-from magnavpy.magnav import XYZ0, Traj, INS, MagV, MapS, get_map
+from magnavpy.magnav import XYZ0, Traj, INS, MagV, MapS
+from magnavpy.map_utils import get_map
 from magnavpy.create_xyz import (
     create_xyz0 as create_XYZ0_py, # Corrected case
     create_ins as create_ins_py,

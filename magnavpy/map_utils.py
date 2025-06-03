@@ -321,8 +321,136 @@ def get_map_val(
         if interpolator_object is None: # Interpolator creation failed
             nan_vals = np.full_like(np.atleast_1d(lat_query), fill_value, dtype=float).squeeze()
             return (nan_vals, None) if return_interpolator else nan_vals
+    elif isinstance(map_data, MapV):
+        # Check for essential attributes and non-None map components
+        if not (hasattr(map_data, 'yy') and hasattr(map_data, 'xx') and
+                hasattr(map_data, 'x') and hasattr(map_data, 'y') and hasattr(map_data, 'z') and
+                map_data.yy is not None and map_data.xx is not None and
+                map_data.x is not None and map_data.y is not None and map_data.z is not None):
+            # print(f"Warning: MapV '{getattr(map_data, 'info', 'N/A')}' is missing attributes or has None for coordinates/component maps. Cannot interpolate.")
+            # Determine shape for NaN values based on original inputs
+            original_input_shape_for_nans = np.broadcast(lat_query, lon_query).shape
+            if not original_input_shape_for_nans: # scalar inputs
+                nan_val_to_use = fill_value # Already a float
+            else: # array inputs
+                nan_val_to_use = np.full(original_input_shape_for_nans, fill_value, dtype=float)
+
+            nan_result_tuple = (nan_val_to_use, nan_val_to_use, nan_val_to_use)
+            return (nan_result_tuple, [None, None, None]) if return_interpolator else nan_result_tuple
+
+        map_grid_lat = np.asarray(map_data.yy).squeeze()
+        map_grid_lon = np.asarray(map_data.xx).squeeze()
+
+        if map_grid_lat.ndim == 0: map_grid_lat = np.array([map_grid_lat.item()])
+        if map_grid_lon.ndim == 0: map_grid_lon = np.array([map_grid_lon.item()])
+
+        if map_grid_lat.size == 0 or map_grid_lon.size == 0:
+            # print(f"Warning: MapV '{getattr(map_data, 'info', 'N/A')}' has empty coordinates. Cannot interpolate.")
+            original_input_shape_for_nans = np.broadcast(lat_query, lon_query).shape
+            if not original_input_shape_for_nans: # scalar inputs
+                nan_val_to_use = fill_value
+            else: # array inputs
+                nan_val_to_use = np.full(original_input_shape_for_nans, fill_value, dtype=float)
+            nan_result_tuple = (nan_val_to_use, nan_val_to_use, nan_val_to_use)
+            return (nan_result_tuple, [None, None, None]) if return_interpolator else nan_result_tuple
+
+        if map_grid_lat.ndim != 1 or map_grid_lon.ndim != 1:
+            raise ValueError("MapV grid coordinates (yy, xx) must be 1D.")
+
+        points_coords_2d = (map_grid_lat, map_grid_lon)
+
+        # Prepare query points, ensuring they can be broadcasted or match
+        lat_q_arr_orig = np.atleast_1d(lat_query) # Keep original for broadcast shape determination
+        lon_q_arr_orig = np.atleast_1d(lon_query)
+
+        # Attempt to broadcast query points for processing
+        try:
+            b = np.broadcast(lat_q_arr_orig, lon_q_arr_orig)
+            # Create query arrays based on the broadcast output shape
+            # This ensures lat_q_arr and lon_q_arr are compatible for column_stack
+            # and correctly represent the query points over the broadcasted grid.
+            if b.ndim > 0 : # If broadcast result is not scalar
+                query_grid = np.empty(b.shape + (2,))
+                query_grid[..., 0] = lat_q_arr_orig # Broadcasting happens here
+                query_grid[..., 1] = lon_q_arr_orig # And here
+                lat_q_arr = query_grid[..., 0].ravel()
+                lon_q_arr = query_grid[..., 1].ravel()
+            else: # Scalar broadcast
+                lat_q_arr = lat_q_arr_orig.ravel()
+                lon_q_arr = lon_q_arr_orig.ravel()
+
+        except ValueError: # If broadcasting fails
+            raise ValueError("lat_query, lon_query shapes are incompatible for MapV interpolation.")
+
+
+        query_points_2d = np.column_stack((lat_q_arr, lon_q_arr))
+        original_input_shape = np.broadcast(lat_query, lon_query).shape # Shape of the final output
+
+        results_xyz_components = []
+        interpolators_list = [] if return_interpolator else None
+
+        for component_idx, component_data_array in enumerate([map_data.x, map_data.y, map_data.z]):
+            if component_data_array.shape != (map_grid_lat.size, map_grid_lon.size):
+                comp_name = ['x', 'y', 'z'][component_idx]
+                raise ValueError(f"MapV component '{comp_name}' data shape {component_data_array.shape} mismatch with grid dimensions "
+                                 f"({map_grid_lat.size}, {map_grid_lon.size}) for map '{getattr(map_data, 'info', 'N/A')}'.")
+            
+            current_interpolator = None
+            try:
+                # Ensure map grid coordinates are sorted for RegularGridInterpolator
+                if not np.all(np.diff(map_grid_lat) > 0) and not np.all(np.diff(map_grid_lat) < 0):
+                    # Attempt to sort if not monotonic, this is a bit risky if map_data is not aligned
+                    # print(f"Warning: MapV latitude coordinates for map '{getattr(map_data, 'info', 'N/A')}' are not monotonic. Attempting to sort.")
+                    # sort_idx_lat = np.argsort(map_grid_lat)
+                    # map_grid_lat_sorted = map_grid_lat[sort_idx_lat]
+                    # component_data_array_sorted_lat = component_data_array[sort_idx_lat, :]
+                    pass # For now, assume they should be sorted by the caller or map creation
+                if not np.all(np.diff(map_grid_lon) > 0) and not np.all(np.diff(map_grid_lon) < 0):
+                    # print(f"Warning: MapV longitude coordinates for map '{getattr(map_data, 'info', 'N/A')}' are not monotonic. Attempting to sort.")
+                    # sort_idx_lon = np.argsort(map_grid_lon)
+                    # map_grid_lon_sorted = map_grid_lon[sort_idx_lon]
+                    # component_data_array_final = (component_data_array_sorted_lat if 'component_data_array_sorted_lat' in locals() else component_data_array)[:, sort_idx_lon]
+                    pass # For now, assume they should be sorted
+
+                interpolator_comp = RegularGridInterpolator(
+                    (map_grid_lat, map_grid_lon), # Use potentially sorted coords
+                    component_data_array, # Use potentially sorted data
+                    method=method,
+                    bounds_error=bounds_error,
+                    fill_value=fill_value
+                )
+                interpolated_values_comp_flat = interpolator_comp(query_points_2d)
+                current_interpolator = interpolator_comp
+            except ValueError as ve: # Catch specific errors from RGI if coords not strictly monotonic
+                # print(f"ValueError during MapV component interpolation for map '{getattr(map_data, 'info', 'N/A')}': {ve}. Check coordinate monotonicity.")
+                interpolated_values_comp_flat = np.full(query_points_2d.shape[0], fill_value, dtype=float)
+            except Exception as e:
+                # print(f"Error during MapV component interpolation for map '{getattr(map_data, 'info', 'N/A')}': {e}")
+                interpolated_values_comp_flat = np.full(query_points_2d.shape[0], fill_value, dtype=float)
+            
+            if return_interpolator and interpolators_list is not None:
+                interpolators_list.append(current_interpolator)
+
+            # Reshape component to match original query structure
+            if not original_input_shape: # All original inputs were scalar
+                reshaped_component_value = interpolated_values_comp_flat.item() if interpolated_values_comp_flat.size == 1 else interpolated_values_comp_flat
+            else:
+                reshaped_component_value = interpolated_values_comp_flat.reshape(original_input_shape)
+                # Ensure scalar output for scalar inputs even if original_input_shape is e.g. (1,) but inputs were float
+                if reshaped_component_value.size == 1 and \
+                   isinstance(lat_query, (int, float)) and \
+                   isinstance(lon_query, (int, float)): # Check original types
+                     reshaped_component_value = reshaped_component_value.item()
+            results_xyz_components.append(reshaped_component_value)
+
+        final_tuple_result = tuple(results_xyz_components)
+
+        if return_interpolator:
+            return final_tuple_result, interpolators_list
+        else:
+            return final_tuple_result
     else:
-        raise TypeError("map_data must be a MapS, MapS3D, or MapCacheBase object.")
+        raise TypeError("map_data must be a MapS, MapS3D, MapV, or MapCacheBase object.")
 
     # Prepare query points
     lat_q_arr = np.atleast_1d(lat_query)

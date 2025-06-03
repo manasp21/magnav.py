@@ -44,7 +44,7 @@ itp_mapS = map_interpolate(mapS)
 # Load trajectory data
 # xyz_data_mat = scipy.io.loadmat(TRAJ_FILE) # Option 1
 # xyz = get_XYZ0(xyz_data_mat, 'traj', 'none', silent=SILENT)
-xyz = get_XYZ0(TRAJ_FILE, xyz_type='traj', xyz_set='none', silent=SILENT) # Option 2
+xyz = get_XYZ0(mapS, silent=SILENT) # Option 2, corrected to pass MapS object
 traj = xyz.traj
 ins = xyz.ins
 flux_a = xyz.flux_a
