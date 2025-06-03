@@ -8,6 +8,7 @@ import os
 try:
     from magnavpy import google_earth
     from magnavpy import magnav # For Traj, MapS data structures
+    from magnavpy import map_utils # For map_params
     # For more specific imports if preferred:
     # from MagNavPy.src.magnav import Traj, MapS
 except ImportError as e:
@@ -47,9 +48,9 @@ def map_data_fixture():
     # This assumes a similar magnav.map_params function exists in Python.
     # The [1] access corresponds to Julia's [2] (0-indexed vs 1-indexed).
     try:
-        # This is a critical assumption: magnav.map_params exists and its
+        # This is a critical assumption: map_utils.map_params exists and its
         # second return element (index 1) is the map_mask.
-        map_params_output = magnav.map_params(map_map_val, map_xx_val, map_yy_val)
+        map_params_output = map_utils.map_params(map_map_val, map_xx_val, map_yy_val)
         map_mask_val = map_params_output[1]
     except (AttributeError, TypeError, IndexError) as e:
         # AttributeError: magnav.map_params doesn't exist or is misspelled.

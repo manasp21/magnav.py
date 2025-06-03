@@ -121,7 +121,7 @@ ins2 = magnav.INS(N,dt,tt,ins_lat,ins_lon,ins_alt,ins_vn,ins_ve,ins_vd,
                   ins_fn,ins_fe,ins_fd,ins_Cnb,np.ones((3,3,N)))
 
 mapS       = magnav.MapS(map_info,map_map,map_xx,map_yy,map_alt,map_mask)
-map_cache  = magnav.Map_Cache(maps=[mapS]) # Assuming Map_Cache takes a list of maps
+map_cache  = magnav.MapCache(maps=[mapS]) # Assuming MapCache takes a list of maps
 
 # Assuming eval_filt.map_interpolate and eval_filt.upward_fft exist
 # ':linear' becomes 'linear' string

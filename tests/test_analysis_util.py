@@ -10,11 +10,9 @@ import matplotlib.figure
 # Relative imports from magnavpy
 # Assuming these modules exist and contain the translated functions
 from magnavpy import analysis_util # Keep for other analysis_util functions
-from magnavpy.compensation import norm_sets # Moved norm_sets
+from magnavpy.compensation import norm_sets, get_nn_m, sparse_group_lasso, denorm_sets, unpack_data_norms
 from magnavpy import magnav as mn_data  # For data loading functions like sgl_2020_train
-from magnavpy.compensation import get_nn_m # For get_nn_m, etc. - MOVED
 import torch.nn as nn # For nn.SiLU
-from magnavpy import model_functions # Keep for other functions if any, or remove if get_nn_m was the only one
 from magnavpy import tolles_lawson
 from magnavpy import plot_functions
 
@@ -329,37 +327,37 @@ def test_get_nn_m():
     def check_model(model): # Placeholder for more specific model checks
         assert model is not None
 
-    check_model(model_functions.get_nn_m(1, 1, hidden=[]))
-    check_model(model_functions.get_nn_m(1, 1, hidden=[1]))
-    check_model(model_functions.get_nn_m(1, 1, hidden=[1, 1]))
-    check_model(model_functions.get_nn_m(1, 1, hidden=[1, 1, 1]))
-    check_model(model_functions.get_nn_m(1, 1, hidden=[1], final_bias=False))
-    check_model(model_functions.get_nn_m(1, 1, hidden=[1], skip_con=True))
-    check_model(model_functions.get_nn_m(1, 1, hidden=[1], model_type="m3w", dropout_prob=0))
-    check_model(model_functions.get_nn_m(1, 1, hidden=[1], model_type="m3w", dropout_prob=0.5))
-    check_model(model_functions.get_nn_m(1, 1, hidden=[1,1], model_type="m3w", dropout_prob=0))
-    check_model(model_functions.get_nn_m(1, 1, hidden=[1,1], model_type="m3w", dropout_prob=0.5))
-    check_model(model_functions.get_nn_m(1, 1, hidden=[1], model_type="m3tf", tf_layer_type="prelayer", tf_norm_type="layer", N_tf_head=1))
-    check_model(model_functions.get_nn_m(1, 1, hidden=[1], model_type="m3tf", tf_layer_type="postlayer", tf_norm_type="layer", N_tf_head=1))
-    check_model(model_functions.get_nn_m(1, 1, hidden=[1,1], model_type="m3tf", tf_layer_type="prelayer", tf_norm_type="batch", N_tf_head=1))
-    check_model(model_functions.get_nn_m(1, 1, hidden=[1,1], model_type="m3tf", tf_layer_type="postlayer", tf_norm_type="none", N_tf_head=1))
+    check_model(get_nn_m(1, 1, hidden=[]))
+    check_model(get_nn_m(1, 1, hidden=[1]))
+    check_model(get_nn_m(1, 1, hidden=[1, 1]))
+    check_model(get_nn_m(1, 1, hidden=[1, 1, 1]))
+    check_model(get_nn_m(1, 1, hidden=[1], final_bias=False))
+    check_model(get_nn_m(1, 1, hidden=[1], skip_con=True))
+    check_model(get_nn_m(1, 1, hidden=[1], model_type="m3w", dropout_prob=0))
+    check_model(get_nn_m(1, 1, hidden=[1], model_type="m3w", dropout_prob=0.5))
+    check_model(get_nn_m(1, 1, hidden=[1,1], model_type="m3w", dropout_prob=0))
+    check_model(get_nn_m(1, 1, hidden=[1,1], model_type="m3w", dropout_prob=0.5))
+    check_model(get_nn_m(1, 1, hidden=[1], model_type="m3tf", tf_layer_type="prelayer", tf_norm_type="layer", N_tf_head=1))
+    check_model(get_nn_m(1, 1, hidden=[1], model_type="m3tf", tf_layer_type="postlayer", tf_norm_type="layer", N_tf_head=1))
+    check_model(get_nn_m(1, 1, hidden=[1,1], model_type="m3tf", tf_layer_type="prelayer", tf_norm_type="batch", N_tf_head=1))
+    check_model(get_nn_m(1, 1, hidden=[1,1], model_type="m3tf", tf_layer_type="postlayer", tf_norm_type="none", N_tf_head=1))
 
     with pytest.raises(Exception): # Julia ErrorException
-        model_functions.get_nn_m(1, 1, hidden=[1, 1, 1, 1])
+        get_nn_m(1, 1, hidden=[1, 1, 1, 1])
     with pytest.raises(Exception):
-        model_functions.get_nn_m(1, 1, hidden=[1, 1], skip_con=True)
+        get_nn_m(1, 1, hidden=[1, 1], skip_con=True)
     with pytest.raises(Exception):
-        model_functions.get_nn_m(1, 1, hidden=[], model_type="m3w")
+        get_nn_m(1, 1, hidden=[], model_type="m3w")
     with pytest.raises(Exception):
-        model_functions.get_nn_m(1, 1, hidden=[1, 1, 1], model_type="m3w")
+        get_nn_m(1, 1, hidden=[1, 1, 1], model_type="m3w")
     with pytest.raises(AssertionError): # Julia AssertionError
-        model_functions.get_nn_m(1, 1, hidden=[], model_type="m3tf", N_tf_head=1)
+        get_nn_m(1, 1, hidden=[], model_type="m3tf", N_tf_head=1)
     with pytest.raises(Exception):
-        model_functions.get_nn_m(1, 1, hidden=[1, 1, 1], model_type="m3tf", N_tf_head=1)
+        get_nn_m(1, 1, hidden=[1, 1, 1], model_type="m3tf", N_tf_head=1)
     with pytest.raises(Exception):
-        model_functions.get_nn_m(1, 1, hidden=[1], model_type="m3tf", tf_layer_type="test", N_tf_head=1)
+        get_nn_m(1, 1, hidden=[1], model_type="m3tf", tf_layer_type="test", N_tf_head=1)
     with pytest.raises(Exception):
-        model_functions.get_nn_m(1, 1, hidden=[1], model_type="m3tf", tf_norm_type="test", N_tf_head=1)
+        get_nn_m(1, 1, hidden=[1], model_type="m3tf", tf_norm_type="test", N_tf_head=1)
 
 # Model for subsequent tests
 m_global_nn_model = get_nn_m(3, 1, hidden=[1], activation=nn.SiLU)
@@ -368,19 +366,19 @@ alpha_sgl = 0.5
 def test_sparse_group_lasso():
     # The Julia test `MagNav.sparse_group_lasso(m) ≈ MagNav.sparse_group_lasso(weights)`
     # implies sparse_group_lasso can take a model or weights.
-    # This translation assumes the Python version model_functions.sparse_group_lasso primarily takes the model.
+    # This translation assumes the Python version sparse_group_lasso primarily takes the model.
     # The comparison to a version with explicit weights depends on how weights are handled/extracted in Python.
     # For now, we test the call with the model and alpha.
-    sgl_m = model_functions.sparse_group_lasso(m_global_nn_model)
-    sgl_m_alpha = model_functions.sparse_group_lasso(m_global_nn_model, alpha_sgl)
+    sgl_m = sparse_group_lasso(m_global_nn_model)
+    sgl_m_alpha = sparse_group_lasso(m_global_nn_model, alpha_sgl)
     
     assert sgl_m is not None # Basic check
     assert sgl_m_alpha is not None
 
     # If there was a Python equivalent to Flux.trainables(m) and sparse_group_lasso could take it:
-    # weights_py = model_functions.get_trainable_parameters(m_global_nn_model) # Hypothetical
-    # assert sgl_m == pytest.approx(model_functions.sparse_group_lasso(weights_py))
-    # assert sgl_m_alpha == pytest.approx(model_functions.sparse_group_lasso(weights_py, alpha_sgl))
+    # weights_py = get_trainable_parameters(m_global_nn_model) # Hypothetical function
+    # assert sgl_m == pytest.approx(sparse_group_lasso(weights_py))
+    # assert sgl_m_alpha == pytest.approx(sparse_group_lasso(weights_py, alpha_sgl))
     # This part is commented out as it's highly dependent on MagNavPy's ML framework specifics.
 
 # Data for norm_sets, denorm_sets tests
@@ -426,24 +424,24 @@ def test_norm_sets():
     # ... (repeat for other x,x ; x,x,x ; y ; y,y ; y,y,y with norm_type="test")
 
 def test_denorm_sets():
-    assert norm_sets(x_bias, x_scale, x_norm) == pytest.approx(x_norm_data) # Assuming denorm_sets is also in compensation or analysis_util.norm_sets was a typo for denorm_sets
+    assert denorm_sets(x_bias, x_scale, x_norm) == pytest.approx(x_norm_data)
     
-    res_xx = norm_sets(x_bias, x_scale, x_norm, x_norm) # Typo: denorm_sets
+    res_xx = denorm_sets(x_bias, x_scale, x_norm, x_norm)
     assert res_xx[0] == pytest.approx(x_norm_data)
     assert res_xx[1] == pytest.approx(x_norm_data)
 
-    res_xxx = norm_sets(x_bias, x_scale, x_norm, x_norm, x_norm) # Typo: denorm_sets
+    res_xxx = denorm_sets(x_bias, x_scale, x_norm, x_norm, x_norm)
     assert res_xxx[0] == pytest.approx(x_norm_data)
     assert res_xxx[1] == pytest.approx(x_norm_data)
     assert res_xxx[2] == pytest.approx(x_norm_data)
 
-    assert norm_sets(y_bias, y_scale, y_norm) == pytest.approx(y_norm_data) # Typo: denorm_sets
+    assert denorm_sets(y_bias, y_scale, y_norm) == pytest.approx(y_norm_data)
 
-    res_yy = norm_sets(y_bias, y_scale, y_norm, y_norm) # Typo: denorm_sets
+    res_yy = denorm_sets(y_bias, y_scale, y_norm, y_norm)
     assert res_yy[0] == pytest.approx(y_norm_data)
     assert res_yy[1] == pytest.approx(y_norm_data)
 
-    res_yyy = norm_sets(y_bias, y_scale, y_norm, y_norm, y_norm) # Typo: denorm_sets
+    res_yyy = denorm_sets(y_bias, y_scale, y_norm, y_norm, y_norm)
     assert res_yyy[0] == pytest.approx(y_norm_data)
     assert res_yyy[1] == pytest.approx(y_norm_data)
     assert res_yyy[2] == pytest.approx(y_norm_data)
@@ -468,17 +466,16 @@ def compare_data_norms_tuples(t1, t2):
             assert t1[i] == pytest.approx(t2[i])
 
 def test_unpack_data_norms():
-    # Assuming analysis_util.unpack_data_norms is available
     # The comparison needs to handle tuples of numpy arrays and scalars.
-    compare_data_norms_tuples(norm_sets(data_norms_7), data_norms_7) # Typo: unpack_data_norms
-    compare_data_norms_tuples(norm_sets(data_norms_6), data_norms_7) # Typo: unpack_data_norms
-    compare_data_norms_tuples(norm_sets(data_norms_5), data_norms_A_expected) # Typo: unpack_data_norms
-    compare_data_norms_tuples(norm_sets(data_norms_4), data_norms_A_expected) # Typo: unpack_data_norms
+    compare_data_norms_tuples(unpack_data_norms(data_norms_7), data_norms_7)
+    compare_data_norms_tuples(unpack_data_norms(data_norms_6), data_norms_7)
+    compare_data_norms_tuples(unpack_data_norms(data_norms_5), data_norms_A_expected)
+    compare_data_norms_tuples(unpack_data_norms(data_norms_4), data_norms_A_expected)
 
     with pytest.raises(Exception): # Julia ErrorException
-        norm_sets(tuple([0]*8)) # Typo: unpack_data_norms
+        unpack_data_norms(tuple([0]*8))
     with pytest.raises(Exception):
-        norm_sets(tuple([0]*3)) # Typo: unpack_data_norms
+        unpack_data_norms(tuple([0]*3))
 
 def test_get_ind(flight_data_setup):
     s = flight_data_setup

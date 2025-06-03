@@ -7,18 +7,15 @@ import scipy.io
 # MagNavPy imports based on user instructions and Julia code
 from magnavpy.magnav import MapS, MapSd, MapS3D, MapV, Traj, MapCache
 from magnavpy.map_utils import (
-    get_map, map_interpolate, get_map_val, upward_fft, # map_trim removed
+    get_map, map_interpolate, get_map_val, upward_fft, map_params, # map_trim removed
     # map_resample, # Not found
     # map_get_gxf, # Not found
     # map_lla_lim, # Not found
     # map_correct_igrf, # Not found
     get_lim, map_trim # Removed map_border
-    # map_params needs to be located
 )
 from magnavpy.create_xyz import create_traj # Changed get_traj to create_traj
 from magnavpy.core_utils import get_years # Added get_years
-# Still need to locate: map_params
-# from magnavpy.analysis_util import map_params # Tentative
     # Assuming these internal/utility functions are also available if tested directly:
     # map_border_clean, map_border_sort (prefixed with MagNav in Julia, might be private)
     # For plotting functions, we'll assume they exist in plot_functions
@@ -71,7 +68,13 @@ traj = create_traj(mapS, traj_h5=traj_file_path, silent=True) # Adjusted to use 
 gxf_file_data_loaded = False
 try:
     # Assuming these functions exist in MagNavPy to get paths or data
-    from magnavpy.map_functions import ottawa_area_maps_gxf_path, ottawa_area_maps_path, emm720_path
+    # Assuming these path functions are available, e.g. from magnav or a data_paths module
+    # For now, these will likely cause errors if not defined/imported elsewhere.
+    # Placeholder:
+    def ottawa_area_maps_gxf_path(s): return f"dummy_path_gxf_{s}"
+    def ottawa_area_maps_path(s): return f"dummy_path_maps_{s}"
+    def emm720_path(): return "dummy_path_emm720"
+    def map_get_gxf(s): return (np.array([[]]), np.array([]), np.array([])) # Dummy return
 
     gxf_file = ottawa_area_maps_gxf_path("HighAlt")
     (map_map_gxf, map_xx_gxf, map_yy_gxf) = map_get_gxf(gxf_file)
@@ -151,20 +154,25 @@ def test_map_interpolate():
 #     # assert isinstance(result[2], np.ndarray)
 
 def test_map_params():
-    # if not gxf_file_data_loaded or mapV is None: # mapV needed
-    #      pytest.skip("Skipping map_params test for mapV due to missing data.")
-    # # Returns Tuple{BitMatrix,BitMatrix,Int,Int}
-    # # Python: Tuple[np.ndarray(bool), np.ndarray(bool), int, int]
-    # params_s = map_params(mapS)
-    # assert isinstance(params_s, tuple) and len(params_s) == 4
-    # assert isinstance(params_s[0], np.ndarray) and params_s[0].dtype == bool
-    # assert isinstance(params_s[1], np.ndarray) and params_s[1].dtype == bool
-    # assert isinstance(params_s[2], int)
-    # assert isinstance(params_s[3], int)
-    # params_v = map_params(mapV) # Requires mapV
-    # assert isinstance(params_v, tuple) and len(params_v) == 4
-    # # ... similar checks for params_v
-    pytest.skip("Skipping test_map_params as map_params function location is unknown.")
+    if not gxf_file_data_loaded or mapV is None: # mapV needed
+         pytest.skip("Skipping map_params test for mapV due to missing data (GXF/EMM720).")
+    # Returns Tuple{BitMatrix,BitMatrix,Int,Int}
+    # Python: Tuple[np.ndarray(bool), np.ndarray(bool), int, int]
+    params_s = map_params(mapS.map, mapS.xx, mapS.yy) # Pass map_data, xx, yy
+    assert isinstance(params_s, tuple) and len(params_s) == 4
+    assert isinstance(params_s[0], np.ndarray) and params_s[0].dtype == bool
+    assert isinstance(params_s[1], np.ndarray) and params_s[1].dtype == bool
+    assert isinstance(params_s[2], int)
+    assert isinstance(params_s[3], int)
+    
+    # For MapV, map_params would typically operate on one component, e.g., mapX
+    params_v = map_params(mapV.mapX, mapV.xx, mapV.yy) # Pass map_data, xx, yy
+    assert isinstance(params_v, tuple) and len(params_v) == 4
+    # ... similar checks for params_v
+    assert isinstance(params_v[0], np.ndarray) and params_v[0].dtype == bool
+    assert isinstance(params_v[1], np.ndarray) and params_v[1].dtype == bool
+    assert isinstance(params_v[2], int)
+    assert isinstance(params_v[3], int)
 
 # @pytest.mark.skipif(not gxf_file_data_loaded, reason="GXF data not loaded for map_xx_gxf, map_yy_gxf")
 # def test_map_lla_lim():

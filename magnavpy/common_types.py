@@ -32,10 +32,13 @@ class MapS(Map):
     Inherits lat, lon from Map ABC. Defines its own alt (scalar) and map (2D).
     """
     info: str       # map information
+    lat: np.ndarray # Explicitly define to include in __init__, inherited from Map
+    lon: np.ndarray # Explicitly define to include in __init__, inherited from Map
     map: np.ndarray # ny x nx scalar magnetic anomaly map [nT] (2D)
+    alt: float      # map altitude [m] (scalar)
+    # Default fields must come after non-default fields
     xx: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))  # nx map x-direction (longitude) coordinates [rad] (1D)
     yy: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))  # ny map y-direction (latitude)  coordinates [rad] (1D)
-    alt: float      # map altitude [m] (scalar)
     mask: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=bool)) # ny x nx mask for valid (not filled-in) map data (2D boolean)
 
     # lat, lon are inherited from Map ABC. If they are needed for __init__ (i.e. no default in ABC),
@@ -73,13 +76,13 @@ class MapS3D(Map):
 class MapV(Map):
     """Vector magnetic anomaly map struct. Based on Julia's MapV."""
     info: str
+    alt: float    # map altitude [m] (scalar)
     # mapX, mapY, mapZ from Julia are x, y, z here.
     x: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=float)) # x-direction magnetic anomaly [nT] (2D)
     y: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=float)) # y-direction magnetic anomaly [nT] (2D)
     z: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=float)) # z-direction magnetic anomaly [nT] (2D)
     xx: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))  # nx longitude coordinates [rad] (1D)
     yy: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))  # ny latitude coordinates [rad] (1D)
-    alt: float    # map altitude [m] (scalar)
     mask: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=bool)) # ny x nx mask (2D boolean)
     # 'map' field from Map ABC is not directly used by components x,y,z.
     # lat, lon are inherited. 'alt' from Map ABC is shadowed by float alt here.

@@ -577,7 +577,8 @@ from . import map_utils
 from . import compensation
 from . import common_types
 from . import model_functions # For get_igrf if needed
-from .common_types import XYZ0, INS, MagV, MagScal # Assuming MagScal for scalar measurements
+from .magnav import XYZ0, INS, MagV # XYZ0, INS, MagV are in magnav.py
+# from .common_types import MagScal # Assuming MagScal for scalar measurements
 
 def setup_logging():
     """Sets up basic logging."""

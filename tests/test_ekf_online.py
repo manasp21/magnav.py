@@ -46,7 +46,7 @@ def ekf_online_data():
     # Julia: mapS = get_map(map_file,:map_data)
     # Assuming the Python get_map function can take a key for the .mat file
     mapS_obj = get_map(map_file, mat_key='map_data')
-    map_cache_obj = Map_Cache(maps=[mapS_obj])
+    map_cache_obj = MapCache(maps=[mapS_obj])
     # Julia: itp_mapS  = map_interpolate(mapS)
     itp_mapS_obj = map_interpolate(mapS_obj)
 

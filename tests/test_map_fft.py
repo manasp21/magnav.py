@@ -26,7 +26,7 @@ except ImportError:
 # Attempt to import data structures and helpers from magnavpy.magnav
 try:
     from magnavpy.magnav import MapS, MapS3D, MapV
-    from magnavpy.create_xyz import get_traj # Moved get_traj
+    from magnavpy.create_xyz import create_traj # Renamed from get_traj
     from magnavpy.map_utils import map_trim, get_map # Moved map_trim, get_map
     # Assuming emag2 and emm720 are available, e.g., as constants or accessible via get_map
     # If they are string identifiers for get_map:
@@ -57,7 +57,7 @@ def map_test_data():
     if not os.path.exists(traj_file):
         pytest.skip(f"Trajectory data file not found: {traj_file}")
     
-    traj = get_traj(traj_file, 'traj', silent=True)
+    traj = create_traj(traj_file, 'traj', silent=True)
 
     map_map = map_data.map
     nx = map_map.shape[1]

@@ -1,4 +1,5 @@
 import numpy as np
+from typing import List, Union # Add Union to this import
 
 # Assuming FILTres, EKF_RT, INS, Map_Cache, get_cached_map are defined/imported in .magnav
 # If get_cached_map is elsewhere, adjust import.

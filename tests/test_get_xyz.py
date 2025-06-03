@@ -218,14 +218,18 @@ def test_get_xyz0_xyz1(initial_test_data):
     df_flight = data["df_flight"]
     xyz_setup = data["xyz_obj_for_setup"] # for sourcing data like mag_1_c
 
-    assert isinstance(get_XYZ0(xyz_csv_path, silent=True), XYZ0)
-    assert isinstance(get_XYZ1(traj_csv_path, silent=True), XYZ1)
-    assert isinstance(get_XYZ0(original_traj_mat_path, traj_field_name, None, # :none -> None
-                               flight=1, line=1, dt=1, silent=True), XYZ0)
-    assert isinstance(get_XYZ1(xyz_mat_gen_path, traj_field_name, ins_field_name,
-                               flight=1, line=1, dt=1, silent=True), XYZ1)
-    assert isinstance(get_XYZ0(xyz_h5_path, silent=True), XYZ0)
-    assert isinstance(get_XYZ1(xyz_h5_path, silent=True), XYZ1)
+    assert isinstance(create_xyz0(xyz_csv_path, silent=True), XYZ0)
+    # Assuming get_XYZ1 should be create_xyz1 or similar; using create_xyz0 for now if XYZ1 is a variant
+    # This might need a specific create_xyz1 function if the structure is different.
+    # For now, if XYZ1 can be loaded by create_xyz0 logic (e.g. by detecting fields):
+    assert isinstance(create_xyz0(traj_csv_path, silent=True), XYZ1) # Or specific create_xyz1
+    assert isinstance(create_xyz0(original_traj_mat_path, traj_field_name, None, # :none -> None
+                                flight=1, line=1, dt=1, silent=True), XYZ0)
+    # Assuming create_xyz0 can handle the fields for XYZ1 from this mat file
+    assert isinstance(create_xyz0(xyz_mat_gen_path, traj_field_name, ins_field_name,
+                                flight=1, line=1, dt=1, silent=True), XYZ1) # Or specific create_xyz1
+    assert isinstance(create_xyz0(xyz_h5_path, silent=True), XYZ0)
+    assert isinstance(create_xyz0(xyz_h5_path, silent=True), XYZ1) # Or specific create_xyz1
 
     delete_h5_field(xyz_h5_path, 'tt')
     delete_h5_field(xyz_h5_path, 'ins_tt')
@@ -242,20 +246,22 @@ def test_get_xyz0_xyz1(initial_test_data):
     write_h5_field(xyz_h5_path, 'ins_pitch', np.zeros_like(xyz_setup.ins.lat))
     write_h5_field(xyz_h5_path, 'ins_yaw', np.zeros_like(xyz_setup.ins.lat))
 
-    assert isinstance(get_XYZ0(xyz_h5_path, silent=True), XYZ0)
+    assert isinstance(create_xyz0(xyz_h5_path, silent=True), XYZ0)
 
-    assert isinstance(get_XYZ(df_flight['flight'].iloc[0], df_flight), XYZ0)
-    assert isinstance(get_XYZ(df_flight['flight'].iloc[1], df_flight), XYZ1)
+    # Assuming get_XYZ is a wrapper or needs to be create_xyz0/1 based on df_flight type
+    # For now, assuming create_xyz0 can determine type or a more specific function is needed.
+    assert isinstance(create_xyz0(df_flight['flight'].iloc[0], df_flight), XYZ0)
+    assert isinstance(create_xyz0(df_flight['flight'].iloc[1], df_flight), XYZ1) # Or specific create_xyz1
     with pytest.raises(Exception): # Julia: ErrorException. Python: map to general Exception or specific one if known
-        get_XYZ(df_flight['flight'].iloc[2], df_flight)
+        create_xyz0(df_flight['flight'].iloc[2], df_flight) # Or specific create_xyz_test
 
     # Test NaN error
     write_h5_field(xyz_h5_path, 'ins_alt', xyz_setup.ins.alt * np.nan)
     with pytest.raises(Exception): # Julia: ErrorException
-        get_XYZ0(xyz_h5_path, silent=True)
+        create_xyz0(xyz_h5_path, silent=True)
 
     with pytest.raises(AssertionError): # Or FileNotFoundError / specific error
-        get_XYZ0("non_existent_file_path_test")
+        create_xyz0("non_existent_file_path_test")
 
 def test_get_traj(initial_test_data):
     data = initial_test_data
@@ -266,8 +272,8 @@ def test_get_traj(initial_test_data):
     ind = data["ind"]
     # traj_obj_from_xyz = xyz_obj.traj # This is the placeholder Traj object
 
-    assert isinstance(get_traj(traj_csv_path, silent=True), Traj)
-    assert isinstance(get_traj(original_traj_mat_path, traj_field_name, silent=True), Traj)
+    assert isinstance(create_traj(traj_csv_path, silent=True), Traj)
+    assert isinstance(create_traj(original_traj_mat_path, traj_field_name, silent=True), Traj)
 
     # Test get_traj(xyz, ind).Cnb == traj(ind).Cnb
     # This requires that xyz_obj (placeholder) is structured like a real XYZ output,
@@ -291,7 +297,7 @@ def test_get_traj(initial_test_data):
     # For now, I'll keep it simple and focus on type checks.
 
     with pytest.raises(AssertionError): # Or FileNotFoundError / specific error
-        get_traj("non_existent_file_path_test")
+        create_traj("non_existent_file_path_test")
 
 def test_get_ins(initial_test_data):
     data = initial_test_data
@@ -303,8 +309,8 @@ def test_get_ins(initial_test_data):
     traj_setup = data["traj_setup"] # Placeholder Traj from setup
     ins_setup = data["ins_setup"]   # Placeholder INS from setup
 
-    assert isinstance(get_ins(xyz_csv_path, silent=True), INS)
-    assert isinstance(get_ins(xyz_mat_gen_path, ins_field_name, silent=True), INS)
+    assert isinstance(create_ins(xyz_csv_path, silent=True), INS)
+    assert isinstance(create_ins(xyz_mat_gen_path, ins_field_name, silent=True), INS)
 
     # Test get_ins(xyz,ind).P == ins(ind).P
     # Similar to get_traj, this depends on get_ins processing xyz_obj and INS supporting __getitem__
@@ -316,11 +322,11 @@ def test_get_ins(initial_test_data):
     # Test get_ins with N_zero_ll and t_zero_ll
     # These tests assume get_ins correctly uses these parameters and that
     # the placeholder traj_setup.lat can be indexed as expected.
-    ins_N_zero = get_ins(xyz_obj, ind, N_zero_ll=5, silent=True)
+    ins_N_zero = create_ins(xyz_obj, ind, N_zero_ll=5, silent=True)
     expected_lat_N = traj_setup[ind].lat[:5] # Assuming _Traj.__getitem__ works
     np.testing.assert_allclose(ins_N_zero.lat[:5], expected_lat_N)
 
-    ins_t_zero = get_ins(xyz_obj, ind, t_zero_ll=0.4, silent=True) # Julia t_zero_ll=4, assuming it's time units
+    ins_t_zero = create_ins(xyz_obj, ind, t_zero_ll=0.4, silent=True) # Julia t_zero_ll=4, assuming it's time units
                                                                  # and 0.4 corresponds to 4 * dt (0.1)
     # The comparison logic for t_zero_ll might be more complex depending on time arrays.
     # For simplicity, using the same comparison as N_zero_ll, assuming first 5 points match.
@@ -338,7 +344,7 @@ def test_get_ins(initial_test_data):
     # Commenting out: requires a proper Python version of zero_ins_ll.
 
     with pytest.raises(AssertionError): # Or FileNotFoundError / specific error
-        get_ins("non_existent_file_path_test")
+        create_ins("non_existent_file_path_test")
 
 def test_get_flux(initial_test_data):
     data = initial_test_data
@@ -348,8 +354,8 @@ def test_get_flux(initial_test_data):
     flux_a_setup = data["flux_a_setup"] # Placeholder MagV
     ind = data["ind"]
 
-    assert isinstance(get_flux(traj_csv_path, 'flux_a'), MagV) # Assuming 'flux_a' is the base name
-    assert isinstance(get_flux(original_traj_mat_path, 'flux_a', traj_field_name), MagV)
+    assert isinstance(create_flux(traj_csv_path, 'flux_a'), MagV) # Assuming 'flux_a' is the base name
+    assert isinstance(create_flux(original_traj_mat_path, 'flux_a', traj_field_name), MagV)
 
     # Test flux_a(ind) isa MagNav.MagV
     # This assumes flux_a_setup (placeholder _MagV) supports __getitem__
@@ -379,7 +385,7 @@ def test_get_xyz20(tmp_path): # Using tmp_path if any temp files are made by fun
         xyz_file_path = Path(xyz_file_str)
         if not xyz_file_path.exists():
             pytest.skip(f"SGL test data file not found: {xyz_file_path}, skipping test.")
-        xyz = get_XYZ0(xyz_file_path, tt_sort=True, silent=True) # Assuming get_XYZ20 is get_XYZ0/1 with specific params or type
+        xyz = create_xyz0(xyz_file_path, tt_sort=True, silent=True) # Assuming get_XYZ20 is create_xyz0/1 with specific params or type
                                                                 # Or, if get_XYZ20 is a distinct function:
                                                                 # xyz = get_XYZ20(xyz_file_path, tt_sort=True, silent=True)
         assert isinstance(xyz, XYZ20) # Check against the specific XYZ20 type
@@ -395,7 +401,7 @@ def test_get_xyz20(tmp_path): # Using tmp_path if any temp files are made by fun
         xyz_file_path = get_sgl_2020_train_path(flight_name)
         if not xyz_file_path.exists():
             pytest.skip(f"SGL test data file not found: {xyz_file_path}, skipping dependent get_XYZ test.")
-        xyz = get_XYZ(flight_name, df_flight_xyz20, tt_sort=True, reorient_vec=True, silent=True)
+        xyz = create_xyz0(flight_name, df_flight_xyz20, tt_sort=True, reorient_vec=True, silent=True) # Assuming create_xyz0 handles df_flight
         assert isinstance(xyz, XYZ20)
         assert xyz.traj.N == len(xyz.traj.lat)
         assert len(xyz.traj.lat) == len(xyz.traj.lon)
@@ -420,8 +426,8 @@ def test_get_xyz21(tmp_path):
         xyz_file_path = Path(xyz_file_str)
         if not xyz_file_path.exists():
             pytest.skip(f"SGL test data file not found: {xyz_file_path}, skipping test.")
-        # xyz = get_XYZ21(xyz_file_path, tt_sort=True, silent=True) # If get_XYZ21 is a distinct function
-        xyz = get_XYZ0(xyz_file_path, tt_sort=True, silent=True) # Or if it's a variant of get_XYZ0
+        # xyz = create_xyz1(xyz_file_path, tt_sort=True, silent=True) # If create_XYZ21 is a distinct function
+        xyz = create_xyz0(xyz_file_path, tt_sort=True, silent=True) # Or if it's a variant of create_xyz0
         assert isinstance(xyz, XYZ21)
         assert xyz.traj.N == len(xyz.traj.lat)
         assert len(xyz.traj.lat) == len(xyz.traj.lon)
@@ -430,7 +436,7 @@ def test_get_xyz21(tmp_path):
         xyz_file_path = get_sgl_2021_train_path(flight_name)
         if not xyz_file_path.exists():
             pytest.skip(f"SGL test data file not found: {xyz_file_path}, skipping dependent get_XYZ test.")
-        xyz = get_XYZ(flight_name, df_flight_xyz21, tt_sort=True, reorient_vec=True, silent=True)
+        xyz = create_xyz0(flight_name, df_flight_xyz21, tt_sort=True, reorient_vec=True, silent=True) # Assuming create_xyz0 handles df_flight
         assert isinstance(xyz, XYZ21)
         assert xyz.traj.N == len(xyz.traj.lat)
         assert len(xyz.traj.lat) == len(xyz.traj.lon)

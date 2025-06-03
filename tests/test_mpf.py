@@ -12,7 +12,7 @@ from scipy.io import loadmat
 # 4. Data shapes (e.g., Cnb as (3,3,N)) are handled consistently by Python code.
 
 try:
-    from magnavpy.magnav import INS, MapS, Map_Cache
+    from magnavpy.magnav import INS, MapS, MapCache
     # Attempt to import get_years if it exists in a known location
     # from magnavpy.utils import get_years # Example path
 except ImportError:
@@ -35,7 +35,7 @@ except ImportError:
     print("Warning: magnavpy.mpf components not found, using placeholders.")
 
 try:
-    from magnavpy.map_functions import map_params, map_interpolate
+    from magnavpy.map_utils import map_params, map_interpolate
 except ImportError:
     def map_params(*args, **kwargs): return None, np.array([]) # return dummy mask
     def map_interpolate(*args, **kwargs): pass

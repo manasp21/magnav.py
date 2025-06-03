@@ -5,7 +5,7 @@ from pathlib import Path
 
 # Assuming dcm functions are in magnavpy.dcm
 # Adjust the import path if your project structure is different
-from magnavpy.dcm_util import euler2dcm, dcm2euler
+from magnavpy.dcm_util import euler2dcm, dcm2euler, correct_Cnb
 
 # Determine the correct relative path to the .mat file
 # The test script is in MagNavPy/tests/
