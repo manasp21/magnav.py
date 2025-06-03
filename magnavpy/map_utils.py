@@ -1115,7 +1115,28 @@ def get_map(map_name: str, variable_name: str = "map_data", *args, **kwargs) -> 
     if map_name.lower() == "namad":
         print(f"Placeholder: get_map called for NAMAD. Returning MAP_S_NULL. Load actual NAMAD data separately.")
     elif map_name.lower() == "emm720":
-        print(f"Placeholder: get_map called for EMM720. Returning MAP_S_NULL. Load actual EMM720 data separately.")
+        if kwargs.get('map_type') == "vector":
+            print(f"Placeholder: get_map called for EMM720 with map_type='vector'. Returning DUMMY MapV. Load actual EMM720 data separately.")
+            # Create a minimal valid MapV object to prevent ValueError in create_flux
+            # Ensure xx and yy are 1D and have at least one element.
+            # Ensure x, y, z components match dimensions of xx, yy.
+            dummy_xx = np.array([0.0, 1.0]) # Min 2 points for some interpolators if not careful
+            dummy_yy = np.array([0.0, 1.0])
+            dummy_data_shape = (dummy_yy.size, dummy_xx.size)
+            return MapV(info="Dummy EMM720 Vector Map",
+                        alt=0.0,
+                        x=np.zeros(dummy_data_shape),
+                        y=np.zeros(dummy_data_shape),
+                        z=np.zeros(dummy_data_shape),
+                        xx=dummy_xx,
+                        yy=dummy_yy,
+                        mask=np.ones(dummy_data_shape, dtype=bool),
+                        lat=np.array([]), # Placeholder
+                        lon=np.array([])  # Placeholder
+                        )
+        else:
+            print(f"Placeholder: get_map called for EMM720 (scalar). Returning MAP_S_NULL. Load actual EMM720 data separately.")
+            return MAP_S_NULL # Original behavior for scalar
     else:
         print(f"Placeholder: get_map called for '{map_name}'. File not found or not a .mat, or unknown ID. Returning MAP_S_NULL.")
     return MAP_S_NULL
