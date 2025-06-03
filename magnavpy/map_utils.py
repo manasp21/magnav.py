@@ -1049,7 +1049,10 @@ def map_combine(map1: MapS, map2: MapS, method: str = "average_overlap", copy:bo
 
 
 # Functions from the original map_utils.py that are being kept or slightly adapted
-def get_map(map_name: str, variable_name: str = "map_data", *args, **kwargs) -> Union[MapS, MapV, None]:
+def get_map(map_name: str, variable_name: str = "map_data", *args, map_type: Optional[str] = None, **kwargs) -> Union[MapS, MapV, None]:
+    print(f"DEBUG_MAP_UTILS_GET_MAP: ID of this get_map: {id(get_map)}") # New print
+    print(f"IMMEDIATE_GET_MAP_ENTRY: map_name='{map_name}', var_name='{variable_name}', args={args}, map_type_param='{map_type}', kwargs={kwargs}")
+    print(f"DEBUG_GET_MAP_ENTRY: map_name='{map_name}', variable_name='{variable_name}', map_type='{map_type}', args={args}, kwargs={kwargs}")
     """
     Retrieves a specific magnetic map, attempting to load from a .mat file if map_name is a path.
     If map_name is a known ID (e.g., "namad", "emm720"), it returns a placeholder.
@@ -1114,9 +1117,28 @@ def get_map(map_name: str, variable_name: str = "map_data", *args, **kwargs) -> 
     # Fallback for known map IDs or if file not found/not .mat
     if map_name.lower() == "namad":
         print(f"Placeholder: get_map called for NAMAD. Returning MAP_S_NULL. Load actual NAMAD data separately.")
-    elif map_name.lower() == "emm720":
-        if kwargs.get('map_type') == "vector":
-            print(f"Placeholder: get_map called for EMM720 with map_type='vector'. Returning DUMMY MapV. Load actual EMM720 data separately.")
+    elif map_name.lower() == "emm720" or "emm720" in map_name.lower():
+        with open("debug_get_map.txt", "a") as f_debug:
+            f_debug.write(f"--- New get_map emm720 entry ---\n")
+            f_debug.write(f"EMM720_BLOCK_ENTERED: map_name='{map_name}'\n")
+            f_debug.write(f"KWARGS: {kwargs}\n")
+            # Using direct map_type parameter now for f_debug
+            f_debug.write(f"FDEBUG_MAP_TYPE_PARAM_VAL: {map_type}\n")
+            f_debug.write(f"FDEBUG_TYPE_MAP_TYPE_PARAM: {type(map_type)}\n")
+            is_vector_robust_check_fdebug = map_type and map_type.lower() == 'vector'
+            f_debug.write(f"FDEBUG_IS_VECTOR_ROBUST_CHECK_RESULT: {is_vector_robust_check_fdebug}\n")
+
+        print(f"DEBUG: In get_map emm720 block. map_name='{map_name}'")
+        print(f"DEBUG: kwargs received: {kwargs}")
+        # Using direct map_type parameter now for print
+        print(f"DEBUG: map_type parameter value: {map_type}")
+        print(f"DEBUG: type of map_type parameter: {type(map_type)}")
+        print(f"DEBUG: Condition (map_type and map_type.lower() == 'vector') is: {map_type and map_type.lower() == 'vector'}")
+        
+        if map_type and map_type.lower() == "vector": # Use the direct parameter, robustly
+            with open("debug_get_map.txt", "a") as f_debug:
+                f_debug.write("EMM720_BLOCK_VECTOR_PATH_TAKEN\n")
+            print(f"Placeholder: get_map called for EMM720 (or similar) with map_type='vector'. Returning DUMMY MapV. Load actual EMM720 data separately.")
             # Create a minimal valid MapV object to prevent ValueError in create_flux
             # Ensure xx and yy are 1D and have at least one element.
             # Ensure x, y, z components match dimensions of xx, yy.
@@ -1134,12 +1156,14 @@ def get_map(map_name: str, variable_name: str = "map_data", *args, **kwargs) -> 
                         lat=np.array([]), # Placeholder
                         lon=np.array([])  # Placeholder
                         )
-        else:
-            print(f"Placeholder: get_map called for EMM720 (scalar). Returning MAP_S_NULL. Load actual EMM720 data separately.")
+        else: # Corresponds to: if kwargs.get('map_type') == "vector"
+            with open("debug_get_map.txt", "a") as f_debug:
+                f_debug.write("EMM720_BLOCK_SCALAR_PATH_TAKEN\n")
+            print(f"Placeholder: get_map called for EMM720 (scalar, or similar). Returning MAP_S_NULL. Load actual EMM720 data separately.")
             return MAP_S_NULL # Original behavior for scalar
-    else:
+    else: # Corresponds to: if map_name.lower() == "namad": / elif map_name.lower() == "emm720":
         print(f"Placeholder: get_map called for '{map_name}'. File not found or not a .mat, or unknown ID. Returning MAP_S_NULL.")
-    return MAP_S_NULL
+        return MAP_S_NULL
 
 # Placeholders for specific map loaders mentioned in original map_utils or task
 def ottawa_area_maps(map_name: str = "", *args, **kwargs) -> Optional[MapS]:

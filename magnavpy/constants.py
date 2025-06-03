@@ -64,12 +64,17 @@ NAMAD_H5_FILE = os.path.join(_DATA_DIR_NAME, "NAMAD_305", "NAMAD_305.h5")
 SILENT_DEBUG = True         # Internal flag for verbose print outs
 
 # Complex Constants (line 395 in MagNav.jl)
+# Default Map IDs
+DEFAULT_VECTOR_MAP_ID = "default_vector_map_id_placeholder"
+DEFAULT_SCALAR_MAP_ID = "default_scalar_map_id_placeholder"
 # Null scalar magnetic anomaly map (MapS instance)
 # Julia: const mapS_null = MapS("Null map",zeros(1,1),[0.0],[0.0],0.0,trues(1,1))
 # Requires numpy and a MapS class definition (actual or placeholder).
 MAP_S_NULL = MapS(
     info="Null map",
-    map_data=np.zeros((1, 1), dtype=float),  # Julia zeros(1,1) -> 1x1 Matrix{Float64}
+    lat=np.array([], dtype=float),
+    lon=np.array([], dtype=float),
+    map=np.zeros((1, 1), dtype=float),  # Changed from map_data, Julia zeros(1,1) -> 1x1 Matrix{Float64}
     xx=np.array([0.0], dtype=float),         # Julia [0.0] -> Vector{Float64}
     yy=np.array([0.0], dtype=float),         # Julia [0.0] -> Vector{Float64}
     alt=0.0,                                 # Julia 0.0 -> Float64

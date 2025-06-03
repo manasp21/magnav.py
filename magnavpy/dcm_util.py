@@ -126,6 +126,28 @@ def dcm2euler(Cnb: np.ndarray, order: str = 'zyx') -> Tuple[Union[float, np.ndar
             angle1_out[i] = roll_extracted 
             angle2_out[i] = pitch      
             angle3_out[i] = yaw_extracted 
+        elif order == 'body2nav': # Roll, Pitch, Yaw from Cnb = Rz(yaw)Ry(pitch)Rx(roll)
+            # Calculations are the same as 'zyx' for yaw_calc, pitch_calc, roll_calc
+            # but the output order is (roll, pitch, yaw)
+            pitch_val = -C[2, 0]
+            if pitch_val >= 1.0:
+                current_pitch = math.pi / 2.0
+            elif pitch_val <= -1.0:
+                current_pitch = -math.pi / 2.0
+            else:
+                current_pitch = math.asin(pitch_val)
+
+            if abs(abs(current_pitch) - math.pi / 2.0) < 1e-9: # Gimbal lock
+                # Following 'zyx' gimbal lock convention:
+                current_roll = 0.0
+                current_yaw = math.atan2(C[0, 1], C[1, 1])
+            else:
+                current_roll = math.atan2(C[2, 1], C[2, 2])
+                current_yaw = math.atan2(C[1, 0], C[0, 0])
+
+            angle1_out[i] = current_roll  # roll
+            angle2_out[i] = current_pitch # pitch
+            angle3_out[i] = current_yaw   # yaw
         else:
             raise ValueError(f"Unsupported Euler angle order for dcm2euler: {order}")
 
