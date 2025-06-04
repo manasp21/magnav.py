@@ -167,17 +167,8 @@ def ekf(
         Phi = get_Phi(nx, lat_t, vn_t, ve_t, vd_t, fn_t, fe_t, fd_t, _Cnb_t_for_phi,
                       baro_tau, acc_tau, gyro_tau, fogm_tau, dt)
 
-       # Debugging for Error 3 (get_h call)
-       print(f"DEBUG_ERROR_3_GET_H: type(current_itp_mapS_for_step): {type(current_itp_mapS_for_step)}")
-       if hasattr(current_itp_mapS_for_step, '__class__'):
-           print(f"DEBUG_ERROR_3_GET_H: current_itp_mapS_for_step.__class__.__name__: {current_itp_mapS_for_step.__class__.__name__}")
-
-       if not isinstance(current_itp_mapS_for_step, (MapS, MapS3D)):
-           # This check assumes get_h expects MapS or MapS3D directly.
-           # If current_itp_mapS_for_step is an interpolator (callable) or None, this will raise.
-           raise TypeError(f'map_obj for get_h must be MapS or MapS3D, but got {type(current_itp_mapS_for_step)}')
-       h_pred = get_h(current_itp_mapS_for_step, x, lat_t, lon_t, alt_t,
-                      date=date, core=core, der_map=current_der_mapS_for_step, map_alt=map_alt)
+        h_pred = get_h(current_itp_mapS_for_step, x, lat_t, lon_t, alt_t,
+                        date=date, core=core, der_map=current_der_mapS_for_step, map_alt=map_alt)
 
         if isinstance(h_pred, (float, int, np.number)): h_pred = np.array([h_pred])
         if h_pred.ndim == 1: h_pred = h_pred.reshape(-1,1)
@@ -186,17 +177,9 @@ def ekf(
 
         r_out[:, t] = resid.flatten()
 
-       # Debugging for Error 3 (get_H call)
-       print(f"DEBUG_ERROR_3_GET_H_CALL: type(current_itp_mapS_for_step): {type(current_itp_mapS_for_step)}")
-       if hasattr(current_itp_mapS_for_step, '__class__'):
-           print(f"DEBUG_ERROR_3_GET_H_CALL: current_itp_mapS_for_step.__class__.__name__: {current_itp_mapS_for_step.__class__.__name__}")
-
-       if not isinstance(current_itp_mapS_for_step, (MapS, MapS3D)):
-           # This check assumes get_H expects MapS or MapS3D directly.
-           raise TypeError(f'map_obj for get_H must be MapS or MapS3D, but got {type(current_itp_mapS_for_step)}')
-       H_m = get_H(current_itp_mapS_for_step, x, lat_t, lon_t, alt_t,
-                   date=date, core=core) # Expected (nx,) or (1,nx)
-       if H_m.ndim == 1: H_m = H_m.reshape(1, -1) # Ensure (1,nx)
+        H_m = get_H(current_itp_mapS_for_step, x, lat_t, lon_t, alt_t,
+                    date=date, core=core) # Expected (nx,) or (1,nx)
+        if H_m.ndim == 1: H_m = H_m.reshape(1, -1) # Ensure (1,nx)
         
         # If ny > 1, H_m would be tiled. For ny=1, H_m is (1,nx)
         # H_val = np.tile(H_m, (ny, 1)) # This is general

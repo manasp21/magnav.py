@@ -66,7 +66,9 @@ def create_dcm_from_vel(vn: np.ndarray, ve: np.ndarray, dt: float, order: str) -
     """Creates an array of DCMs from velocity (placeholder)."""
     # Placeholder implementation from fallback block.
     # TODO: Implement actual DCM creation logic.
-    return np.array([np.eye(3)] * len(vn))
+    N_samples = len(vn)
+    # Stack identity matrices along the third axis
+    return np.stack([np.eye(3)] * N_samples, axis=-1) # Returns (3, 3, N)
 
 def get_tolles_lawson_aircraft_field_vector(coeffs, terms, Bt_scale,
                                             flux_c, norm_flux_a, norm_flux_b, norm_flux_c, dcm_data, igrf_bf,

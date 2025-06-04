@@ -159,7 +159,11 @@ def test_map_params():
          pytest.skip("Skipping map_params test for mapV due to missing data (GXF/EMM720).")
     # Returns Tuple{BitMatrix,BitMatrix,Int,Int}
     # Python: Tuple[np.ndarray(bool), np.ndarray(bool), int, int]
+    print(f"DEBUG_ERROR_5: mapS.map type: {type(mapS.map)}, shape: {getattr(mapS.map, 'shape', 'N/A')}")
+    print(f"DEBUG_ERROR_5: mapS.xx type: {type(mapS.xx)}, shape: {getattr(mapS.xx, 'shape', 'N/A')}")
+    print(f"DEBUG_ERROR_5: mapS.yy type: {type(mapS.yy)}, shape: {getattr(mapS.yy, 'shape', 'N/A')}")
     params_s = map_params(mapS.map, mapS.xx, mapS.yy) # Pass map_data, xx, yy
+    print(f"DEBUG_ERROR_5: params_s type: {type(params_s)}, len: {len(params_s) if isinstance(params_s, tuple) else 'N/A'}")
     assert isinstance(params_s, tuple) and len(params_s) == 4
     assert isinstance(params_s[0], np.ndarray) and params_s[0].dtype == bool
     assert isinstance(params_s[1], np.ndarray) and params_s[1].dtype == bool
@@ -167,7 +171,11 @@ def test_map_params():
     assert isinstance(params_s[3], int)
     
     # For MapV, map_params would typically operate on one component, e.g., mapX
+    print(f"DEBUG_ERROR_5: mapV.mapX type: {type(mapV.mapX)}, shape: {getattr(mapV.mapX, 'shape', 'N/A')}")
+    print(f"DEBUG_ERROR_5: mapV.xx type: {type(mapV.xx)}, shape: {getattr(mapV.xx, 'shape', 'N/A')}")
+    print(f"DEBUG_ERROR_5: mapV.yy type: {type(mapV.yy)}, shape: {getattr(mapV.yy, 'shape', 'N/A')}")
     params_v = map_params(mapV.mapX, mapV.xx, mapV.yy) # Pass map_data, xx, yy
+    print(f"DEBUG_ERROR_5: params_v type: {type(params_v)}, len: {len(params_v) if isinstance(params_v, tuple) else 'N/A'}")
     assert isinstance(params_v, tuple) and len(params_v) == 4
     # ... similar checks for params_v
     assert isinstance(params_v[0], np.ndarray) and params_v[0].dtype == bool

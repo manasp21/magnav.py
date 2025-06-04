@@ -267,15 +267,26 @@ def mpf(lat: np.ndarray, lon: np.ndarray, alt: np.ndarray,
             diag_M[diag_M <= 0] = np.finfo(dtype).eps
             noise_nl_prop = np.sqrt(diag_M).reshape(-1,1) * np.random.randn(nxn_nonlinear_states, np_particles).astype(dtype)
         
-        xn_particles_propagated = An_n @ xn_particles + An_l @ xl_particles_temp_for_prop + noise_nl_prop
+        print(f"DEBUG_ERROR_7: t={t}, An_n.shape={An_n.shape}, xn_particles.shape={xn_particles.shape}, An_l.shape={An_l.shape}, xl_particles_temp_for_prop.shape={xl_particles_temp_for_prop.shape}, noise_nl_prop.shape={noise_nl_prop.shape}")
+        term1 = An_n @ xn_particles
+        term2 = An_l @ xl_particles_temp_for_prop
+        print(f"DEBUG_ERROR_7: t={t}, term1.shape={term1.shape}, term2.shape={term2.shape}")
+        xn_particles_propagated = term1 + term2 + noise_nl_prop
+        print(f"DEBUG_ERROR_7: t={t}, xn_particles_propagated.shape={xn_particles_propagated.shape}, xn_particles_propagated.dtype={xn_particles_propagated.dtype}")
         
         if nxl_linear_states > 0:
             z_nl_diff = noise_nl_prop # As per Julia: z = xn_propagated - (An_n @ xn_particles_current + An_l @ xl_particles_temp_for_prop)
-            xl_particles = Al_n @ xn_particles + Al_l @ xl_particles_temp_for_prop + \
-                           L_prop_gain @ (z_nl_diff - (An_l @ xl_particles_temp_for_prop))
+            print(f"DEBUG_ERROR_7: t={t}, Al_n.shape={Al_n.shape}, Al_l.shape={Al_l.shape}, L_prop_gain.shape={L_prop_gain.shape}, z_nl_diff.shape={z_nl_diff.shape}")
+            term_xl1 = Al_n @ xn_particles
+            term_xl2 = Al_l @ xl_particles_temp_for_prop
+            term_xl3 = L_prop_gain @ (z_nl_diff - (An_l @ xl_particles_temp_for_prop))
+            print(f"DEBUG_ERROR_7: t={t}, term_xl1.shape={term_xl1.shape}, term_xl2.shape={term_xl2.shape}, term_xl3.shape={term_xl3.shape}")
+            xl_particles = term_xl1 + term_xl2 + term_xl3
+            print(f"DEBUG_ERROR_7: t={t}, xl_particles.shape={xl_particles.shape}, xl_particles.dtype={xl_particles.dtype}")
         else: # No linear states to propagate via KF mechanism
             pass # xl_particles remains empty or zero
 
+        print(f"DEBUG_ERROR_7: t={t}, Assigning xn_particles_propagated (shape {xn_particles_propagated.shape}) to xn_particles (shape {xn_particles.shape})")
         xn_particles = xn_particles_propagated
 
     converge_status = True

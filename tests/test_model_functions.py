@@ -117,6 +117,8 @@ fogm_data_expected = np.array([
 mapS_obj = MapS(map_info, map_map, map_xx, map_yy, map_alt, map_mask)
 
 # Interpolate map
+print(f"DEBUG_ERROR_6_TEST: map_interpolate.__module__: {map_interpolate.__module__}") # For Error 6
+print(f"DEBUG_ERROR_6_TEST: map_interpolate.__qualname__: {map_interpolate.__qualname__}") # For Error 6
 itp_mapS, der_mapS = map_interpolate(mapS_obj, 'linear', return_vert_deriv=True)
 
 map_up_alt = np.array([mapS_obj.alt, mapS_obj.alt + 5.0]) # Ensure float for calculations

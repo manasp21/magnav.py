@@ -78,7 +78,7 @@ else:
 
 # Calculate Cnb_estimate_1 and Cnb_estimate
 # Ensure tilt_err_jl[:,0] is correctly shaped for correct_Cnb
-cnb_estimate_1_py = correct_Cnb(cnb_1_py, tilt_err_jl[:, 0])
+cnb_estimate_1_py = correct_Cnb(cnb_1_py, tilt_err_jl[0, :])
 
 # For cnb_estimate_py, correct_Cnb needs to handle a 3D Cnb and 2D tilt_err
 # or be called in a loop.

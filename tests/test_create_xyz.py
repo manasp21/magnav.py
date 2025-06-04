@@ -96,9 +96,9 @@ fe_traj = traj_data_mat["fe"].ravel()
 fd_traj = traj_data_mat["fd"].ravel()
 Cnb_traj = traj_data_mat["Cnb"]
 mag_1_c_traj = traj_data_mat["mag_1_c"].ravel()
-flux_a_x_traj = traj_data_mat["flux_a_x"].ravel()
-flux_a_y_traj = traj_data_mat["flux_a_y"].ravel()
-flux_a_z_traj = traj_data_mat["flux_a_z"].ravel()
+flux_a_x_traj = traj_data_mat["flux_a_x"][0][0].ravel().astype(float)
+flux_a_y_traj = traj_data_mat["flux_a_y"][0][0].ravel().astype(float)
+flux_a_z_traj = traj_data_mat["flux_a_z"][0][0].ravel().astype(float)
 N_traj = len(lat_traj)
 
 # Corruption parameters

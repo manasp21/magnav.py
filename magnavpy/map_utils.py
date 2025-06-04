@@ -225,6 +225,7 @@ def map_interpolate(map_obj: Union[MapS, MapS3D],
             A tuple (interpolator, derivative_interpolator).
             Currently, derivative_interpolator will be None.
     """
+    print(f"DEBUG_ERROR_6: map_interpolate from map_utils.py called. map_obj type: {type(map_obj)}, return_vert_deriv: {return_vert_deriv}") # For Error 6
     if not (hasattr(map_obj, 'yy') and hasattr(map_obj, 'xx') and hasattr(map_obj, 'map')):
         raise ValueError("Map object is missing 'yy', 'xx', or 'map' attributes.")
     if map_obj.map is None or map_obj.yy is None or map_obj.xx is None:

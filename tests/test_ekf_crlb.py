@@ -98,6 +98,7 @@ ins  = INS(N, dt, tt, ins_lat, ins_lon, ins_alt, ins_vn, ins_ve, ins_vd,
 # Ensure alt is a scalar float for MapS
 map_alt_scalar = map_alt_data.item() if map_alt_data.size == 1 else float(np.mean(map_alt_data))
 mapS = MapS(info=map_info, lat=np.array([]), lon=np.array([]), alt=map_alt_scalar, map=map_map, xx=map_xx, yy=map_yy)
+print(f"DEBUG_ERROR_3_TEST: type(mapS) after instantiation: {type(mapS)}") # For Error 3
 map_cache = MapCache(maps=[mapS]) # Assuming MapCache class and constructor
 
 # Interpolate map
