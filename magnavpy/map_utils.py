@@ -156,7 +156,8 @@ def map_params(map_data: np.ndarray, map_xx: Optional[np.ndarray] = None, map_yy
     if map_yy is not None and ny != map_yy.size:
         raise ValueError(f"yy map dimension ({map_yy.size}) inconsistent with map_data y-dim ({ny})")
             
-    return ind0, ind1, nx, ny
+    # Ensure a 4-tuple is always returned
+    return (ind0, ind1, int(nx), int(ny))
 
 def map_lims(map_obj: Union[MapS, MapV, MapS3D, MapSd], buffer_percent: float = 0.0) -> Tuple[Tuple[float, float], Tuple[float, float]]:
     """
@@ -204,7 +205,8 @@ def map_shape(map_obj: Union[MapS, MapV, MapS3D, MapSd]) -> Optional[Tuple[int, 
 def map_interpolate(map_obj: Union[MapS, MapS3D],
                     method: str = "linear",
                     bounds_error: bool = False,
-                    fill_value: float = np.nan) -> Optional[Callable]:
+                    fill_value: float = np.nan,
+                    return_vert_deriv: bool = False) -> Union[Optional[Callable], Tuple[Optional[Callable], Optional[Callable]]]:
     """
     Creates and returns an interpolator function for a MapS or MapS3D object.
     For MapS3D, interpolates through the altitude dimension as well if alt_query is provided to the interpolator.
@@ -216,13 +218,19 @@ def map_interpolate(map_obj: Union[MapS, MapS3D],
         fill_value: Value for out-of-bounds points.
 
     Returns:
-        A callable interpolator function, or None if interpolation setup fails.
-        The interpolator expects points as (lat, lon) for MapS, or (lat, lon, alt) for MapS3D.
+        If return_vert_deriv is False:
+            A callable interpolator function, or None if interpolation setup fails.
+            The interpolator expects points as (lat, lon) for MapS, or (lat, lon, alt) for MapS3D.
+        If return_vert_deriv is True:
+            A tuple (interpolator, derivative_interpolator).
+            Currently, derivative_interpolator will be None.
     """
     if not (hasattr(map_obj, 'yy') and hasattr(map_obj, 'xx') and hasattr(map_obj, 'map')):
         raise ValueError("Map object is missing 'yy', 'xx', or 'map' attributes.")
     if map_obj.map is None or map_obj.yy is None or map_obj.xx is None:
         print(f"Warning: Map '{map_obj.info}' has None for map, yy, or xx. Cannot create interpolator.")
+        if return_vert_deriv:
+            return None, None
         return None
 
     map_grid_lat = np.asarray(map_obj.yy).squeeze()
@@ -234,6 +242,8 @@ def map_interpolate(map_obj: Union[MapS, MapS3D],
 
     if map_grid_lat.size == 0 or map_grid_lon.size == 0 or map_values.size == 0:
         print(f"Warning: Map '{map_obj.info}' has empty coordinates or map data. Cannot create interpolator.")
+        if return_vert_deriv:
+            return None, None
         return None
 
     if map_grid_lat.ndim != 1 or map_grid_lon.ndim != 1:
@@ -267,6 +277,10 @@ def map_interpolate(map_obj: Union[MapS, MapS3D],
                 # interpn expects xi as a tuple of arrays for each dimension if method is not 'linear' or 'nearest' for grid.
                 # Or, if xi is (M, ndim), it's treated as M points.
                 return interpn(points_coords, map_values, query_points_array, method="cubic", bounds_error=bounds_error, fill_value=fill_value)
+            
+            if return_vert_deriv:
+                # TODO: Implement actual vertical derivative calculation and its interpolator
+                return interpn_callable, None
             return interpn_callable
         else:
             interpolator = RegularGridInterpolator(
@@ -276,9 +290,14 @@ def map_interpolate(map_obj: Union[MapS, MapS3D],
                 bounds_error=bounds_error,
                 fill_value=fill_value
             )
+            if return_vert_deriv:
+                # TODO: Implement actual vertical derivative calculation and its interpolator
+                return interpolator, None
             return interpolator
     except ValueError as e:
         print(f"Error creating interpolator for map '{map_obj.info}': {e}. Check if coordinates are sorted and unique.")
+        if return_vert_deriv:
+            return None, None
         return None
 
 

@@ -88,7 +88,22 @@ vd = traj_data_dict["vd"].flatten()[0]
 fn = traj_data_dict["fn"].flatten()[0]
 fe = traj_data_dict["fe"].flatten()[0]
 fd = traj_data_dict["fd"].flatten()[0]
-Cnb = traj_data_dict["Cnb"][:,:,0] # Julia Cnb[:,:,1] -> Python Cnb[:,:,0]
+
+# Robustly load Cnb to ensure it's a 2D (3,3) array
+raw_cnb_data = traj_data_dict["Cnb"]
+actual_cnb_array = raw_cnb_data
+# If raw_cnb_data is 0-D and contains the actual array (due to squeeze_me on a scalar cell holding the matrix)
+if raw_cnb_data.ndim == 0 and hasattr(raw_cnb_data, 'item') and isinstance(raw_cnb_data.item(), np.ndarray):
+    actual_cnb_array = raw_cnb_data.item()
+
+if actual_cnb_array.ndim == 3:
+    # If it's 3D (e.g., 3x3xN), take the first slice
+    Cnb = actual_cnb_array[:,:,0]
+elif actual_cnb_array.ndim == 2 and actual_cnb_array.shape == (3,3):
+    # If it's already 2D (3x3)
+    Cnb = actual_cnb_array
+else:
+    raise ValueError(f"Unexpected shape or type for Cnb data after loading: {actual_cnb_array.shape}, type: {type(actual_cnb_array)}")
 
 fogm_data_expected = np.array([
     -0.00573724460026025,

@@ -173,6 +173,7 @@ def euler2dcm(angle1: Union[float, np.ndarray],
                Supported orders:
                - 'zyx': angle1=yaw, angle2=pitch, angle3=roll. DCM = Rz(yaw)Ry(pitch)Rx(roll).
                - 'xyz': angle1=roll, angle2=pitch, angle3=yaw. DCM = Rx(roll)Ry(pitch)Rz(yaw).
+               - 'body2nav': angle1=roll, angle2=pitch, angle3=yaw. Produces Cnb. Equivalent to Rz(yaw)Ry(pitch)Rx(roll).
                (Other sequences like 'xzy', 'yxz', 'yzx', 'zxy' can be added if needed).
 
     Returns:
@@ -244,6 +245,27 @@ def euler2dcm(angle1: Union[float, np.ndarray],
                 [0,                 0,                1]
             ])
             C_out[:, :, i] = Rx @ Ry @ Rz
+        elif order == 'body2nav': # angle1=roll, angle2=pitch, angle3=yaw. Cnb = Rz(yaw)Ry(pitch)Rx(roll)
+            # This means: yaw_val = a3_val, pitch_val = a2_val, roll_val = a1_val
+            # Rz uses yaw_val (a3_val)
+            # Ry uses pitch_val (a2_val)
+            # Rx uses roll_val (a1_val)
+            Rz = np.array([
+                [math.cos(a3_val), -math.sin(a3_val), 0], # yaw is angle3
+                [math.sin(a3_val),  math.cos(a3_val), 0],
+                [0,                 0,                1]
+            ])
+            Ry = np.array([
+                [math.cos(a2_val),  0, math.sin(a2_val)], # pitch is angle2
+                [0,                 1, 0               ],
+                [-math.sin(a2_val), 0, math.cos(a2_val)]
+            ])
+            Rx = np.array([
+                [1, 0,                 0               ], # roll is angle1
+                [0, math.cos(a1_val), -math.sin(a1_val)],
+                [0, math.sin(a1_val),  math.cos(a1_val)]
+            ])
+            C_out[:, :, i] = Rz @ Ry @ Rx
         else:
             raise ValueError(f"Unsupported Euler angle order for euler2dcm: {order}")
 
@@ -272,6 +294,14 @@ def correct_Cnb(Cnb: np.ndarray, tilt_err: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: 3x3xN (or 3x3) "in error" Direction Cosine Matrix.
     """
+    # Debugging for Error 2
+    print(f"DEBUG_ERROR_2: type(tilt_err): {type(tilt_err)}")
+    if hasattr(tilt_err, 'shape'):
+        print(f"DEBUG_ERROR_2: tilt_err.shape: {tilt_err.shape}")
+    elif hasattr(tilt_err, '__len__'):
+        print(f"DEBUG_ERROR_2: len(tilt_err): {len(tilt_err)}")
+    print(f"DEBUG_ERROR_2: tilt_err: {tilt_err}")
+
     if Cnb.ndim == 2:
         Cnb_proc = Cnb[:, :, np.newaxis]
     elif Cnb.ndim == 3:
@@ -279,19 +309,38 @@ def correct_Cnb(Cnb: np.ndarray, tilt_err: np.ndarray) -> np.ndarray:
     else:
         raise ValueError("Input Cnb DCM must be 3x3 or 3x3xN")
 
-    # Process tilt_err to be 3xN
-    if tilt_err.ndim == 1:
-        if tilt_err.shape == (3,):
-            tilt_err_proc = tilt_err[:, np.newaxis]
+    # Process tilt_err to be 3xN, ensuring it's a numpy array of float for subsequent operations.
+    if tilt_err is None:
+        raise ValueError("tilt_err cannot be None.")
+    
+    if isinstance(tilt_err, (list, tuple)):
+        tilt_err_np = np.array(tilt_err, dtype=float)
+        if tilt_err_np.ndim == 0: # Handles single number case if list was e.g. [0.1]
+             raise ValueError(f"tilt_err sequence must represent a 3-element vector or 3xN array, got scalar-like {tilt_err}")
+        if tilt_err_np.ndim == 1:
+            if tilt_err_np.shape != (3,):
+                raise ValueError(f"1D tilt_err sequence must have 3 elements, got shape {tilt_err_np.shape} from {tilt_err}")
+            tilt_err_proc = tilt_err_np.reshape(3, 1)
+        elif tilt_err_np.ndim == 2:
+            if tilt_err_np.shape[0] != 3:
+                 raise ValueError(f"2D tilt_err sequence must have 3 rows (shape 3xN), got shape {tilt_err_np.shape} from {tilt_err}")
+            tilt_err_proc = tilt_err_np
         else:
-            raise ValueError("1D tilt_err must have 3 elements.")
-    elif tilt_err.ndim == 2:
-        if tilt_err.shape[0] == 3:
-            tilt_err_proc = tilt_err
+            raise ValueError(f"tilt_err sequence converted to array has unsupported ndim {tilt_err_np.ndim} from {tilt_err}")
+
+    elif isinstance(tilt_err, np.ndarray):
+        tilt_err_proc = tilt_err.astype(float) # Ensure float
+        if tilt_err_proc.ndim == 1:
+            if tilt_err_proc.shape != (3,):
+                raise ValueError(f"1D tilt_err numpy array must have 3 elements, got shape {tilt_err_proc.shape}")
+            tilt_err_proc = tilt_err_proc.reshape(3, 1)
+        elif tilt_err_proc.ndim == 2:
+            if tilt_err_proc.shape[0] != 3:
+                raise ValueError(f"2D tilt_err numpy array must be of shape 3xN, got {tilt_err_proc.shape}")
         else:
-            raise ValueError("2D tilt_err must be of shape 3xN.")
+            raise ValueError(f"tilt_err numpy array must be 1D (3 elements) or 2D (shape 3xN), got ndim {tilt_err_proc.ndim}")
     else:
-        raise ValueError("tilt_err must be a 3-element vector or a 3xN array.")
+        raise TypeError(f"tilt_err must be a list, tuple, or numpy array, got {type(tilt_err)}")
 
 
     num_Cnb = Cnb_proc.shape[2]

@@ -136,8 +136,17 @@ g_ins_py = create_ins_py(g_traj_py,
                        gyro_tau       = gyro_tau_p[0][0])
 
 # Corrupt mag data
-g_mag_1_uc_py, _, _ = corrupt_mag_py(mag_1_c_traj, flux_a_x_traj, flux_a_y_traj, flux_a_z_traj,
+# Create MagV object for flux_a
+flux_a_t_traj = np.sqrt(flux_a_x_traj**2 + flux_a_y_traj**2 + flux_a_z_traj**2)
+g_flux_a_py = MagV(x=flux_a_x_traj, y=flux_a_y_traj, z=flux_a_z_traj, t=flux_a_t_traj)
+
+g_mag_1_uc_py, _, _ = corrupt_mag_py(mag_c_scalar = mag_1_c_traj,
+                                   flux_a       = g_flux_a_py,
+                                   # flux_b and flux_c are optional and not provided by test data for this call
+                                   flux_b       = None,
+                                   flux_c       = None,
                                    dt           = dt_p,
+                                   traj_ideal   = g_traj_py, # Pass the Traj object
                                    cor_sigma    = cor_sigma_p,
                                    cor_tau      = cor_tau_p,
                                    cor_var      = cor_var_p,

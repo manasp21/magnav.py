@@ -469,8 +469,8 @@ def create_xyz0(
 
     # Create uncompensated (corrupted) scalar magnetometer measurements
     mag_1_uc, _, diurnal_effect = corrupt_mag(
-        mag_1_c, flux_a, traj,
-        dt=dt,
+        mag_1_c, flux_a,
+        traj_ideal=traj, dt=dt,
         cor_sigma=cor_sigma, cor_tau=cor_tau, cor_var=cor_var,
         cor_drift=cor_drift, cor_perm_mag=cor_perm_mag,
         cor_ind_mag=cor_ind_mag, cor_eddy_mag=cor_eddy_mag
@@ -491,7 +491,29 @@ def create_xyz0(
                mag_1_c=mag_1_c, mag_1_uc=mag_1_uc)
 
     igrf_vector_body = get_igrf_magnetic_field(xyz, frame='body', norm_igrf=False, check_xyz=False)
-    igrf_scalar = np.linalg.norm(igrf_vector_body, axis=0)
+    # Ensure igrf_vector_body is suitable for np.linalg.norm, converting to float if necessary
+    # This addresses potential TypeError if igrf_vector_body has an object dtype
+    # or contains elements that np.sqrt (used by norm) cannot handle directly.
+    processed_igrf_vector_body = igrf_vector_body
+    if isinstance(igrf_vector_body, np.ndarray) and not np.issubdtype(igrf_vector_body.dtype, np.number):
+        try:
+            processed_igrf_vector_body = igrf_vector_body.astype(float)
+            if not silent: # Assuming 'silent' is in scope from create_xyz0 parameters
+                print(f"INFO_CREATE_XYZ: Converted igrf_vector_body from dtype {igrf_vector_body.dtype} to float for norm calculation.")
+        except ValueError as e:
+            if not silent: # Assuming 'silent' is in scope
+                print(f"WARNING_CREATE_XYZ: Could not convert igrf_vector_body to float (dtype: {igrf_vector_body.dtype}). Error: {e}. Proceeding with original.")
+            # If conversion fails, use original and let np.linalg.norm handle it (it might still error)
+    
+    # Debugging for Error 1
+    if not silent:
+        print(f"DEBUG_ERROR_1: type(processed_igrf_vector_body): {type(processed_igrf_vector_body)}")
+        if isinstance(processed_igrf_vector_body, np.ndarray):
+            print(f"DEBUG_ERROR_1: processed_igrf_vector_body.shape: {processed_igrf_vector_body.shape}")
+            print(f"DEBUG_ERROR_1: processed_igrf_vector_body.dtype: {processed_igrf_vector_body.dtype}")
+        print(f"DEBUG_ERROR_1: processed_igrf_vector_body: {processed_igrf_vector_body}")
+
+    igrf_scalar = np.linalg.norm(processed_igrf_vector_body, axis=0)
     xyz.igrf = igrf_scalar
 
     if save_h5:
@@ -697,8 +719,9 @@ def create_traj(
     
     tt = np.linspace(0, t, N_pts)
 
-    Cnb_array = create_dcm_from_vel(vn, ve, dt, order='body2nav')
-    euler_angles = dcm2euler(Cnb_array, order='body2nav')
+    Cnb_array_wrong_dims = create_dcm_from_vel(vn, ve, dt, order='body2nav') # Shape (N, 3, 3)
+    Cnb_array = np.transpose(Cnb_array_wrong_dims, (1, 2, 0)) # Shape (3, 3, N)
+    euler_angles = dcm2euler(Cnb_array, order='body2nav') # Now Cnb_array is (3,3,N)
     roll_path  = euler_angles[:,0]
     pitch_path = euler_angles[:,1]
     yaw_path   = euler_angles[:,2]

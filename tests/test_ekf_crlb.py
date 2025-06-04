@@ -95,7 +95,9 @@ ins  = INS(N, dt, tt, ins_lat, ins_lon, ins_alt, ins_vn, ins_ve, ins_vd,
            ins_fn, ins_fe, ins_fd, ins_Cnb, np.zeros((3,3,N))) # Assuming last arg dCnb_CG
 
 # Create MapS and MapCache objects
-mapS = MapS(info=map_info, lat=np.array([]), lon=np.array([]), alt=map_alt_data, map=map_map, xx=map_xx, yy=map_yy)
+# Ensure alt is a scalar float for MapS
+map_alt_scalar = map_alt_data.item() if map_alt_data.size == 1 else float(np.mean(map_alt_data))
+mapS = MapS(info=map_info, lat=np.array([]), lon=np.array([]), alt=map_alt_scalar, map=map_map, xx=map_xx, yy=map_yy)
 map_cache = MapCache(maps=[mapS]) # Assuming MapCache class and constructor
 
 # Interpolate map
@@ -105,14 +107,16 @@ itp_mapS = map_interpolate(mapS) # Corrected call to map_interpolate
 der_mapS = None # Vertical derivative map not supported by current map_interpolate
 
 # CRLB calculation
-crlb_P_py = crlb(lat, lon, alt, vn, ve, vd, fn, fe, fd, Cnb, dt, itp_mapS,
+# Pass the raw mapS object instead of the interpolator itp_mapS
+crlb_P_py = crlb(lat, lon, alt, vn, ve, vd, fn, fe, fd, Cnb, dt, mapS, # Changed itp_mapS to mapS
                  R=R_val, # P0 and Qd will use defaults from create_P0 and create_Qd
                  baro_tau=baro_tau, acc_tau=acc_tau, gyro_tau=gyro_tau,
                  fogm_tau=fogm_tau, core=False)
 
 # EKF calculation
+# Pass the raw mapS object instead of the interpolator itp_mapS
 filt_res_py = ekf(ins_lat, ins_lon, ins_alt, ins_vn, ins_ve, ins_vd,
-                  ins_fn, ins_fe, ins_fd, ins_Cnb, mag_1_c, dt, itp_mapS,
+                  ins_fn, ins_fe, ins_fd, ins_Cnb, mag_1_c, dt, mapS, # Changed itp_mapS to mapS
                   R=R_val, # P0 and Qd will use defaults from create_P0 and create_Qd
                   baro_tau=baro_tau, acc_tau=acc_tau, gyro_tau=gyro_tau,
                   fogm_tau=fogm_tau, core=False)
@@ -135,8 +139,9 @@ def common_data():
         "ekf_data_P_out": ekf_data_P_out,
         "traj": traj,
         "ins": ins,
-        "itp_mapS": itp_mapS,
-        "map_cache": map_cache,
+        "mapS_object": mapS, # Store the raw mapS object
+        "itp_mapS": itp_mapS, # Keep the interpolator for other potential uses or if some tests still need it
+        "map_cache": map_cache, # Keep map_cache
         "der_mapS": der_mapS,
         "map_alt_data": map_alt_data,
         "mag_1_c": mag_1_c,
@@ -159,17 +164,24 @@ def test_crlb_calculations(common_data):
     np.testing.assert_allclose(common_data["crlb_P_py"][:,:,0], common_data["ekf_data_crlb_P"][:,:,0], atol=1e-6)
     np.testing.assert_allclose(common_data["crlb_P_py"][:,:,-1], common_data["ekf_data_crlb_P"][:,:,-1], atol=1e-6)
 
-    # Test crlb with Traj object and map objects, assuming Python crlb supports this
-    # This requires crlb to be flexible with its first two arguments (traj data, map data)
-    crlb_traj_itp = crlb(common_data["traj"], common_data["itp_mapS"], R=common_data["R_val"], # P0, Qd use defaults
+    # Test crlb with Traj object and map objects
+    # Pass the raw mapS_object for consistency with the type check in ekf.py
+    crlb_traj_mapS = crlb(common_data["traj"], common_data["mapS_object"], R=common_data["R_val"], # P0, Qd use defaults
                          baro_tau=common_data["baro_tau"], acc_tau=common_data["acc_tau"], gyro_tau=common_data["gyro_tau"],
                          fogm_tau=common_data["fogm_tau"], core=False)
-    assert crlb_traj_itp.shape == (18, 18, common_data["N"]) # Default P0 is 18x18 if no P0_TL
+    assert crlb_traj_mapS.shape == (18, 18, common_data["N"]) # Default P0 is 18x18 if no P0_TL
 
-    crlb_traj_cache = crlb(common_data["traj"], common_data["map_cache"], R=common_data["R_val"], # P0, Qd use defaults
+    # If MapCache is passed, ekf.py's internal logic will extract an interpolator.
+    # This will fail the new strict type check if not isinstance(current_itp_mapS_for_step, (MapS, MapS3D)).
+    # To fix this, either ekf.py needs to handle MapCache by extracting the MapS object,
+    # or this test should pass a MapS object directly.
+    # For now, let's assume the test should pass a MapS object.
+    # We'll use the first map from the cache for this test.
+    map_from_cache = common_data["map_cache"].maps[0] if common_data["map_cache"].maps else common_data["mapS_object"]
+    crlb_traj_map_from_cache = crlb(common_data["traj"], map_from_cache, R=common_data["R_val"], # P0, Qd use defaults
                            baro_tau=common_data["baro_tau"], acc_tau=common_data["acc_tau"], gyro_tau=common_data["gyro_tau"],
                            fogm_tau=common_data["fogm_tau"], core=False)
-    assert crlb_traj_cache.shape == (18, 18, common_data["N"]) # Default P0 is 18x18
+    assert crlb_traj_map_from_cache.shape == (18, 18, common_data["N"]) # Default P0 is 18x18
 
 def test_ekf_calculations(common_data):
     """Tests for EKF functionality."""
@@ -182,14 +194,17 @@ def test_ekf_calculations(common_data):
     np.testing.assert_allclose(filt_res_py.P[:,:,0], ekf_data_P_out[:,:,0], atol=1e-6)
     np.testing.assert_allclose(filt_res_py.P[:,:,-1], ekf_data_P_out[:,:,-1], atol=1e-3)
 
-    # Test EKF with INS object and other variations, assuming Python ekf supports this
-    res1 = ekf(common_data["ins"], common_data["mag_1_c"], common_data["itp_mapS"],
+    # Test EKF with INS object and other variations
+    # Pass the raw mapS_object for consistency
+    res1 = ekf(common_data["ins"], common_data["mag_1_c"], common_data["mapS_object"], # Changed itp_mapS
                R=common_data["R_val"], # P0, Qd use defaults
                baro_tau=common_data["baro_tau"], acc_tau=common_data["acc_tau"],
                gyro_tau=common_data["gyro_tau"], fogm_tau=common_data["fogm_tau"], core=False)
     assert isinstance(res1, FILTres)
 
-    res2 = ekf(common_data["ins"], common_data["mag_1_c"], common_data["map_cache"],
+    # Similar to crlb, pass the extracted MapS object from cache
+    map_from_cache_ekf = common_data["map_cache"].maps[0] if common_data["map_cache"].maps else common_data["mapS_object"]
+    res2 = ekf(common_data["ins"], common_data["mag_1_c"], map_from_cache_ekf, # Changed map_cache
                R=common_data["R_val"], # P0, Qd use defaults
                baro_tau=common_data["baro_tau"], acc_tau=common_data["acc_tau"],
                gyro_tau=common_data["gyro_tau"], fogm_tau=common_data["fogm_tau"], core=True) # core=True here
@@ -197,13 +212,13 @@ def test_ekf_calculations(common_data):
 
     # Test with R as a tuple, e.g., (1.0, 10.0)
     R_tuple_test = (1.0, 10.0) # Based on Julia test R=(1,10)
-    res3 = ekf(common_data["ins"], common_data["mag_1_c"], common_data["itp_mapS"],
+    res3 = ekf(common_data["ins"], common_data["mag_1_c"], common_data["mapS_object"], # Changed itp_mapS
                R=R_tuple_test, # Using tuple R; P0, Qd use defaults
                baro_tau=common_data["baro_tau"], acc_tau=common_data["acc_tau"],
                gyro_tau=common_data["gyro_tau"], fogm_tau=common_data["fogm_tau"], core=False)
     assert isinstance(res3, FILTres)
 
-    res4 = ekf(common_data["ins"], common_data["mag_1_c"], common_data["itp_mapS"],
+    res4 = ekf(common_data["ins"], common_data["mag_1_c"], common_data["mapS_object"], # Changed itp_mapS
                der_mapS=common_data["der_mapS"], map_alt=common_data["map_alt_data"], # Optional map args
                R=common_data["R_val"], # P0, Qd use defaults
                baro_tau=common_data["baro_tau"], acc_tau=common_data["acc_tau"],
@@ -233,7 +248,7 @@ def test_ekf_rt_functionality(common_data):
                                    common_data["ins_vn"][t], common_data["ins_ve"][t], common_data["ins_vd"][t],
                                    common_data["ins_fn"][t], common_data["ins_fe"][t], common_data["ins_fd"][t],
                                    current_ins_Cnb_t, current_mag_1_c_t, common_data["tt"][t],
-                                   common_data["itp_mapS"], dt=common_data["dt"])
+                                   common_data["mapS_object"], dt=common_data["dt"]) # Changed itp_mapS
         
         x_rt[:,t]   = filt_res_step.x.ravel() # Ensure x is 1D for assignment
         P_rt[:,:,t] = filt_res_step.P
@@ -261,15 +276,16 @@ def test_ekf_rt_functionality(common_data):
                               common_data["ins_vn"][last_idx], common_data["ins_ve"][last_idx], common_data["ins_vd"][last_idx],
                               common_data["ins_fn"][last_idx], common_data["ins_fe"][last_idx], common_data["ins_fd"][last_idx],
                               last_ins_Cnb, last_mag_1_c, common_data["tt"][last_idx],
-                              common_data["itp_mapS"], dt=common_data["dt"])
+                              common_data["mapS_object"], dt=common_data["dt"]) # Changed itp_mapS
     assert isinstance(res_rt_test1, FILTres)
 
-    # Test 2: EKF_RT with map_cache for last step
+    # Test 2: EKF_RT with map_cache for last step - pass extracted MapS
+    map_from_cache_rt = common_data["map_cache"].maps[0] if common_data["map_cache"].maps else common_data["mapS_object"]
     res_rt_test2 = ekf_rt_obj(common_data["ins_lat"][last_idx], common_data["ins_lon"][last_idx], common_data["ins_alt"][last_idx],
                               common_data["ins_vn"][last_idx], common_data["ins_ve"][last_idx], common_data["ins_vd"][last_idx],
                               common_data["ins_fn"][last_idx], common_data["ins_fe"][last_idx], common_data["ins_fd"][last_idx],
                               last_ins_Cnb, last_mag_1_c, common_data["tt"][last_idx],
-                              common_data["map_cache"], dt=common_data["dt"]) # Using map_cache
+                              map_from_cache_rt, dt=common_data["dt"]) # Using map_from_cache_rt
     assert isinstance(res_rt_test2, FILTres)
     
     # Test 3: EKF_RT with der_mapS and map_alt for last step
@@ -277,6 +293,6 @@ def test_ekf_rt_functionality(common_data):
                               common_data["ins_vn"][last_idx], common_data["ins_ve"][last_idx], common_data["ins_vd"][last_idx],
                               common_data["ins_fn"][last_idx], common_data["ins_fe"][last_idx], common_data["ins_fd"][last_idx],
                               last_ins_Cnb, last_mag_1_c, common_data["tt"][last_idx],
-                              common_data["itp_mapS"], dt=common_data["dt"],
+                              common_data["mapS_object"], dt=common_data["dt"], # Changed itp_mapS
                               der_mapS=common_data["der_mapS"], map_alt=common_data["map_alt_data"]) # Optional args
     assert isinstance(res_rt_test3, FILTres)

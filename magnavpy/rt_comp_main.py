@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 from typing import Any, Callable, List, Tuple, Optional, Union
+from scipy.linalg import block_diag # Import block_diag
 from .magnav import INS, MagV
 from .common_types import MapCache, get_cached_map
 
@@ -430,10 +431,21 @@ def ekf_online_nn(
     current_itp_mapS = itp_mapS
 
     for t in range(N):
-        phi_matrix = ekf_get_Phi(nx, lat[t], vn[t], ve[t], vd[t],
-                                 fn[t], fe[t], fd[t], Cnb[:, :, t],
-                                 baro_tau, acc_tau, gyro_tau, fogm_tau, dt,
-                                 vec_states=False) # Assuming NN params handled by Qd/Phi structure
+        # Construct the full Phi matrix block-diagonally
+        nx_nav = 18 # Number of navigation states
+        Phi_nav_part = ekf_get_Phi(nx_nav, lat[t], vn[t], ve[t], vd[t],
+                                   fn[t], fe[t], fd[t], Cnb[:, :, t],
+                                   baro_tau, acc_tau, gyro_tau, fogm_tau, dt,
+                                   vec_states=False) # vec_states=False for the nav part
+
+        # Assuming NN parameters and scalar bias are random walk (identity in Phi)
+        Phi_nn_params_part = np.eye(nx_nn)
+        Phi_scalar_bias_part = np.eye(1)
+
+        phi_matrix = block_diag(Phi_nav_part, Phi_nn_params_part, Phi_scalar_bias_part)
+        
+        if phi_matrix.shape != (nx, nx):
+            raise ValueError(f"Constructed full phi_matrix shape {phi_matrix.shape} does not match expected ({nx}, {nx})")
 
         current_nn_params_vec = x[nn_params_start_idx:nn_params_end_idx]
         
@@ -450,11 +462,19 @@ def ekf_online_nn(
         h_pred = nn_output_denormalized + map_h_val
         resid = meas[t, :] - h_pred
 
-        H_map_derivs_and_bias_deriv = ekf_get_H(current_itp_mapS, x, lat[t], lon[t], alt[t], date=date, core=core).T
+        # ekf_get_H returns a 1D array of shape (nx,). Transpose (.T) has no effect on 1D array.
+        H_values_from_ekf_get_H = ekf_get_H(current_itp_mapS, x, lat[t], lon[t], alt[t], date=date, core=core)
         H_row = np.zeros(nx, dtype=P0.dtype)
-        H_row[0:2] = H_map_derivs_and_bias_deriv[0, 0:2] # dMap/dPos_xy
-        # Zeros for other INS states (indices 2 to 17, assuming H_map covers only pos_xy for direct impact here)
         
+        # Populate H_row based on derivatives from H_values_from_ekf_get_H
+        # Assuming H_values_from_ekf_get_H contains derivatives for INS states primarily.
+        # H[0] is dMeas/dLat_err, H[1] is dMeas/dLon_err, H[2] is dMeas/dAlt_err from get_H
+        if H_values_from_ekf_get_H.shape[0] >= 3:
+            H_row[0:3] = H_values_from_ekf_get_H[0:3] # dMap/dPos (lat,lon,alt)
+        elif H_values_from_ekf_get_H.shape[0] >= 2: # Should not happen if get_H is correct
+             H_row[0:2] = H_values_from_ekf_get_H[0:2]
+
+        # Derivatives for NN parameters
         H_row[nn_params_start_idx:nn_params_end_idx] = nn_param_grads_unscaled * y_scale
         H_row[scalar_bias_idx] = 1.0 # d(Total)/d(ScalarBiasState)
 

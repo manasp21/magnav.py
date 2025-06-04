@@ -22,11 +22,27 @@ def load_test_data():
 
 dcm_data = load_test_data()
 
+# Helper function to robustly extract 1D scalar arrays
+def _extract_scalar_vector(data_field: np.ndarray) -> np.ndarray:
+    """
+    Extracts a 1D array of scalars from a data field loaded from .mat,
+    which might be an object array of arrays or a simple numeric array.
+    Takes the first element of any inner arrays.
+    """
+    if data_field.ndim == 0: # Handle scalar case
+        return np.array([data_field.item()])
+    if data_field.dtype == object:
+        # If elements are arrays, take the first element of each inner array
+        return np.array([arr.flat[0] if hasattr(arr, 'flat') else arr for arr in data_field.flat], dtype=float)
+    else:
+        # Standard case, e.g., a 2D array (N,1) or (1,N) that needs flattening
+        return data_field.flatten().astype(float)
+
 # Extract data similarly to the Julia script
 # Ensure correct indexing and shaping if necessary
-roll_jl = dcm_data["roll"].flatten()  # .flatten() or .ravel() to make it 1D
-pitch_jl = dcm_data["pitch"].flatten()
-yaw_jl = dcm_data["yaw"].flatten()
+roll_jl = _extract_scalar_vector(dcm_data["roll"])
+pitch_jl = _extract_scalar_vector(dcm_data["pitch"])
+yaw_jl = _extract_scalar_vector(dcm_data["yaw"])
 
 # Note: In Julia, euler2dcm might handle single values and arrays differently.
 # The Python version should be consistent or tested for both.

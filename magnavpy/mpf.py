@@ -214,9 +214,14 @@ def mpf(lat: np.ndarray, lon: np.ndarray, alt: np.ndarray,
         q_weights = q_weights * np.exp(log_likelihood_per_particle - max_log_likelihood)
 
         sum_q_weights = np.sum(q_weights)
-        if sum_q_weights <= np.finfo(dtype).eps: 
+        # Check for NaN or effectively zero sum of weights
+        if np.isnan(sum_q_weights) or sum_q_weights <= np.finfo(dtype).eps:
             converge_status = False
-            x_out[:, t:] = np.nan 
+            # Fill remaining x_out with NaN
+            if t < N_samples:
+                x_out[:, t:] = np.nan
+            # P_out will be handled by filter_exit, ensure it's filled appropriately for diverged steps
+            # For now, filter_exit will use what's in Pl_out, Pn_out up to min_steps_dim
             P_out_final = filter_exit(Pl_out, Pn_out, t, N_samples, converge_status)
             return FILTres(x_out, P_out_final, resid_out, converge_status)
 

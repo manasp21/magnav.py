@@ -85,21 +85,24 @@ traj_data = traj_data_mat['traj'] if 'traj' in traj_data_mat else traj_data_mat
 
 # Extract variables from loaded data
 # Ensure to handle scalar extraction from numpy arrays (e.g., val[0,0])
-P0 = ekf_data['P0'].squeeze()
-Qd = ekf_data['Qd'].squeeze()
+# Convert to float to avoid object dtypes from loadmat
+P0 = ekf_data['P0'].squeeze().astype(float)
+Qd = ekf_data['Qd'].squeeze().astype(float)
 R_julia = ekf_data['R'].squeeze()
-R = float(R_julia) if R_julia.size == 1 else R_julia # Ensure R is scalar if it's meant to be
+R = float(R_julia.item()) if R_julia.size == 1 else R_julia.astype(float) # Ensure R is scalar float or float array
 
 ins_lat = np.deg2rad(ins_data['lat'][0][0].flatten().astype(float))
 ins_lon = np.deg2rad(ins_data['lon'][0][0].flatten().astype(float))
-ins_alt = ins_data['alt'].flatten()
-ins_vn = ins_data['vn'].flatten()
-ins_ve = ins_data['ve'].flatten()
-ins_vd = ins_data['vd'].flatten()
-ins_fn = ins_data['fn'].flatten()
-ins_fe = ins_data['fe'].flatten()
-ins_fd = ins_data['fd'].flatten()
-ins_Cnb = ins_data['Cnb']  # Shape (3, 3, N) in Julia/MAT
+ins_alt = ins_data['alt'].flatten().astype(float)
+ins_vn = ins_data['vn'].flatten().astype(float)
+ins_ve = ins_data['ve'].flatten().astype(float)
+ins_vd = ins_data['vd'].flatten().astype(float)
+ins_fn = ins_data['fn'].flatten().astype(float)
+ins_fe = ins_data['fe'].flatten().astype(float)
+ins_fd = ins_data['fd'].flatten().astype(float)
+# For Cnb, ensure it's a numeric type. If it's an object array of arrays, this needs more care.
+# Assuming Cnb from .mat is already a numeric array (e.g., double)
+ins_Cnb = ins_data['Cnb'].astype(float)  # Shape (3, 3, N) in Julia/MAT
 N = len(ins_lat)
 
 map_info_val = map_data['map_info'] if 'map_info' in map_data.dtype.fields else "Map" # Access directly if key exists
@@ -109,7 +112,7 @@ map_map = map_data['map']
 map_xx = np.deg2rad(np.array(map_data['xx'].tolist()).flatten().astype(float))
 map_yy = np.deg2rad(np.array(map_data['yy'].tolist()).flatten().astype(float))
 map_alt_julia = map_data['alt'].squeeze()
-map_alt = float(map_alt_julia) if map_alt_julia.size == 1 else map_alt_julia
+map_alt = float(map_alt_julia.item()) if map_alt_julia.size == 1 else map_alt_julia.astype(float)
 
 # MagNav.map_params(map_map,map_xx,map_yy)[2] -> Python map_params(...)[1]
 # Assuming map_params returns (some_other_info, mask)
@@ -125,8 +128,8 @@ fogm_tau = float(params['meas_tau'].squeeze()) # 'meas_tau' in Julia
 date = get_years(2020, 185)
 core = False # Default, or load if 'core' in params: bool(params['core'].squeeze())
 
-tt = traj_data['tt'].flatten()
-mag_1_c = traj_data['mag_1_c'].flatten()
+tt = traj_data['tt'].flatten().astype(float)
+mag_1_c = traj_data['mag_1_c'].flatten().astype(float)
 
 # Create INS object
 # The Julia INS constructor: INS(N,dt,tt,lat,lon,alt,vn,ve,vd,fn,fe,fd,Cnb,ins_ωb=zeros(3,3,N))

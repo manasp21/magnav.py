@@ -1,7 +1,8 @@
 import numpy as np
 from typing import List, Union # Add Union to this import
+from .common_types import MapS, MapS3D, MapCache # Import MapS, MapS3D, and MapCache
 
-# Assuming FILTres, EKF_RT, INS, Map_Cache, get_cached_map are defined/imported in .magnav
+# Assuming FILTres, EKF_RT, INS, get_cached_map are defined/imported in .magnav
 # If get_cached_map is elsewhere, adjust import.
 from .magnav import FILTres, EKF_RT, INS
 from .common_types import get_cached_map
@@ -104,10 +105,45 @@ def ekf(
         current_der_mapS_for_step = der_mapS
 
         if isinstance(itp_mapS_arg, MapCache):
-            # get_cached_map returns the interpolator for the current location
-            current_itp_mapS_for_step = get_cached_map(itp_mapS_arg, lat[t], lon[t], alt[t], silent=True)
-            # In Julia, if map_cache is used, der_mapS is effectively ignored for get_h in RT.
-            # For batch, der_mapS is passed along. Here we assume der_mapS is independent or also cached.
+            if not itp_mapS_arg.maps or not itp_mapS_arg.interpolators:
+                # Fallback or error if MapCache is empty
+                # For now, let's assume it might use its fallback_map's interpolator if available
+                # This part needs robust handling based on MapCache's design for fallbacks
+                if hasattr(itp_mapS_arg, 'fallback_map_interpolator') and itp_mapS_arg.fallback_map_interpolator is not None:
+                    current_itp_mapS_for_step = itp_mapS_arg.fallback_map_interpolator
+                elif hasattr(itp_mapS_arg, 'fallback_map') and itp_mapS_arg.fallback_map is not None:
+                    # Attempt to create interpolator from fallback_map if not pre-cached
+                    # This requires map_interpolate from map_utils
+                    try:
+                        from .map_utils import map_interpolate # Local import
+                        current_itp_mapS_for_step = map_interpolate(itp_mapS_arg.fallback_map)
+                        if current_itp_mapS_for_step is None:
+                            raise ValueError("Fallback interpolator creation failed.")
+                    except Exception as e_interp:
+                        print(f"Warning: MapCache empty and fallback interpolator failed/unavailable: {e_interp}")
+                        # As a last resort, if no interpolator, get_h/get_H will fail.
+                        # Or, we could make current_itp_mapS_for_step a dummy that returns NaNs.
+                        # For now, let it proceed and fail in get_h/get_H if interpolator is None.
+                        current_itp_mapS_for_step = None # This will likely cause issues downstream
+                else:
+                    print("Warning: MapCache is empty and no fallback available. Interpolation will likely fail.")
+                    current_itp_mapS_for_step = None # This will likely cause issues downstream
+            else:
+                # Select interpolator from MapCache based on closest altitude
+                map_altitudes = np.array([m.alt for m in itp_mapS_arg.maps])
+                # Ensure alt[t] is a scalar for comparison
+                current_alt_scalar = alt[t].item() if isinstance(alt[t], np.ndarray) else alt[t]
+                closest_idx = np.argmin(np.abs(map_altitudes - current_alt_scalar))
+                current_itp_mapS_for_step = itp_mapS_arg.interpolators[closest_idx]
+                if current_itp_mapS_for_step is None:
+                    # This specific interpolator might be None if its map was problematic
+                    print(f"Warning: Selected interpolator from MapCache at index {closest_idx} is None.")
+                    # Potentially use fallback logic here too
+                    # For now, allow None to propagate; get_h/get_H should handle it or error out.
+
+            # der_mapS handling: if itp_mapS is MapCache, Julia often ignores der_mapS for get_h.
+            # If get_h/get_H are robust to current_itp_mapS_for_step being None, this is okay.
+            # The original der_mapS (passed to ekf) is used for current_der_mapS_for_step.
 
         _Cnb_t = Cnb[:, :, t] if Cnb.ndim == 3 else Cnb
 
@@ -131,8 +167,17 @@ def ekf(
         Phi = get_Phi(nx, lat_t, vn_t, ve_t, vd_t, fn_t, fe_t, fd_t, _Cnb_t_for_phi,
                       baro_tau, acc_tau, gyro_tau, fogm_tau, dt)
 
-        h_pred = get_h(current_itp_mapS_for_step, x, lat_t, lon_t, alt_t,
-                       date=date, core=core, der_map=current_der_mapS_for_step, map_alt=map_alt)
+       # Debugging for Error 3 (get_h call)
+       print(f"DEBUG_ERROR_3_GET_H: type(current_itp_mapS_for_step): {type(current_itp_mapS_for_step)}")
+       if hasattr(current_itp_mapS_for_step, '__class__'):
+           print(f"DEBUG_ERROR_3_GET_H: current_itp_mapS_for_step.__class__.__name__: {current_itp_mapS_for_step.__class__.__name__}")
+
+       if not isinstance(current_itp_mapS_for_step, (MapS, MapS3D)):
+           # This check assumes get_h expects MapS or MapS3D directly.
+           # If current_itp_mapS_for_step is an interpolator (callable) or None, this will raise.
+           raise TypeError(f'map_obj for get_h must be MapS or MapS3D, but got {type(current_itp_mapS_for_step)}')
+       h_pred = get_h(current_itp_mapS_for_step, x, lat_t, lon_t, alt_t,
+                      date=date, core=core, der_map=current_der_mapS_for_step, map_alt=map_alt)
 
         if isinstance(h_pred, (float, int, np.number)): h_pred = np.array([h_pred])
         if h_pred.ndim == 1: h_pred = h_pred.reshape(-1,1)
@@ -141,9 +186,17 @@ def ekf(
 
         r_out[:, t] = resid.flatten()
 
-        H_m = get_H(current_itp_mapS_for_step, x, lat_t, lon_t, alt_t,
-                    date=date, core=core) # Expected (nx,) or (1,nx)
-        if H_m.ndim == 1: H_m = H_m.reshape(1, -1) # Ensure (1,nx)
+       # Debugging for Error 3 (get_H call)
+       print(f"DEBUG_ERROR_3_GET_H_CALL: type(current_itp_mapS_for_step): {type(current_itp_mapS_for_step)}")
+       if hasattr(current_itp_mapS_for_step, '__class__'):
+           print(f"DEBUG_ERROR_3_GET_H_CALL: current_itp_mapS_for_step.__class__.__name__: {current_itp_mapS_for_step.__class__.__name__}")
+
+       if not isinstance(current_itp_mapS_for_step, (MapS, MapS3D)):
+           # This check assumes get_H expects MapS or MapS3D directly.
+           raise TypeError(f'map_obj for get_H must be MapS or MapS3D, but got {type(current_itp_mapS_for_step)}')
+       H_m = get_H(current_itp_mapS_for_step, x, lat_t, lon_t, alt_t,
+                   date=date, core=core) # Expected (nx,) or (1,nx)
+       if H_m.ndim == 1: H_m = H_m.reshape(1, -1) # Ensure (1,nx)
         
         # If ny > 1, H_m would be tiled. For ny=1, H_m is (1,nx)
         # H_val = np.tile(H_m, (ny, 1)) # This is general
@@ -417,7 +470,30 @@ def crlb(
     for t in range(N):
         current_itp_mapS_for_step = itp_mapS_arg
         if isinstance(itp_mapS_arg, MapCache):
-            current_itp_mapS_for_step = get_cached_map(itp_mapS_arg, lat[t], lon[t], alt[t], silent=True)
+            if not itp_mapS_arg.maps or not itp_mapS_arg.interpolators:
+                # Fallback or error if MapCache is empty (similar to EKF logic)
+                if hasattr(itp_mapS_arg, 'fallback_map_interpolator') and itp_mapS_arg.fallback_map_interpolator is not None:
+                    current_itp_mapS_for_step = itp_mapS_arg.fallback_map_interpolator
+                elif hasattr(itp_mapS_arg, 'fallback_map') and itp_mapS_arg.fallback_map is not None:
+                    try:
+                        from .map_utils import map_interpolate # Local import
+                        current_itp_mapS_for_step = map_interpolate(itp_mapS_arg.fallback_map)
+                        if current_itp_mapS_for_step is None:
+                            raise ValueError("Fallback interpolator creation failed for CRLB.")
+                    except Exception as e_interp_crlb:
+                        print(f"Warning: CRLB MapCache empty and fallback interpolator failed: {e_interp_crlb}")
+                        current_itp_mapS_for_step = None
+                else:
+                    print("Warning: CRLB MapCache is empty and no fallback. Interpolation will likely fail.")
+                    current_itp_mapS_for_step = None
+            else:
+                map_altitudes = np.array([m.alt for m in itp_mapS_arg.maps])
+                current_alt_scalar = alt[t].item() if isinstance(alt[t], np.ndarray) else alt[t]
+                closest_idx = np.argmin(np.abs(map_altitudes - current_alt_scalar))
+                current_itp_mapS_for_step = itp_mapS_arg.interpolators[closest_idx]
+                if current_itp_mapS_for_step is None:
+                     print(f"Warning: Selected interpolator for CRLB from MapCache at index {closest_idx} is None.")
+            # For CRLB, der_mapS is not used by get_H, so no special handling for it here.
 
         _Cnb_t = Cnb[:, :, t] if Cnb.ndim == 3 else Cnb
         
@@ -436,6 +512,9 @@ def crlb(
                       baro_tau, acc_tau, gyro_tau, fogm_tau, dt)
 
         # H is (1, nx) for scalar measurement
+        if not isinstance(current_itp_mapS_for_step, (MapS, MapS3D)):
+            # This check assumes get_H expects MapS or MapS3D directly.
+            raise TypeError(f'map_obj for get_H in crlb must be MapS or MapS3D, but got {type(current_itp_mapS_for_step)}')
         H_m = get_H(current_itp_mapS_for_step, x_true, lat_t, lon_t, alt_t, date=date, core=core)
         if H_m.ndim == 1: H_m = H_m.reshape(1, -1) # Ensure (1,nx)
 
