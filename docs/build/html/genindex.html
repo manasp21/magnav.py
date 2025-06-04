@@ -58,6 +58,7 @@
 <li class="toctree-l1"><a class="reference internal" href="comp.html">Aeromagnetic Compensation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="nncomp.html">Neural Network-Based Model Diagrams</a></li>
 <li class="toctree-l1"><a class="reference internal" href="nav.html">Navigation Algorithms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="status.html">Current Status and Known Issues</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api_functions.html">API: Functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api_structs.html">API: Structs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api_reference.html">API Reference</a></li>
@@ -99,6 +100,7 @@
  | <a href="#G"><strong>G</strong></a>
  | <a href="#H"><strong>H</strong></a>
  | <a href="#I"><strong>I</strong></a>
+ | <a href="#K"><strong>K</strong></a>
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
@@ -110,6 +112,7 @@
  | <a href="#T"><strong>T</strong></a>
  | <a href="#U"><strong>U</strong></a>
  | <a href="#V"><strong>V</strong></a>
+ | <a href="#W"><strong>W</strong></a>
  | <a href="#X"><strong>X</strong></a>
  | <a href="#Y"><strong>Y</strong></a>
  | <a href="#Z"><strong>Z</strong></a>
@@ -118,63 +121,61 @@
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.a">a (magnavpy.magnav.LinCompParams attribute)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.acc_tau">acc_tau (magnavpy.magnav.EKF_RT attribute)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.magnav.TempParams.A">A (magnavpy.magnav.TempParams attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.a_bias">a_bias (magnavpy.magnav.LinCompParams attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.a_f">a_f (magnavpy.magnav.LinCompParams attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.a_h">a_h (magnavpy.magnav.LinCompParams attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.a_m">a_m (magnavpy.magnav.LinCompParams attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.a_mis_a">a_mis_a (magnavpy.magnav.LinCompParams attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.a_mis_e">a_mis_e (magnavpy.magnav.LinCompParams attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.a_scale">a_scale (magnavpy.magnav.LinCompParams attribute)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.activation">activation() (magnavpy.magnav.NNCompParams method)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.activation_to_str">activation_to_str() (in module magnavpy.compensation)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.add_extension">add_extension() (in module magnavpy.compensation)</a>
 
       <ul>
-        <li><a href="api_reference.html#id46">(in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.add_extension">[1]</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.add_extension">(in module magnavpy.magnav)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id9">alt (magnavpy.create_xyz.MapS attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.MapS.alt">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.ah">ah (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.ah_std">ah_std (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.alpha_sgl">alpha_sgl (magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.alt">alt (magnavpy.magnav.FILTout attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#id14">(magnavpy.create_xyz.MapS3D attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.MapS3D.alt">[1]</a>
-</li>
-        <li><a href="api_reference.html#id22">(magnavpy.create_xyz.Traj attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj.alt">[1]</a>
-</li>
-        <li><a href="api_reference.html#magnavpy.magnav.FILTout.alt">(magnavpy.magnav.FILTout attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.INS.alt">(magnavpy.magnav.INS attribute)</a>
+</li>
+        <li><a href="api_reference.html#magnavpy.magnav.Map.alt">(magnavpy.magnav.Map attribute)</a>
+</li>
+        <li><a href="api_reference.html#magnavpy.magnav.MapS.alt">(magnavpy.magnav.MapS attribute)</a>
+</li>
+        <li><a href="api_reference.html#magnavpy.magnav.MapV.alt">(magnavpy.magnav.MapV attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.Path.alt">(magnavpy.magnav.Path attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.Traj.alt">(magnavpy.magnav.Traj attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#magnavpy.magnav.INSout.alt_err">alt_err (magnavpy.magnav.INSout attribute)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.alt_err">alt_err (magnavpy.magnav.FILTout attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.INSout.alt_err">(magnavpy.magnav.INSout attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.MapSd.alt_matrix">alt_matrix (magnavpy.magnav.MapSd attribute)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.CRLBout.alt_std">alt_std (magnavpy.magnav.CRLBout attribute)</a>
 
       <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.FILTout.alt_std">(magnavpy.magnav.FILTout attribute)</a>
+</li>
         <li><a href="api_reference.html#magnavpy.magnav.INSout.alt_std">(magnavpy.magnav.INSout attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id47">apply_band_pass_filter() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.apply_band_pass_filter">[1]</a>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_reference.html#magnavpy.create_xyz.apply_band_pass_filter">apply_band_pass_filter() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#id48">approximate_gradient() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.approximate_gradient">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.approximate_gradient">approximate_gradient() (in module magnavpy.create_xyz)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ1.aux_1">aux_1 (magnavpy.magnav.XYZ1 attribute)</a>
 
@@ -200,41 +201,51 @@
         <li><a href="api_reference.html#magnavpy.magnav.XYZ21.aux_3">(magnavpy.magnav.XYZ21 attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.ax">ax (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.ax_std">ax_std (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.ay">ay (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.ay_std">ay_std (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.az">az (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.az_std">az_std (magnavpy.magnav.FILTout attribute)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="B">B</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#magnavpy.magnav.TempParams.B">B (magnavpy.magnav.TempParams attribute)</a>
-</li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20.baro">baro (magnavpy.magnav.XYZ20 attribute)</a>
 
       <ul>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ21.baro">(magnavpy.magnav.XYZ21 attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.baro_tau">baro_tau (magnavpy.magnav.EKF_RT attribute)</a>
+</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id0">BaseMap (class in magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.BaseMap">[1]</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.bias">bias (magnavpy.magnav.FILTout attribute)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.batchsize">batchsize (magnavpy.magnav.NNCompParams attribute)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.bpf_data">bpf_data() (in module magnavpy.compensation)</a>
 </li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.bpf_mag">bpf_mag (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.bpf_mag">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.c">c (magnavpy.magnav.FILTout attribute)</a>
-
-      <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.FILTres.c">(magnavpy.magnav.FILTres attribute)</a>
-</li>
-      </ul></li>
-      <li><a href="api_reference.html#magnavpy.magnav.TempParams.C">C (magnavpy.magnav.TempParams attribute)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTres.c">c (magnavpy.magnav.FILTres attribute)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.ekf.calc_crlb_att">calc_crlb_att() (in module magnavpy.ekf)</a>
 </li>
@@ -246,23 +257,23 @@
 </li>
       <li><a href="api_reference.html#magnavpy.ekf.calc_crlb_vel">calc_crlb_vel() (in module magnavpy.ekf)</a>
 </li>
-      <li><a href="api_reference.html#id49">calculate_imputed_TL_earth() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.calculate_imputed_TL_earth">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.calculate_imputed_TL_earth">calculate_imputed_TL_earth() (in module magnavpy.create_xyz)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.Chain">Chain (class in magnavpy.compensation)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.model_functions.chol">chol() (in module magnavpy.model_functions)</a>
 </li>
-      <li><a href="api_reference.html#id20">Cnb (magnavpy.create_xyz.Traj attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj.Cnb">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.INS.Cnb">Cnb (magnavpy.magnav.INS attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.INS.Cnb">(magnavpy.magnav.INS attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.Traj.Cnb">(magnavpy.magnav.Traj attribute)</a>
 </li>
       </ul></li>
       <li><a href="api_reference.html#magnavpy.compensation.comp_test">comp_test() (in module magnavpy.compensation)</a>, <a href="comp.html#magnavpy.compensation.comp_test">[1]</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.comp_train">comp_train() (in module magnavpy.compensation)</a>, <a href="comp.html#magnavpy.compensation.comp_train">[1]</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.compensation.comp_train_df">comp_train_df() (in module magnavpy.compensation)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.comp_train_test">comp_train_test() (in module magnavpy.compensation)</a>
 </li>
@@ -272,51 +283,61 @@
         <li><a href="api_reference.html#magnavpy.magnav.CompParams">(class in magnavpy.magnav)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id50">correct_cnb_matrix() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.correct_cnb_matrix">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.core">core (magnavpy.magnav.EKF_RT attribute)</a>
 </li>
-      <li><a href="api_reference.html#id51">corrupt_mag() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.corrupt_mag">[1]</a>
+      <li><a href="api_reference.html#magnavpy.dcm_util.correct_Cnb">correct_Cnb() (in module magnavpy.dcm_util)</a>
 </li>
-      <li><a href="api_reference.html#id52">create_dcm_from_vel() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.create_dcm_from_vel">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.correct_cnb_matrix">correct_cnb_matrix() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#id53">create_dcm_internal() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.create_dcm_internal">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.corrupt_mag">corrupt_mag() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#id54">create_flux() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.create_flux">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.create_dcm_from_vel">create_dcm_from_vel() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#id55">create_informed_xyz() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.create_informed_xyz">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.create_dcm_internal">create_dcm_internal() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#id56">create_ins() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.create_ins">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.create_flux">create_flux() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#id57">create_ins_model_matrices() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.create_ins_model_matrices">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.create_informed_xyz">create_informed_xyz() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#id58">create_mag_c() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.create_mag_c">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.create_ins">create_ins() (in module magnavpy.create_xyz)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.create_xyz.create_ins_model_matrices">create_ins_model_matrices() (in module magnavpy.create_xyz)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.create_xyz.create_mag_c">create_mag_c() (in module magnavpy.create_xyz)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.model_functions.create_model">create_model() (in module magnavpy.model_functions)</a>, <a href="nav.html#magnavpy.model_functions.create_model">[1]</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.model_functions.create_P0">create_P0() (in module magnavpy.model_functions)</a>
+      <li><a href="api_reference.html#magnavpy.model_functions.create_P0">create_P0() (in module magnavpy.model_functions)</a>, <a href="nav.html#magnavpy.model_functions.create_P0">[1]</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.model_functions.create_Qd">create_Qd() (in module magnavpy.model_functions)</a>, <a href="nav.html#magnavpy.model_functions.create_Qd">[1]</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#magnavpy.model_functions.create_p0">create_p0() (in module magnavpy.model_functions)</a>, <a href="nav.html#magnavpy.model_functions.create_p0">[1]</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.model_functions.create_Qd">create_Qd() (in module magnavpy.model_functions)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.model_functions.create_qd">create_qd() (in module magnavpy.model_functions)</a>, <a href="nav.html#magnavpy.model_functions.create_qd">[1]</a>
-</li>
       <li><a href="api_reference.html#magnavpy.compensation.create_TL_A">create_TL_A() (in module magnavpy.compensation)</a>
 
       <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.create_TL_A">(in module magnavpy.magnav)</a>
+</li>
         <li><a href="api_reference.html#magnavpy.tolles_lawson.create_TL_A">(in module magnavpy.tolles_lawson)</a>, <a href="comp.html#magnavpy.tolles_lawson.create_TL_A">[1]</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#magnavpy.tolles_lawson.create_TL_coef">create_TL_coef() (in module magnavpy.tolles_lawson)</a>, <a href="comp.html#magnavpy.tolles_lawson.create_TL_coef">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.create_TL_coef">create_TL_coef() (in module magnavpy.magnav)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.tolles_lawson.create_TL_coef">(in module magnavpy.tolles_lawson)</a>, <a href="comp.html#magnavpy.tolles_lawson.create_TL_coef">[1]</a>
 </li>
-      <li><a href="api_reference.html#id59">create_tolles_lawson_A_matrix() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.create_tolles_lawson_A_matrix">[1]</a>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.create_xyz.create_tolles_lawson_A_matrix">create_tolles_lawson_A_matrix() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#id60">create_traj() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.create_traj">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.create_traj">create_traj() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#id61">create_xyz0() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.create_xyz0">[1]</a>, <a href="data.html#id0">[2]</a>, <a href="data.html#magnavpy.create_xyz.create_xyz0">[3]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.create_xyz">create_xyz() (in module magnavpy.create_xyz)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.create_xyz.create_xyz0">create_xyz0() (in module magnavpy.create_xyz)</a>, <a href="data.html#id0">[1]</a>, <a href="data.html#magnavpy.create_xyz.create_xyz0">[2]</a>
 </li>
       <li><a href="api_reference.html#magnavpy.ekf.crlb">crlb() (in module magnavpy.ekf)</a>, <a href="nav.html#magnavpy.ekf.crlb">[1]</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.ekf.crlb_ins">crlb_ins() (in module magnavpy.ekf)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.CRLBout">CRLBout (class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.CRLBout">[1]</a>
 </li>
@@ -378,43 +399,47 @@
 <h2 id="D">D</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.data_norms">data_norms (magnavpy.magnav.NNCompParams attribute)</a>
-</li>
-      <li><a href="api_reference.html#id62">dcm2euler() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.dcm2euler">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.data_norms">data_norms (magnavpy.magnav.LinCompParams attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.dcm_util.dcm2euler">(in module magnavpy.dcm_util)</a>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.data_norms">(magnavpy.magnav.NNCompParams attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#magnavpy.analysis_util.de2dlon">de2dlon() (in module magnavpy.analysis_util)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.date">date (magnavpy.magnav.EKF_RT attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.dcm_util.dcm2euler">dcm2euler() (in module magnavpy.dcm_util)</a>
 
       <ul>
-        <li><a href="api_reference.html#id63">(in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.de2dlon">[1]</a>
-</li>
-        <li><a href="api_reference.html#magnavpy.model_functions.de2dlon">(in module magnavpy.model_functions)</a>
+        <li><a href="api_reference.html#magnavpy.magnav.dcm2euler">(in module magnavpy.magnav)</a>
 </li>
       </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.de2dlon">de2dlon() (in module magnavpy.magnav)</a>
+</li>
       <li><a href="api_reference.html#magnavpy.model_functions.deg2rad">deg2rad() (in module magnavpy.model_functions)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.compensation.denorm_sets">denorm_sets() (in module magnavpy.compensation)</a>
+      <li><a href="api_reference.html#magnavpy.analysis_util.denorm_sets">denorm_sets() (in module magnavpy.analysis_util)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.compensation.denorm_sets">(in module magnavpy.compensation)</a>
 </li>
+      </ul></li>
       <li><a href="api_reference.html#magnavpy.plot_functions.derivative">derivative() (in module magnavpy.plot_functions)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.rt_comp_main.destructure_nn_model">destructure_nn_model() (in module magnavpy.rt_comp_main)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.analysis_util.detrend">detrend() (in module magnavpy.analysis_util)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.detrend">(in module magnavpy.magnav)</a>
 </li>
+      </ul></li>
       <li><a href="api_reference.html#magnavpy.plot_functions.detrend_linear">detrend_linear() (in module magnavpy.plot_functions)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.plot_functions.detrend_mean_only">detrend_mean_only() (in module magnavpy.plot_functions)</a>
 </li>
-      <li><a href="api_reference.html#id34">diurnal (magnavpy.create_xyz.XYZ0 attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.XYZ0.diurnal">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.XYZ.diurnal">diurnal (magnavpy.magnav.XYZ attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.FILTout.diurnal">(magnavpy.magnav.FILTout attribute)</a>
-</li>
-        <li><a href="api_reference.html#magnavpy.magnav.XYZ.diurnal">(magnavpy.magnav.XYZ attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ0.diurnal">(magnavpy.magnav.XYZ0 attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ1.diurnal">(magnavpy.magnav.XYZ1 attribute)</a>
@@ -426,28 +451,12 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#magnavpy.analysis_util.dlat2dn">dlat2dn() (in module magnavpy.analysis_util)</a>
-
-      <ul>
-        <li><a href="api_reference.html#id64">(in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.dlat2dn">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.dlat2dn">dlat2dn() (in module magnavpy.magnav)</a>
 </li>
-        <li><a href="api_reference.html#magnavpy.model_functions.dlat2dn">(in module magnavpy.model_functions)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.dlon2de">dlon2de() (in module magnavpy.magnav)</a>
 </li>
-      </ul></li>
-      <li><a href="api_reference.html#magnavpy.analysis_util.dlon2de">dlon2de() (in module magnavpy.analysis_util)</a>
-
-      <ul>
-        <li><a href="api_reference.html#id65">(in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.dlon2de">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.dn2dlat">dn2dlat() (in module magnavpy.magnav)</a>
 </li>
-      </ul></li>
-      <li><a href="api_reference.html#magnavpy.analysis_util.dn2dlat">dn2dlat() (in module magnavpy.analysis_util)</a>
-
-      <ul>
-        <li><a href="api_reference.html#id66">(in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.dn2dlat">[1]</a>
-</li>
-        <li><a href="api_reference.html#magnavpy.model_functions.dn2dlat">(in module magnavpy.model_functions)</a>
-</li>
-      </ul></li>
       <li><a href="api_reference.html#magnavpy.analysis_util.downsample">downsample() (in module magnavpy.analysis_util)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.plot_functions.downsample_data">downsample_data() (in module magnavpy.plot_functions)</a>
@@ -464,9 +473,15 @@
         <li><a href="api_reference.html#magnavpy.magnav.XYZ21.doy">(magnavpy.magnav.XYZ21 attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id35">doys (magnavpy.create_xyz.XYZ0 attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.XYZ0.doys">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.drop_fi">drop_fi (magnavpy.magnav.NNCompParams attribute)</a>
 </li>
-      <li><a href="api_reference.html#id23">dt (magnavpy.create_xyz.Traj attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj.dt">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.drop_fi_bson">drop_fi_bson (magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.drop_fi_csv">drop_fi_csv (magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.TempParams.dropout_prob">dropout_prob (magnavpy.magnav.TempParams attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.dt">dt (magnavpy.magnav.FILTout attribute)</a>
 
       <ul>
         <li><a href="api_reference.html#magnavpy.magnav.INS.dt">(magnavpy.magnav.INS attribute)</a>
@@ -482,9 +497,17 @@
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.e_err">e_err (magnavpy.magnav.FILTout attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.INSout.e_err">(magnavpy.magnav.INSout attribute)</a>
+</li>
+      </ul></li>
       <li><a href="api_reference.html#magnavpy.magnav.CRLBout.e_std">e_std (magnavpy.magnav.CRLBout attribute)</a>
 
       <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.FILTout.e_std">(magnavpy.magnav.FILTout attribute)</a>
+</li>
         <li><a href="api_reference.html#magnavpy.magnav.INSout.e_std">(magnavpy.magnav.INSout attribute)</a>
 </li>
       </ul></li>
@@ -492,18 +515,24 @@
 </li>
       <li><a href="api_reference.html#magnavpy.ekf.ekf_ins">ekf_ins() (in module magnavpy.ekf)</a>
 </li>
+      <li><a href="api_reference.html#magnavpy.ekf.ekf_online">ekf_online() (in module magnavpy.ekf)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.ekf.ekf_online_ins">ekf_online_ins() (in module magnavpy.ekf)</a>
+</li>
       <li><a href="api_reference.html#magnavpy.rt_comp_main.ekf_online_nn">ekf_online_nn() (in module magnavpy.rt_comp_main)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.rt_comp_main.ekf_online_nn_ins">ekf_online_nn_ins() (in module magnavpy.rt_comp_main)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.rt_comp_main.ekf_online_nn_setup">ekf_online_nn_setup() (in module magnavpy.rt_comp_main)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.rt_comp_main.ekf_online_tl">ekf_online_tl() (in module magnavpy.rt_comp_main)</a>
+      <li><a href="api_reference.html#magnavpy.ekf.ekf_online_setup">ekf_online_setup() (in module magnavpy.ekf)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.rt_comp_main.ekf_online_tl_ins">ekf_online_tl_ins() (in module magnavpy.rt_comp_main)</a>
+      <li><a href="api_reference.html#magnavpy.rt_comp_main.ekf_online_tl">ekf_online_tl() (in module magnavpy.rt_comp_main)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_reference.html#magnavpy.rt_comp_main.ekf_online_tl_ins">ekf_online_tl_ins() (in module magnavpy.rt_comp_main)</a>
+</li>
       <li><a href="api_reference.html#magnavpy.rt_comp_main.ekf_online_tl_setup">ekf_online_tl_setup() (in module magnavpy.rt_comp_main)</a>
 </li>
       <li><a href="api_structs.html#magnavpy.ekf.EKF_RT">EKF_RT (class in magnavpy.ekf)</a>
@@ -514,46 +543,64 @@
       </ul></li>
       <li><a href="api_reference.html#magnavpy.compensation.elasticnet_fit">elasticnet_fit() (in module magnavpy.compensation)</a>
 </li>
-      <li><a href="api_reference.html#id88">emag2() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id96">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.emag2">[2]</a>, <a href="maps.html#magnavpy.map_utils.emag2">[3]</a>
+      <li><a href="api_reference.html#id0">emag2() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id24">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.emag2">[2]</a>, <a href="maps.html#magnavpy.map_utils.emag2">[3]</a>
 </li>
-      <li><a href="api_reference.html#id89">emm720() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id97">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.emm720">[2]</a>, <a href="maps.html#magnavpy.map_utils.emm720">[3]</a>
+      <li><a href="api_reference.html#id1">emm720() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id25">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.emm720">[2]</a>, <a href="maps.html#magnavpy.map_utils.emm720">[3]</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.compensation.err_segs">err_segs() (in module magnavpy.compensation)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.epoch_adam">epoch_adam (magnavpy.magnav.NNCompParams attribute)</a>
 </li>
-      <li><a href="api_reference.html#id67">euler2dcm() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.euler2dcm">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.epoch_lbfgs">epoch_lbfgs (magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.analysis_util.err_segs">err_segs() (in module magnavpy.analysis_util)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.dcm_util.euler2dcm">(in module magnavpy.dcm_util)</a>
+        <li><a href="api_reference.html#magnavpy.compensation.err_segs">(in module magnavpy.compensation)</a>
 </li>
       </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.eta_adam">eta_adam (magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.dcm_util.euler2dcm">euler2dcm() (in module magnavpy.dcm_util)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.euler2dcm">(in module magnavpy.magnav)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.analysis_util.expand_range">expand_range() (in module magnavpy.analysis_util)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="F">F</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.f">f (magnavpy.magnav.FILTout attribute)</a>
-</li>
-      <li><a href="api_reference.html#id24">fd (magnavpy.create_xyz.Traj attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj.fd">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.INS.fd">fd (magnavpy.magnav.INS attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.INS.fd">(magnavpy.magnav.INS attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.Traj.fd">(magnavpy.magnav.Traj attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id68">fdm() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.fdm">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.fdm">fdm() (in module magnavpy.magnav)</a>
 
       <ul>
         <li><a href="api_reference.html#magnavpy.tolles_lawson.fdm">(in module magnavpy.tolles_lawson)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id25">fe (magnavpy.create_xyz.Traj attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj.fe">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.INS.fe">fe (magnavpy.magnav.INS attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.INS.fe">(magnavpy.magnav.INS attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.Traj.fe">(magnavpy.magnav.Traj attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.features_no_norm">features_no_norm (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.features_no_norm">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.features_setup">features_setup (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.features_setup">(magnavpy.magnav.NNCompParams attribute)</a>
 </li>
       </ul></li>
       <li><a href="api_reference.html#magnavpy.analysis_util.field_check">field_check() (in module magnavpy.analysis_util)</a>
@@ -562,15 +609,9 @@
         <li><a href="api_reference.html#magnavpy.compensation.field_check">(in module magnavpy.compensation)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#magnavpy.magnav.CompParams.fields">fields (magnavpy.magnav.CompParams attribute)</a>
-
-      <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.fields">(magnavpy.magnav.LinCompParams attribute)</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.fill_map_gaps">fill_map_gaps() (in module magnavpy.create_xyz)</a>
 </li>
-        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.fields">(magnavpy.magnav.NNCompParams attribute)</a>
-</li>
-      </ul></li>
-      <li><a href="api_reference.html#id69">fill_map_gaps() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.fill_map_gaps">[1]</a>
+      <li><a href="api_reference.html#magnavpy.analysis_util.filter_events">filter_events() (in module magnavpy.analysis_util)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.FILTout">FILTout (class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.FILTout">[1]</a>
 </li>
@@ -594,13 +635,9 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id36">flights (magnavpy.create_xyz.XYZ0 attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.XYZ0.flights">[1]</a>
-</li>
-      <li><a href="api_reference.html#id37">flux_a (magnavpy.create_xyz.XYZ0 attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.XYZ0.flux_a">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.XYZ0.flux_a">flux_a (magnavpy.magnav.XYZ0 attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.XYZ0.flux_a">(magnavpy.magnav.XYZ0 attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ1.flux_a">(magnavpy.magnav.XYZ1 attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ20.flux_a">(magnavpy.magnav.XYZ20 attribute)</a>
@@ -628,17 +665,23 @@
         <li><a href="api_reference.html#magnavpy.magnav.XYZ21.flux_d">(magnavpy.magnav.XYZ21 attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id26">fn (magnavpy.create_xyz.Traj attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj.fn">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.INS.fn">fn (magnavpy.magnav.INS attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.INS.fn">(magnavpy.magnav.INS attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.Traj.fn">(magnavpy.magnav.Traj attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.fogm">fogm (magnavpy.magnav.FILTout attribute)</a>
+</li>
       <li><a href="api_reference.html#magnavpy.model_functions.fogm">fogm() (in module magnavpy.model_functions)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.CRLBout.fogm_std">fogm_std (magnavpy.magnav.CRLBout attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.FILTout.fogm_std">(magnavpy.magnav.FILTout attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.fogm_tau">fogm_tau (magnavpy.magnav.EKF_RT attribute)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.M1Struct.forward">forward() (magnavpy.compensation.M1Struct method)</a>
 
@@ -650,23 +693,33 @@
         <li><a href="api_reference.html#magnavpy.compensation.M3Struct.forward">(magnavpy.compensation.M3Struct method)</a>
 </li>
       </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.frac_train">frac_train (magnavpy.magnav.NNCompParams attribute)</a>
+</li>
   </ul></td>
 </tr></table>
 
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id70">generate_fogm_noise() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.generate_fogm_noise">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.generate_fogm_noise">generate_fogm_noise() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.compensation.get_Axy">get_Axy() (in module magnavpy.compensation)</a>
+      <li><a href="api_reference.html#magnavpy.analysis_util.get_Axy">get_Axy() (in module magnavpy.analysis_util)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.compensation.get_Axy">(in module magnavpy.compensation)</a>
 </li>
-      <li><a href="api_reference.html#id72">get_band_pass_filter_coeffs() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.get_band_pass_filter_coeffs">[1]</a>
-</li>
+      </ul></li>
       <li><a href="api_reference.html#magnavpy.compensation.get_bpf">get_bpf() (in module magnavpy.compensation)</a>
+</li>
+      <li><a href="api_reference.html#id2">get_cached_map() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id26">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.get_cached_map">[2]</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.get_comp_params">get_comp_params() (in module magnavpy.compensation)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.get_curriculum_ind">get_curriculum_ind() (in module magnavpy.compensation)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.analysis_util.get_data_stats">get_data_stats() (in module magnavpy.analysis_util)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.analysis_util.get_days_in_year">get_days_in_year() (in module magnavpy.analysis_util)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.model_functions.get_f">get_f() (in module magnavpy.model_functions)</a>
 </li>
@@ -678,31 +731,37 @@
 </li>
       <li><a href="api_reference.html#magnavpy.model_functions.get_h_with_derivative">get_h_with_derivative() (in module magnavpy.model_functions)</a>
 </li>
-      <li><a href="api_reference.html#id73">get_igrf_magnetic_field() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.get_igrf_magnetic_field">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.get_igrf_magnetic_field">get_igrf_magnetic_field() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#id74">get_map() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.get_map">[1]</a>
-
-      <ul>
-        <li><a href="api_reference.html#id90">(in module magnavpy.map_utils)</a>, <a href="api_reference.html#id98">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.get_map">[2]</a>, <a href="maps.html#magnavpy.map_utils.get_map">[3]</a>
+      <li><a href="api_reference.html#magnavpy.analysis_util.get_ind">get_ind() (in module magnavpy.analysis_util)</a>
 </li>
-      </ul></li>
-      <li><a href="api_reference.html#id75">get_map_params() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.get_map_params">[1]</a>
+      <li><a href="api_reference.html#magnavpy.analysis_util.get_ind_segs">get_ind_segs() (in module magnavpy.analysis_util)</a>
 </li>
-      <li><a href="api_reference.html#id91">get_map_val() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id99">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.get_map_val">[2]</a>
+      <li><a href="api_reference.html#magnavpy.analysis_util.get_lim">get_lim() (in module magnavpy.analysis_util)</a>
+</li>
+      <li><a href="api_reference.html#id27">get_map() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id3">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.get_map">[2]</a>, <a href="maps.html#magnavpy.map_utils.get_map">[3]</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.create_xyz.get_map_params">get_map_params() (in module magnavpy.create_xyz)</a>
+</li>
+      <li><a href="api_reference.html#id28">get_map_val() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id4">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.get_map_val">[2]</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.get_nn_m">get_nn_m() (in module magnavpy.compensation)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.rt_comp_main.get_nn_output_and_param_gradients">get_nn_output_and_param_gradients() (in module magnavpy.rt_comp_main)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_reference.html#magnavpy.model_functions.get_Phi">get_Phi() (in module magnavpy.model_functions)</a>
 </li>
-      <li><a href="api_reference.html#id76">get_phi_matrix() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.get_phi_matrix">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.get_phi_matrix">get_phi_matrix() (in module magnavpy.create_xyz)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_reference.html#magnavpy.model_functions.get_pinson">get_pinson() (in module magnavpy.model_functions)</a>, <a href="nav.html#magnavpy.model_functions.get_pinson">[1]</a>
 </li>
+      <li><a href="api_reference.html#magnavpy.analysis_util.get_segments">get_segments() (in module magnavpy.analysis_util)</a>
+</li>
       <li><a href="api_reference.html#magnavpy.compensation.get_split">get_split() (in module magnavpy.compensation)</a>
+</li>
+      <li><a href="api_reference.html#id29">get_step() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id5">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.get_step">[2]</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.get_temporal_data">get_temporal_data() (in module magnavpy.compensation)</a>
 </li>
@@ -714,9 +773,9 @@
         <li><a href="api_reference.html#magnavpy.tolles_lawson.get_TL_term_ind">(in module magnavpy.tolles_lawson)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id77">get_tolles_lawson_aircraft_field_vector() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.get_tolles_lawson_aircraft_field_vector">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.get_tolles_lawson_aircraft_field_vector">get_tolles_lawson_aircraft_field_vector() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#id78">get_trajectory_subset() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.get_trajectory_subset">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.get_trajectory_subset">get_trajectory_subset() (in module magnavpy.create_xyz)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.analysis_util.get_x">get_x() (in module magnavpy.analysis_util)</a>
 
@@ -728,17 +787,33 @@
 </li>
       <li><a href="api_reference.html#magnavpy.analysis_util.get_x_multiple_xyz">get_x_multiple_xyz() (in module magnavpy.analysis_util)</a>
 </li>
-      <li><a href="api_reference.html#id71">get_XYZ() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.get_XYZ">[1]</a>, <a href="data.html#magnavpy.create_xyz.get_XYZ">[2]</a>
-</li>
-      <li><a href="api_reference.html#id79">get_xyz20() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.get_xyz20">[1]</a>, <a href="data.html#magnavpy.create_xyz.get_xyz20">[2]</a>
-</li>
       <li><a href="api_reference.html#magnavpy.analysis_util.get_y">get_y() (in module magnavpy.analysis_util)</a>
 
       <ul>
         <li><a href="api_reference.html#magnavpy.compensation.get_y">(in module magnavpy.compensation)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#magnavpy.rt_comp_main.get_years">get_years() (in module magnavpy.rt_comp_main)</a>
+      <li><a href="api_reference.html#magnavpy.analysis_util.get_y_from_dataframes">get_y_from_dataframes() (in module magnavpy.analysis_util)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.analysis_util.get_years">get_years() (in module magnavpy.analysis_util)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.rt_comp_main.get_years">(in module magnavpy.rt_comp_main)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.gx">gx (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.gx_std">gx_std (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.gy">gy (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.gy_std">gy_std (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.gyro_tau">gyro_tau (magnavpy.magnav.EKF_RT attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.gz">gz (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.gz_std">gz_std (magnavpy.magnav.FILTout attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -746,7 +821,15 @@
 <h2 id="H">H</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.h">h (magnavpy.magnav.FILTout attribute)</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.h5_to_xyz0">h5_to_xyz0() (in module magnavpy.create_xyz)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.ha">ha (magnavpy.magnav.FILTout attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.ha_std">ha_std (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.hidden">hidden (magnavpy.magnav.NNCompParams attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -754,13 +837,9 @@
 <h2 id="I">I</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id38">igrf (magnavpy.create_xyz.XYZ0 attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.XYZ0.igrf">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.XYZ.igrf">igrf (magnavpy.magnav.XYZ attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.FILTout.igrf">(magnavpy.magnav.FILTout attribute)</a>
-</li>
-        <li><a href="api_reference.html#magnavpy.magnav.XYZ.igrf">(magnavpy.magnav.XYZ attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ0.igrf">(magnavpy.magnav.XYZ0 attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ1.igrf">(magnavpy.magnav.XYZ1 attribute)</a>
@@ -772,9 +851,17 @@
       </ul></li>
       <li><a href="api_reference.html#magnavpy.model_functions.igrf_grad">igrf_grad() (in module magnavpy.model_functions)</a>
 </li>
-      <li><a href="api_reference.html#id39">info (magnavpy.create_xyz.XYZ0 attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.XYZ0.info">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.Map.info">info (magnavpy.magnav.Map attribute)</a>
 
       <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.MapS.info">(magnavpy.magnav.MapS attribute)</a>
+</li>
+        <li><a href="api_reference.html#magnavpy.magnav.MapS3D.info">(magnavpy.magnav.MapS3D attribute)</a>
+</li>
+        <li><a href="api_reference.html#magnavpy.magnav.MapSd.info">(magnavpy.magnav.MapSd attribute)</a>
+</li>
+        <li><a href="api_reference.html#magnavpy.magnav.MapV.info">(magnavpy.magnav.MapV attribute)</a>
+</li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ.info">(magnavpy.magnav.XYZ attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ0.info">(magnavpy.magnav.XYZ0 attribute)</a>
@@ -786,19 +873,13 @@
         <li><a href="api_reference.html#magnavpy.magnav.XYZ21.info">(magnavpy.magnav.XYZ21 attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id1">INS (class in magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.INS">[1]</a>
-
-      <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.INS">(class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.INS">[1]</a>
-</li>
-      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id40">ins (magnavpy.create_xyz.XYZ0 attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.XYZ0.ins">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.INS">INS (class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.INS">[1]</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.XYZ.ins">ins (magnavpy.magnav.XYZ attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.XYZ.ins">(magnavpy.magnav.XYZ attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ0.ins">(magnavpy.magnav.XYZ0 attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ1.ins">(magnavpy.magnav.XYZ1 attribute)</a>
@@ -827,26 +908,52 @@
   </ul></td>
 </tr></table>
 
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.k_pca">k_pca (magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.k_plsr">k_plsr (magnavpy.magnav.LinCompParams attribute)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id27">lat (magnavpy.create_xyz.Traj attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj.lat">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.TempParams.l_window">l_window (magnavpy.magnav.TempParams attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.lambda_sgl">lambda_sgl (magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.lambda_TL">lambda_TL (magnavpy.magnav.LinCompParams attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.lat">lat (magnavpy.magnav.FILTout attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.FILTout.lat">(magnavpy.magnav.FILTout attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.INS.lat">(magnavpy.magnav.INS attribute)</a>
+</li>
+        <li><a href="api_reference.html#magnavpy.magnav.Map.lat">(magnavpy.magnav.Map attribute)</a>
+</li>
+        <li><a href="api_reference.html#magnavpy.magnav.MapS.lat">(magnavpy.magnav.MapS attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.Path.lat">(magnavpy.magnav.Path attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.Traj.lat">(magnavpy.magnav.Traj attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#magnavpy.magnav.INSout.lat_err">lat_err (magnavpy.magnav.INSout attribute)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.lat_err">lat_err (magnavpy.magnav.FILTout attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.INSout.lat_err">(magnavpy.magnav.INSout attribute)</a>
 </li>
+      </ul></li>
       <li><a href="api_reference.html#magnavpy.magnav.CRLBout.lat_std">lat_std (magnavpy.magnav.CRLBout attribute)</a>
 
       <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.FILTout.lat_std">(magnavpy.magnav.FILTout attribute)</a>
+</li>
         <li><a href="api_reference.html#magnavpy.magnav.INSout.lat_std">(magnavpy.magnav.INSout attribute)</a>
 </li>
       </ul></li>
@@ -878,32 +985,48 @@
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.linear_test">linear_test() (in module magnavpy.compensation)</a>
 </li>
-      <li><a href="api_reference.html#id41">lines (magnavpy.create_xyz.XYZ0 attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.XYZ0.lines">[1]</a>
-</li>
       <li><a href="api_reference.html#magnavpy.compensation.linreg">linreg() (in module magnavpy.compensation)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.analysis_util.linreg_vector">linreg_vector() (in module magnavpy.analysis_util)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.linreg_matrix">linreg_matrix() (in module magnavpy.magnav)</a>
 </li>
-      <li><a href="api_reference.html#id28">lon (magnavpy.create_xyz.Traj attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj.lon">[1]</a>
+      <li><a href="api_reference.html#magnavpy.analysis_util.linreg_vector">linreg_vector() (in module magnavpy.analysis_util)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.FILTout.lon">(magnavpy.magnav.FILTout attribute)</a>
+        <li><a href="api_reference.html#magnavpy.magnav.linreg_vector">(in module magnavpy.magnav)</a>
 </li>
+      </ul></li>
+      <li><a href="api_reference.html#id30">load_map_from_cache() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id6">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.load_map_from_cache">[2]</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.lon">lon (magnavpy.magnav.FILTout attribute)</a>
+
+      <ul>
         <li><a href="api_reference.html#magnavpy.magnav.INS.lon">(magnavpy.magnav.INS attribute)</a>
+</li>
+        <li><a href="api_reference.html#magnavpy.magnav.Map.lon">(magnavpy.magnav.Map attribute)</a>
+</li>
+        <li><a href="api_reference.html#magnavpy.magnav.MapS.lon">(magnavpy.magnav.MapS attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.Path.lon">(magnavpy.magnav.Path attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.Traj.lon">(magnavpy.magnav.Traj attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#magnavpy.magnav.INSout.lon_err">lon_err (magnavpy.magnav.INSout attribute)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.lon_err">lon_err (magnavpy.magnav.FILTout attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.INSout.lon_err">(magnavpy.magnav.INSout attribute)</a>
 </li>
+      </ul></li>
       <li><a href="api_reference.html#magnavpy.magnav.CRLBout.lon_std">lon_std (magnavpy.magnav.CRLBout attribute)</a>
 
       <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.FILTout.lon_std">(magnavpy.magnav.FILTout attribute)</a>
+</li>
         <li><a href="api_reference.html#magnavpy.magnav.INSout.lon_std">(magnavpy.magnav.INSout attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.loss">loss() (magnavpy.magnav.NNCompParams method)</a>
+</li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20.ltrl_acc">ltrl_acc (magnavpy.magnav.XYZ20 attribute)</a>
 </li>
   </ul></td>
@@ -920,13 +1043,11 @@
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.M3Struct">M3Struct (class in magnavpy.compensation)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.mag">mag (magnavpy.magnav.FILTout attribute)</a>
+      <li><a href="api_reference.html#magnavpy.analysis_util.mae">mae() (in module magnavpy.analysis_util)</a>
 </li>
-      <li><a href="api_reference.html#id42">mag_1_c (magnavpy.create_xyz.XYZ0 attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.XYZ0.mag_1_c">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.XYZ0.mag_1_c">mag_1_c (magnavpy.magnav.XYZ0 attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.XYZ0.mag_1_c">(magnavpy.magnav.XYZ0 attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ1.mag_1_c">(magnavpy.magnav.XYZ1 attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ20.mag_1_c">(magnavpy.magnav.XYZ20 attribute)</a>
@@ -940,11 +1061,9 @@
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20.mag_1_lag">mag_1_lag (magnavpy.magnav.XYZ20 attribute)</a>
 </li>
-      <li><a href="api_reference.html#id43">mag_1_uc (magnavpy.create_xyz.XYZ0 attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.XYZ0.mag_1_uc">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.XYZ0.mag_1_uc">mag_1_uc (magnavpy.magnav.XYZ0 attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.XYZ0.mag_1_uc">(magnavpy.magnav.XYZ0 attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ1.mag_1_uc">(magnavpy.magnav.XYZ1 attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ20.mag_1_uc">(magnavpy.magnav.XYZ20 attribute)</a>
@@ -1004,7 +1123,7 @@
     magnavpy.create_xyz
 
       <ul>
-        <li><a href="api_reference.html#module-0">module</a>, <a href="api_reference.html#module-magnavpy.create_xyz">[1]</a>
+        <li><a href="api_reference.html#module-magnavpy.create_xyz">module</a>
 </li>
       </ul></li>
       <li>
@@ -1032,11 +1151,9 @@
     magnavpy.map_utils
 
       <ul>
-        <li><a href="api_reference.html#module-1">module</a>, <a href="api_reference.html#module-2">[1]</a>, <a href="api_reference.html#module-magnavpy.map_utils">[2]</a>
+        <li><a href="api_reference.html#module-0">module</a>, <a href="api_reference.html#module-1">[1]</a>, <a href="api_reference.html#module-magnavpy.map_utils">[2]</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     magnavpy.model_functions
 
@@ -1065,30 +1182,68 @@
         <li><a href="api_reference.html#module-magnavpy.tolles_lawson">module</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id3">MagV (class in magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.MagV">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.MagV">MagV (class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.MagV">[1]</a>
+</li>
+      <li><a href="api_structs.html#magnavpy.common_types.Map">Map (class in magnavpy.common_types)</a>
 
       <ul>
-        <li><a href="api_structs.html#magnavpy.magnav.MagV">(class in magnavpy.magnav)</a>
+        <li><a href="api_reference.html#magnavpy.magnav.Map">(class in magnavpy.magnav)</a>
 </li>
       </ul></li>
-      <li><a href="api_structs.html#magnavpy.common_types.Map">Map (class in magnavpy.common_types)</a>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_reference.html#magnavpy.magnav.Map.map">map (magnavpy.magnav.Map attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.MapS.map">(magnavpy.magnav.MapS attribute)</a>
 </li>
-      <li><a href="api_reference.html#id10">map (magnavpy.create_xyz.MapS attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.MapS.map">[1]</a>
+        <li><a href="api_reference.html#magnavpy.magnav.MapS3D.map">(magnavpy.magnav.MapS3D attribute)</a>
 </li>
-      <li><a href="api_reference.html#id80">map_check() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.map_check">[1]</a>
+        <li><a href="api_reference.html#magnavpy.magnav.MapSd.map">(magnavpy.magnav.MapSd attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#id31">map_cache_filename() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id7">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_cache_filename">[2]</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.create_xyz.map_check">map_check() (in module magnavpy.create_xyz)</a>
+</li>
+      <li><a href="api_reference.html#id32">map_combine() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id8">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_combine">[2]</a>
+</li>
+      <li><a href="api_reference.html#id33">map_correct_igrf() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id9">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_correct_igrf">[2]</a>
+</li>
+      <li><a href="api_reference.html#id10">map_fill_gaps() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id34">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_fill_gaps">[2]</a>
 </li>
       <li><a href="api_reference.html#magnavpy.model_functions.map_grad">map_grad() (in module magnavpy.model_functions)</a>
 </li>
-      <li><a href="api_reference.html#id100">map_interpolate() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id92">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_interpolate">[2]</a>, <a href="maps.html#magnavpy.map_utils.map_interpolate">[3]</a>
+      <li><a href="api_reference.html#id11">map_gradient() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id35">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_gradient">[2]</a>
+</li>
+      <li><a href="api_reference.html#id12">map_hessian() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id36">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_hessian">[2]</a>
+</li>
+      <li><a href="api_reference.html#id13">map_interpolate() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id37">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_interpolate">[2]</a>, <a href="maps.html#magnavpy.map_utils.map_interpolate">[3]</a>
+</li>
+      <li><a href="api_reference.html#id14">map_lims() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id38">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_lims">[2]</a>
+</li>
+      <li><a href="api_reference.html#id15">map_params() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id39">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_params">[2]</a>
+</li>
+      <li><a href="api_reference.html#id16">map_res() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id40">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_res">[2]</a>
+</li>
+      <li><a href="api_reference.html#id17">map_resample() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id41">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_resample">[2]</a>
+</li>
+      <li><a href="api_reference.html#id18">map_shape() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id42">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_shape">[2]</a>
+</li>
+      <li><a href="api_reference.html#id19">map_trim() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id43">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.map_trim">[2]</a>
 </li>
       <li><a href="api_structs.html#magnavpy.common_types.MapCache">MapCache (class in magnavpy.common_types)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.MapCache">(class in magnavpy.magnav)</a>
 </li>
+      </ul></li>
       <li><a href="api_structs.html#magnavpy.common_types.MapS">MapS (class in magnavpy.common_types)</a>
 
       <ul>
         <li><a href="api_reference.html#magnavpy.compensation.MapS">(class in magnavpy.compensation)</a>
 </li>
-        <li><a href="api_reference.html#id8">(class in magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.MapS">[1]</a>
+        <li><a href="api_reference.html#magnavpy.magnav.MapS">(class in magnavpy.magnav)</a>
 </li>
       </ul></li>
       <li><a href="api_structs.html#magnavpy.common_types.MapS3D">MapS3D (class in magnavpy.common_types)</a>
@@ -1096,7 +1251,7 @@
       <ul>
         <li><a href="api_reference.html#magnavpy.compensation.MapS3D">(class in magnavpy.compensation)</a>
 </li>
-        <li><a href="api_reference.html#id13">(class in magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.MapS3D">[1]</a>
+        <li><a href="api_reference.html#magnavpy.magnav.MapS3D">(class in magnavpy.magnav)</a>
 </li>
       </ul></li>
       <li><a href="api_structs.html#magnavpy.common_types.MapSd">MapSd (class in magnavpy.common_types)</a>
@@ -1104,21 +1259,37 @@
       <ul>
         <li><a href="api_reference.html#magnavpy.compensation.MapSd">(class in magnavpy.compensation)</a>
 </li>
-        <li><a href="api_reference.html#id16">(class in magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.MapSd">[1]</a>
+        <li><a href="api_reference.html#magnavpy.magnav.MapSd">(class in magnavpy.magnav)</a>
 </li>
       </ul></li>
       <li><a href="api_structs.html#magnavpy.common_types.MapV">MapV (class in magnavpy.common_types)</a>
 
       <ul>
-        <li><a href="api_reference.html#id18">(class in magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.MapV">[1]</a>
+        <li><a href="api_reference.html#magnavpy.magnav.MapV">(class in magnavpy.magnav)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id17">mask (magnavpy.create_xyz.MapSd attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.MapSd.mask">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.MapS.mask">mask (magnavpy.magnav.MapS attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.MapS3D.mask">(magnavpy.magnav.MapS3D attribute)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.Mis_a">Mis_a (magnavpy.magnav.FILTout attribute)</a>
+        <li><a href="api_reference.html#magnavpy.magnav.MapSd.mask">(magnavpy.magnav.MapSd attribute)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.Mis_e">Mis_e (magnavpy.magnav.FILTout attribute)</a>
+        <li><a href="api_reference.html#magnavpy.magnav.MapV.mask">(magnavpy.magnav.MapV attribute)</a>
 </li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.model">model (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.model">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.model_type">model_type (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.model_type">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
       <li>
     module
 
@@ -1127,7 +1298,7 @@
 </li>
         <li><a href="api_reference.html#module-magnavpy.compensation">magnavpy.compensation</a>
 </li>
-        <li><a href="api_reference.html#module-0">magnavpy.create_xyz</a>, <a href="api_reference.html#module-magnavpy.create_xyz">[1]</a>
+        <li><a href="api_reference.html#module-magnavpy.create_xyz">magnavpy.create_xyz</a>
 </li>
         <li><a href="api_reference.html#module-magnavpy.dcm_util">magnavpy.dcm_util</a>
 </li>
@@ -1135,7 +1306,7 @@
 </li>
         <li><a href="api_reference.html#module-magnavpy.magnav">magnavpy.magnav</a>
 </li>
-        <li><a href="api_reference.html#module-1">magnavpy.map_utils</a>, <a href="api_reference.html#module-2">[1]</a>, <a href="api_reference.html#module-magnavpy.map_utils">[2]</a>
+        <li><a href="api_reference.html#module-0">magnavpy.map_utils</a>, <a href="api_reference.html#module-1">[1]</a>, <a href="api_reference.html#module-magnavpy.map_utils">[2]</a>
 </li>
         <li><a href="api_reference.html#module-magnavpy.model_functions">magnavpy.model_functions</a>
 </li>
@@ -1158,7 +1329,7 @@
 <h2 id="N">N</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id21">N (magnavpy.create_xyz.Traj attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj.N">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.N">N (magnavpy.magnav.FILTout attribute)</a>
 
       <ul>
         <li><a href="api_reference.html#magnavpy.magnav.INS.N">(magnavpy.magnav.INS attribute)</a>
@@ -1168,17 +1339,23 @@
         <li><a href="api_reference.html#magnavpy.magnav.Traj.N">(magnavpy.magnav.Traj attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#magnavpy.magnav.INSout.n_err">n_err (magnavpy.magnav.INSout attribute)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.n_err">n_err (magnavpy.magnav.FILTout attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.INSout.n_err">(magnavpy.magnav.INSout attribute)</a>
 </li>
+      </ul></li>
       <li><a href="api_reference.html#magnavpy.magnav.CRLBout.n_std">n_std (magnavpy.magnav.CRLBout attribute)</a>
 
       <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.FILTout.n_std">(magnavpy.magnav.FILTout attribute)</a>
+</li>
         <li><a href="api_reference.html#magnavpy.magnav.INSout.n_std">(magnavpy.magnav.INSout attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id101">namad() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id93">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.namad">[2]</a>, <a href="maps.html#magnavpy.map_utils.namad">[3]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.TempParams.N_tf_head">N_tf_head (magnavpy.magnav.TempParams attribute)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.nn">nn (magnavpy.magnav.NNCompParams attribute)</a>
+      <li><a href="api_reference.html#id20">namad() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id44">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.namad">[2]</a>, <a href="maps.html#magnavpy.map_utils.namad">[3]</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.nn_comp_1_fwd">nn_comp_1_fwd() (in module magnavpy.compensation)</a>
 </li>
@@ -1190,14 +1367,14 @@
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.nn_comp_1_train">nn_comp_1_train() (in module magnavpy.compensation)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_reference.html#magnavpy.compensation.nn_comp_2_fwd">nn_comp_2_fwd() (in module magnavpy.compensation)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.nn_comp_2_fwd_from_raw">nn_comp_2_fwd_from_raw() (in module magnavpy.compensation)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.nn_comp_2_test">nn_comp_2_test() (in module magnavpy.compensation)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_reference.html#magnavpy.compensation.nn_comp_2_test_from_raw">nn_comp_2_test_from_raw() (in module magnavpy.compensation)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.nn_comp_2_train">nn_comp_2_train() (in module magnavpy.compensation)</a>
@@ -1218,9 +1395,35 @@
         <li><a href="api_reference.html#magnavpy.magnav.NNCompParams">(class in magnavpy.magnav)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#magnavpy.compensation.norm_sets">norm_sets() (in module magnavpy.compensation)</a>
+      <li><a href="api_reference.html#magnavpy.analysis_util.norm_sets">norm_sets() (in module magnavpy.analysis_util)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.compensation.norm_sets">(in module magnavpy.compensation)</a>
 </li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.norm_type_A">norm_type_A (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.norm_type_A">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.norm_type_x">norm_type_x (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.norm_type_x">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.norm_type_y">norm_type_y (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.norm_type_y">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20.nrml_acc">nrml_acc (magnavpy.magnav.XYZ20 attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.nx">nx (magnavpy.magnav.EKF_RT attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.ny">ny (magnavpy.magnav.EKF_RT attribute)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1234,7 +1437,7 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id102">ottawa_area_maps() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id94">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.ottawa_area_maps">[2]</a>, <a href="maps.html#magnavpy.map_utils.ottawa_area_maps">[3]</a>
+      <li><a href="api_reference.html#id21">ottawa_area_maps() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id45">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.ottawa_area_maps">[2]</a>, <a href="maps.html#magnavpy.map_utils.ottawa_area_maps">[3]</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.ottawa_area_maps_gxf_path">ottawa_area_maps_gxf_path() (in module magnavpy.magnav)</a>
 </li>
@@ -1246,19 +1449,19 @@
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id2">P (magnavpy.create_xyz.INS attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.INS.P">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.P">P (magnavpy.magnav.EKF_RT attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.P">(magnavpy.magnav.EKF_RT attribute)</a>
-</li>
-        <li><a href="api_reference.html#magnavpy.magnav.FILTout.P">(magnavpy.magnav.FILTout attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.FILTres.P">(magnavpy.magnav.FILTres attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.INS.P">(magnavpy.magnav.INS attribute)</a>
 </li>
       </ul></li>
       <li><a href="api_reference.html#magnavpy.magnav.Path">Path (class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.Path">[1]</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.perm_fi">perm_fi (magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.perm_fi_csv">perm_fi_csv (magnavpy.magnav.NNCompParams attribute)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20.pitch_rate">pitch_rate (magnavpy.magnav.XYZ20 attribute)</a>
 </li>
@@ -1314,16 +1517,16 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.R">R (magnavpy.magnav.EKF_RT attribute)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.r">r (magnavpy.magnav.FILTout attribute)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.r">r (magnavpy.magnav.EKF_RT attribute)</a>
 
       <ul>
         <li><a href="api_reference.html#magnavpy.magnav.FILTres.r">(magnavpy.magnav.FILTres attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api_reference.html#magnavpy.create_xyz.read_xyz_file">read_xyz_file() (in module magnavpy.create_xyz)</a>
+</li>
       <li><a href="api_reference.html#magnavpy.plot_functions.relu">relu() (in module magnavpy.plot_functions)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_reference.html#magnavpy.plot_functions.relu_derivative">relu_derivative() (in module magnavpy.plot_functions)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.remove_extension">remove_extension() (in module magnavpy.compensation)</a>
@@ -1332,7 +1535,19 @@
         <li><a href="api_reference.html#magnavpy.magnav.remove_extension">(in module magnavpy.magnav)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.reorient_vec">reorient_vec (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.reorient_vec">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.analysis_util.rmse">rmse() (in module magnavpy.analysis_util)</a>
+</li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20.roll_rate">roll_rate (magnavpy.magnav.XYZ20 attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.rt_comp_main.rt_compensation_main">rt_compensation_main() (in module magnavpy.rt_comp_main)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.run_filt">run_filt() (in module magnavpy.magnav)</a>, <a href="nav.html#magnavpy.magnav.run_filt">[1]</a>
 </li>
@@ -1344,26 +1559,42 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_reference.html#magnavpy.compensation.save_comp_params">save_comp_params() (in module magnavpy.compensation)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.scale">scale (magnavpy.magnav.FILTout attribute)</a>
+      <li><a href="api_reference.html#id22">save_map_to_cache() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id46">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.save_map_to_cache">[2]</a>
 </li>
-      <li><a href="api_reference.html#id81">sgl_2020_train() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.sgl_2020_train">[1]</a>, <a href="data.html#magnavpy.create_xyz.sgl_2020_train">[2]</a>
+      <li><a href="api_reference.html#magnavpy.rt_comp_main.setup_logging">setup_logging() (in module magnavpy.rt_comp_main)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.sgl_2020_train_path">sgl_2020_train_path() (in module magnavpy.magnav)</a>
 </li>
-      <li><a href="api_reference.html#id82">sgl_2021_train() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.sgl_2021_train">[1]</a>, <a href="data.html#magnavpy.create_xyz.sgl_2021_train">[2]</a>
-</li>
       <li><a href="api_reference.html#magnavpy.magnav.sgl_2021_train_path">sgl_2021_train_path() (in module magnavpy.magnav)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_reference.html#magnavpy.magnav.sgl_fields_path">sgl_fields_path() (in module magnavpy.magnav)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.TempParams.sigma_curriculum">sigma_curriculum (magnavpy.magnav.TempParams attribute)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.plot_functions.sigmoid_derivative">sigmoid_derivative() (in module magnavpy.plot_functions)</a>
 </li>
+      <li><a href="api_reference.html#magnavpy.dcm_util.skew">skew() (in module magnavpy.dcm_util)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_reference.html#magnavpy.compensation.sparse_group_lasso">sparse_group_lasso() (in module magnavpy.compensation)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20.static_p">static_p (magnavpy.magnav.XYZ20 attribute)</a>
 </li>
+      <li><a href="api_reference.html#magnavpy.analysis_util.std_err">std_err() (in module magnavpy.analysis_util)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.sub_diurnal">sub_diurnal (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.sub_diurnal">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.sub_igrf">sub_igrf (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.sub_igrf">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
       <li><a href="api_reference.html#magnavpy.plot_functions.swish">swish() (in module magnavpy.plot_functions)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.plot_functions.swish_derivative">swish_derivative() (in module magnavpy.plot_functions)</a>
@@ -1374,67 +1605,89 @@
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id4">t (magnavpy.create_xyz.MagV attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.MagV.t">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.t">t (magnavpy.magnav.EKF_RT attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.MagV.t">(magnavpy.magnav.MagV attribute)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.t_bias">t_bias (magnavpy.magnav.FILTout attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.t_diurnal">t_diurnal (magnavpy.magnav.FILTout attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.t_f">t_f (magnavpy.magnav.FILTout attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.t_h">t_h (magnavpy.magnav.FILTout attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.t_igrf">t_igrf (magnavpy.magnav.FILTout attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.t_m">t_m (magnavpy.magnav.FILTout attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.t_mis_a">t_mis_a (magnavpy.magnav.FILTout attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.t_mis_e">t_mis_e (magnavpy.magnav.FILTout attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.t_scale">t_scale (magnavpy.magnav.FILTout attribute)</a>
-</li>
-      <li><a href="api_reference.html#magnavpy.magnav.FILTout.t_xyz">t_xyz (magnavpy.magnav.FILTout attribute)</a>
-</li>
+      </ul></li>
       <li><a href="api_reference.html#magnavpy.plot_functions.tanh">tanh() (in module magnavpy.plot_functions)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.plot_functions.tanh_derivative">tanh_derivative() (in module magnavpy.plot_functions)</a>
 </li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.td">td (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.td_err">td_err (magnavpy.magnav.FILTout attribute)</a>
+</li>
       <li><a href="api_reference.html#magnavpy.magnav.CRLBout.td_std">td_std (magnavpy.magnav.CRLBout attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.FILTout.td_std">(magnavpy.magnav.FILTout attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.te">te (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.te_err">te_err (magnavpy.magnav.FILTout attribute)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.CRLBout.te_std">te_std (magnavpy.magnav.CRLBout attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.FILTout.te_std">(magnavpy.magnav.FILTout attribute)</a>
 </li>
+      </ul></li>
       <li><a href="api_reference.html#magnavpy.compensation.TempParams">TempParams (class in magnavpy.compensation)</a>
 
       <ul>
         <li><a href="api_reference.html#magnavpy.magnav.TempParams">(class in magnavpy.magnav)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#magnavpy.compensation.TL_mat2vec">TL_mat2vec() (in module magnavpy.compensation)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.terms">terms (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.terms">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.terms_A">terms_A (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.terms_A">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.TempParams.tf_gain">tf_gain (magnavpy.magnav.TempParams attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.TempParams.tf_layer_type">tf_layer_type (magnavpy.magnav.TempParams attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.TempParams.tf_norm_type">tf_norm_type (magnavpy.magnav.TempParams attribute)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.TL_coef">TL_coef (magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.compensation.TL_mat2vec">TL_mat2vec() (in module magnavpy.compensation)</a>
+</li>
       <li><a href="api_reference.html#magnavpy.compensation.TL_vec2mat">TL_vec2mat() (in module magnavpy.compensation)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.compensation.TL_vec_split">TL_vec_split() (in module magnavpy.compensation)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.magnav.CRLBout.tn_std">tn_std (magnavpy.magnav.CRLBout attribute)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.tn">tn (magnavpy.magnav.FILTout attribute)</a>
 </li>
-      <li><a href="api_reference.html#id83">tolles_lawson_coeffs_to_matrix() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.tolles_lawson_coeffs_to_matrix">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.tn_err">tn_err (magnavpy.magnav.FILTout attribute)</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.CRLBout.tn_std">tn_std (magnavpy.magnav.CRLBout attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.FILTout.tn_std">(magnavpy.magnav.FILTout attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.create_xyz.tolles_lawson_coeffs_to_matrix">tolles_lawson_coeffs_to_matrix() (in module magnavpy.create_xyz)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20.total_p">total_p (magnavpy.magnav.XYZ20 attribute)</a>
 </li>
-      <li><a href="api_reference.html#id19">Traj (class in magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.Traj">Traj (class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.Traj">[1]</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.magnav.XYZ.traj">traj (magnavpy.magnav.XYZ attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.Traj">(class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.Traj">[1]</a>
-</li>
-      </ul></li>
-      <li><a href="api_reference.html#id44">traj (magnavpy.create_xyz.XYZ0 attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.XYZ0.traj">[1]</a>
-
-      <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.XYZ.traj">(magnavpy.magnav.XYZ attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ0.traj">(magnavpy.magnav.XYZ0 attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ1.traj">(magnavpy.magnav.XYZ1 attribute)</a>
@@ -1444,11 +1697,11 @@
         <li><a href="api_reference.html#magnavpy.magnav.XYZ21.traj">(magnavpy.magnav.XYZ21 attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id84">transform_lla_to_utm() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.transform_lla_to_utm">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.transform_lla_to_utm">transform_lla_to_utm() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#id85">trim_map() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.trim_map">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.trim_map">trim_map() (in module magnavpy.create_xyz)</a>
 </li>
-      <li><a href="api_reference.html#id29">tt (magnavpy.create_xyz.Traj attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj.tt">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.tt">tt (magnavpy.magnav.FILTout attribute)</a>
 
       <ul>
         <li><a href="api_reference.html#magnavpy.magnav.INS.tt">(magnavpy.magnav.INS attribute)</a>
@@ -1464,20 +1717,36 @@
 <h2 id="U">U</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#magnavpy.compensation.unpack_data_norms">unpack_data_norms() (in module magnavpy.compensation)</a>
+      <li><a href="api_reference.html#magnavpy.analysis_util.unpack_data_norms">unpack_data_norms() (in module magnavpy.analysis_util)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.compensation.unpack_data_norms">(in module magnavpy.compensation)</a>
 </li>
-      <li><a href="api_reference.html#id103">upward_fft() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id95">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.upward_fft">[2]</a>, <a href="maps.html#magnavpy.map_utils.upward_fft">[3]</a>
+      </ul></li>
+      <li><a href="api_reference.html#id23">upward_fft() (in module magnavpy.map_utils)</a>, <a href="api_reference.html#id47">[1]</a>, <a href="api_reference.html#magnavpy.map_utils.upward_fft">[2]</a>, <a href="maps.html#magnavpy.map_utils.upward_fft">[3]</a>
 </li>
-      <li><a href="api_reference.html#id86">upward_fft_map() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.upward_fft_map">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.upward_fft_map">upward_fft_map() (in module magnavpy.create_xyz)</a>
 </li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.use_mag">use_mag (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.use_mag">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.use_vec">use_vec (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.use_vec">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20.utm_x">utm_x (magnavpy.magnav.XYZ20 attribute)</a>
 
       <ul>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ21.utm_x">(magnavpy.magnav.XYZ21 attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20.utm_y">utm_y (magnavpy.magnav.XYZ20 attribute)</a>
 
       <ul>
@@ -1490,7 +1759,7 @@
         <li><a href="api_reference.html#magnavpy.magnav.XYZ21.utm_z">(magnavpy.magnav.XYZ21 attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#id87">utm_zone_from_latlon() (in module magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.utm_zone_from_latlon">[1]</a>
+      <li><a href="api_reference.html#magnavpy.create_xyz.utm_zone_from_latlon">utm_zone_from_latlon() (in module magnavpy.create_xyz)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1498,11 +1767,9 @@
 <h2 id="V">V</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id30">vd (magnavpy.create_xyz.Traj attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj.vd">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.vd">vd (magnavpy.magnav.FILTout attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.FILTout.vd">(magnavpy.magnav.FILTout attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.INS.vd">(magnavpy.magnav.INS attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.Path.vd">(magnavpy.magnav.Path attribute)</a>
@@ -1510,13 +1777,17 @@
         <li><a href="api_reference.html#magnavpy.magnav.Traj.vd">(magnavpy.magnav.Traj attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#magnavpy.magnav.CRLBout.vd_std">vd_std (magnavpy.magnav.CRLBout attribute)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.vd_err">vd_err (magnavpy.magnav.FILTout attribute)</a>
 </li>
-      <li><a href="api_reference.html#id31">ve (magnavpy.create_xyz.Traj attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj.ve">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.CRLBout.vd_std">vd_std (magnavpy.magnav.CRLBout attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.FILTout.ve">(magnavpy.magnav.FILTout attribute)</a>
+        <li><a href="api_reference.html#magnavpy.magnav.FILTout.vd_std">(magnavpy.magnav.FILTout attribute)</a>
 </li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.ve">ve (magnavpy.magnav.FILTout attribute)</a>
+
+      <ul>
         <li><a href="api_reference.html#magnavpy.magnav.INS.ve">(magnavpy.magnav.INS attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.Path.ve">(magnavpy.magnav.Path attribute)</a>
@@ -1524,13 +1795,23 @@
         <li><a href="api_reference.html#magnavpy.magnav.Traj.ve">(magnavpy.magnav.Traj attribute)</a>
 </li>
       </ul></li>
-      <li><a href="api_reference.html#magnavpy.magnav.CRLBout.ve_std">ve_std (magnavpy.magnav.CRLBout attribute)</a>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.ve_err">ve_err (magnavpy.magnav.FILTout attribute)</a>
 </li>
-      <li><a href="api_reference.html#id32">vn (magnavpy.create_xyz.Traj attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.Traj.vn">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.CRLBout.ve_std">ve_std (magnavpy.magnav.CRLBout attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.FILTout.vn">(magnavpy.magnav.FILTout attribute)</a>
+        <li><a href="api_reference.html#magnavpy.magnav.FILTout.ve_std">(magnavpy.magnav.FILTout attribute)</a>
 </li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.version">version (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.version">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.vn">vn (magnavpy.magnav.FILTout attribute)</a>
+
+      <ul>
         <li><a href="api_reference.html#magnavpy.magnav.INS.vn">(magnavpy.magnav.INS attribute)</a>
 </li>
         <li><a href="api_reference.html#magnavpy.magnav.Path.vn">(magnavpy.magnav.Path attribute)</a>
@@ -1538,12 +1819,18 @@
         <li><a href="api_reference.html#magnavpy.magnav.Traj.vn">(magnavpy.magnav.Traj attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.FILTout.vn_err">vn_err (magnavpy.magnav.FILTout attribute)</a>
+</li>
       <li><a href="api_reference.html#magnavpy.magnav.CRLBout.vn_std">vn_std (magnavpy.magnav.CRLBout attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.FILTout.vn_std">(magnavpy.magnav.FILTout attribute)</a>
 </li>
-      <li><a href="api_reference.html#magnavpy.magnav.XYZ20.vol_acc_n">vol_acc_n (magnavpy.magnav.XYZ20 attribute)</a>
-</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_reference.html#magnavpy.magnav.XYZ20.vol_acc_n">vol_acc_n (magnavpy.magnav.XYZ20 attribute)</a>
+</li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20.vol_acc_p">vol_acc_p (magnavpy.magnav.XYZ20 attribute)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20.vol_acpwr">vol_acpwr (magnavpy.magnav.XYZ20 attribute)</a>
@@ -1595,38 +1882,58 @@
   </ul></td>
 </tr></table>
 
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_reference.html#magnavpy.magnav.TempParams.window_type">window_type (magnavpy.magnav.TempParams attribute)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api_reference.html#magnavpy.create_xyz.write_xyz">write_xyz() (in module magnavpy.create_xyz)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="X">X</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id5">x (magnavpy.create_xyz.MagV attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.MagV.x">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.EKF_RT.x">x (magnavpy.magnav.EKF_RT attribute)</a>
 
       <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.FILTout.x">(magnavpy.magnav.FILTout attribute)</a>
-</li>
         <li><a href="api_reference.html#magnavpy.magnav.FILTres.x">(magnavpy.magnav.FILTres attribute)</a>
 </li>
-      </ul></li>
-      <li><a href="api_reference.html#id11">xx (magnavpy.create_xyz.MapS attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.MapS.xx">[1]</a>
+        <li><a href="api_reference.html#magnavpy.magnav.MagV.x">(magnavpy.magnav.MagV attribute)</a>
 </li>
+        <li><a href="api_reference.html#magnavpy.magnav.MapV.x">(magnavpy.magnav.MapV attribute)</a>
+</li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.MapS.xx">xx (magnavpy.magnav.MapS attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.MapS3D.xx">(magnavpy.magnav.MapS3D attribute)</a>
+</li>
+        <li><a href="api_reference.html#magnavpy.magnav.MapSd.xx">(magnavpy.magnav.MapSd attribute)</a>
+</li>
+        <li><a href="api_reference.html#magnavpy.magnav.MapV.xx">(magnavpy.magnav.MapV attribute)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api_reference.html#magnavpy.compensation.XYZ">XYZ (class in magnavpy.compensation)</a>
 
       <ul>
         <li><a href="api_reference.html#magnavpy.magnav.XYZ">(class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.XYZ">[1]</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id33">XYZ0 (class in magnavpy.create_xyz)</a>, <a href="api_reference.html#magnavpy.create_xyz.XYZ0">[1]</a>
-
-      <ul>
-        <li><a href="api_reference.html#magnavpy.magnav.XYZ0">(class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.XYZ0">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.XYZ0">XYZ0 (class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.XYZ0">[1]</a>
 </li>
-      </ul></li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ1">XYZ1 (class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.XYZ1">[1]</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20">XYZ20 (class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.XYZ20">[1]</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ21">XYZ21 (class in magnavpy.magnav)</a>, <a href="api_structs.html#magnavpy.magnav.XYZ21">[1]</a>
+</li>
+      <li><a href="api_reference.html#magnavpy.create_xyz.xyz_file_name">xyz_file_name() (in module magnavpy.create_xyz)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1634,8 +1941,18 @@
 <h2 id="Y">Y</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id6">y (magnavpy.create_xyz.MagV attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.MagV.y">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.MagV.y">y (magnavpy.magnav.MagV attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.MapV.y">(magnavpy.magnav.MapV attribute)</a>
 </li>
+      </ul></li>
+      <li><a href="api_reference.html#magnavpy.magnav.LinCompParams.y_type">y_type (magnavpy.magnav.LinCompParams attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.NNCompParams.y_type">(magnavpy.magnav.NNCompParams attribute)</a>
+</li>
+      </ul></li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ20.yaw_rate">yaw_rate (magnavpy.magnav.XYZ20 attribute)</a>
 </li>
       <li><a href="api_reference.html#magnavpy.magnav.XYZ.year">year (magnavpy.magnav.XYZ attribute)</a>
@@ -1652,21 +1969,31 @@
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id45">years (magnavpy.create_xyz.XYZ0 attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.XYZ0.years">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.MapS.yy">yy (magnavpy.magnav.MapS attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.MapS3D.yy">(magnavpy.magnav.MapS3D attribute)</a>
 </li>
-      <li><a href="api_reference.html#id12">yy (magnavpy.create_xyz.MapS attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.MapS.yy">[1]</a>
+        <li><a href="api_reference.html#magnavpy.magnav.MapSd.yy">(magnavpy.magnav.MapSd attribute)</a>
 </li>
+        <li><a href="api_reference.html#magnavpy.magnav.MapV.yy">(magnavpy.magnav.MapV attribute)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="Z">Z</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id7">z (magnavpy.create_xyz.MagV attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.MagV.z">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.MagV.z">z (magnavpy.magnav.MagV attribute)</a>
+
+      <ul>
+        <li><a href="api_reference.html#magnavpy.magnav.MapV.z">(magnavpy.magnav.MapV attribute)</a>
 </li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api_reference.html#id15">zz (magnavpy.create_xyz.MapS3D attribute)</a>, <a href="api_reference.html#magnavpy.create_xyz.MapS3D.zz">[1]</a>
+      <li><a href="api_reference.html#magnavpy.magnav.MapS3D.zz">zz (magnavpy.magnav.MapS3D attribute)</a>
 </li>
   </ul></td>
 </tr></table>

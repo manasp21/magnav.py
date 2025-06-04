@@ -11,9 +11,9 @@ MagNav Filter Model
 MagNav filter model internals
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: magnavpy.model_functions.create_p0
+.. autofunction:: magnavpy.model_functions.create_P0
 
-.. autofunction:: magnavpy.model_functions.create_qd
+.. autofunction:: magnavpy.model_functions.create_Qd
 
 .. autofunction:: magnavpy.model_functions.get_pinson
 

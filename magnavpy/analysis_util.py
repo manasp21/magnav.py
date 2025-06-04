@@ -1101,7 +1101,7 @@ def get_y_from_dataframes(lines: Union[int, List[int]],
     get_map_val_func = None
 
     try:
-        from .get_XYZ import get_XYZ as get_XYZ_imported
+        from .create_xyz import create_xyz as get_XYZ_imported
         get_XYZ_func = get_XYZ_imported
     except ImportError:
         if not silent: print("Warning: get_XYZ could not be imported. Using placeholder for XYZ data in get_y_from_dataframes.")
@@ -1721,7 +1721,7 @@ def get_Axy(lines: Union[int, List[int]],
 
     get_XYZ_func, get_map_func, get_map_val_func = None, None, None
     try:
-        from .get_XYZ import get_XYZ as get_XYZ_imported
+        from .create_xyz import create_xyz as get_XYZ_imported
         get_XYZ_func = get_XYZ_imported
     except ImportError: pass
     try:

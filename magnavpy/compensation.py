@@ -5859,7 +5859,7 @@ def comp_train_test( # Overload for DataFrames
             # get_XYZ(lines, df_line, df_flight, df_map; kwargs...)
             # which should handle lists of lines and return a single (possibly concatenated)
             # XYZ object, corresponding indices, and map object.
-            from .create_xyz import get_XYZ as get_XYZ_ported
+            from .create_xyz import create_xyz as get_XYZ_ported
         except ImportError:
             if not silent_local: logging.error("compensation.py - create_xyz.get_XYZ not found for DataFrame processing in comp_train_test.")
             return None, None, None

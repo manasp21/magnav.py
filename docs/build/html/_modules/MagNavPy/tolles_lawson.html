@@ -7,7 +7,7 @@
     <title>magnavpy.tolles_lawson &#8212; MagNavPy 0.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
-    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=73454398" />
     <script src="../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
@@ -21,9 +21,68 @@
   
 
   </head><body>
-  
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">MagNavPy</a></h1>
 
-    <div class="document">
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=manasp21&repo=magnav.py&type=star&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../data.html">Flight Path &amp; INS Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maps.html">Magnetic Anomaly Maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../comp.html">Aeromagnetic Compensation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../nncomp.html">Neural Network-Based Model Diagrams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../nav.html">Navigation Algorithms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../status.html">Current Status and Known Issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_functions.html">API: Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_structs.html">API: Structs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_reference.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
       <div class="documentwrapper">
         <div class="bodywrapper">
           
@@ -61,7 +120,7 @@
                             <span class="s2">&quot;backward2&quot;</span><span class="p">,</span> <span class="s2">&quot;forward2&quot;</span><span class="p">,</span> <span class="s2">&quot;fourth&quot;</span><span class="p">,</span> <span class="s2">&quot;central4&quot;</span><span class="p">]</span>
 
 <div class="viewcode-block" id="fdm">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.tolles_lawson.fdm">[docs]</a>
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.fdm">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">fdm</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">scheme</span><span class="p">:</span> <span class="n">VALID_FDM_SCHEMES</span> <span class="o">=</span> <span class="s2">&quot;central&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Finite difference method (FDM) applied to x.</span>
@@ -93,7 +152,8 @@
             <span class="n">dif</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">x_float</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_float</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># Julia: dif_1</span>
             <span class="k">if</span> <span class="n">N</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span> <span class="c1"># Julia: dif_mid = (x[2:end-1] - x[1:end-2])</span>
                 <span class="n">dif</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">x_float</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_float</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">N</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">N</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># Ensure index is valid for single element assignment</span>
+            <span class="c1"># dif[N-1] needs to be handled carefully if N=1 or N=2</span>
+            <span class="k">if</span> <span class="n">N</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># Ensure index is valid for single element assignment</span>
                  <span class="n">dif</span><span class="p">[</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">x_float</span><span class="p">[</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_float</span><span class="p">[</span><span class="n">N</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="c1"># Julia: dif_end</span>
         <span class="c1"># If N=1, returns zeros_like, matching Julia&#39;s else branch</span>
     <span class="k">elif</span> <span class="n">scheme</span> <span class="o">==</span> <span class="s2">&quot;forward&quot;</span><span class="p">:</span>
@@ -101,7 +161,7 @@
             <span class="n">dif</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">x_float</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_float</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># Julia: dif_1</span>
             <span class="k">if</span> <span class="n">N</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span> <span class="c1"># Julia: dif_mid = (x[3:end] - x[2:end-1])</span>
                 <span class="n">dif</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">x_float</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="n">N</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_float</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">N</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">N</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">dif</span><span class="p">[</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">x_float</span><span class="p">[</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">x_float</span><span class="p">[</span><span class="n">N</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="c1"># Julia: dif_end</span>
     <span class="k">elif</span> <span class="n">scheme</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;central&quot;</span><span class="p">,</span> <span class="s2">&quot;central2&quot;</span><span class="p">]:</span>
         <span class="k">if</span> <span class="n">N</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span> <span class="c1"># Julia condition N &gt; 2</span>
@@ -137,7 +197,7 @@
                            <span class="mi">4</span><span class="o">*</span><span class="n">x_float</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="n">N</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span> <span class="o">+</span>
                            <span class="mi">6</span><span class="o">*</span><span class="n">x_float</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="n">N</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span>
                            <span class="mi">4</span><span class="o">*</span><span class="n">x_float</span><span class="p">[</span><span class="mi">3</span><span class="p">:</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span>
-                             <span class="n">x_float</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="n">N</span>  <span class="p">]</span> <span class="p">)</span> <span class="o">/</span> <span class="mf">16.0</span>
+                             <span class="n">x_float</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="n">N</span>  <span class="p">]</span> <span class="p">)</span> <span class="o">/</span> <span class="mf">16.0</span> <span class="c1"># Julia uses 16, not dx^4. Assuming dt=1.</span>
             <span class="c1"># dif_end = zeros(eltype(x),2)</span>
             <span class="n">dif</span><span class="p">[</span><span class="n">N</span><span class="o">-</span><span class="mi">2</span><span class="p">:</span><span class="n">N</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
     <span class="c1"># else: dif remains zeros_like, matching Julia&#39;s final else branch.</span>
@@ -156,14 +216,25 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">Bt_calc</span> <span class="o">=</span> <span class="n">Bt_actual</span>
     
+    <span class="c1"># Handle potential zero Bt_calc values to avoid division by zero</span>
+    <span class="c1"># Replace zeros with a small epsilon or handle as appropriate for the physics</span>
+    <span class="c1"># For now, we assume Bt_calc will not contain zeros where division occurs.</span>
+    <span class="c1"># A robust solution might involve np.where(Bt_calc == 0, epsilon, Bt_calc)</span>
+    <span class="c1"># or specific handling if Bx, By, Bz are all zero.</span>
+    <span class="c1"># If Bt_calc can be zero, Bx_hat etc. become NaN or Inf.</span>
+    <span class="c1"># The original Julia code doesn&#39;t explicitly handle Bt == 0.</span>
+    <span class="c1"># We&#39;ll add a small epsilon to prevent division by zero if Bt_calc is zero.</span>
+    <span class="n">epsilon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+    <span class="n">Bt_calc_safe</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">Bt_calc</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">Bt_calc</span><span class="p">)</span>
+
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">terms</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
         <span class="n">terms_set</span> <span class="o">=</span> <span class="p">{</span><span class="n">terms</span><span class="p">}</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">terms_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">terms</span><span class="p">)</span>
 
-    <span class="n">Bx_hat</span> <span class="o">=</span> <span class="n">Bx</span> <span class="o">/</span> <span class="n">Bt_calc</span>
-    <span class="n">By_hat</span> <span class="o">=</span> <span class="n">By</span> <span class="o">/</span> <span class="n">Bt_calc</span>
-    <span class="n">Bz_hat</span> <span class="o">=</span> <span class="n">Bz</span> <span class="o">/</span> <span class="n">Bt_calc</span>
+    <span class="n">Bx_hat</span> <span class="o">=</span> <span class="n">Bx</span> <span class="o">/</span> <span class="n">Bt_calc_safe</span>
+    <span class="n">By_hat</span> <span class="o">=</span> <span class="n">By</span> <span class="o">/</span> <span class="n">Bt_calc_safe</span>
+    <span class="n">Bz_hat</span> <span class="o">=</span> <span class="n">Bz</span> <span class="o">/</span> <span class="n">Bt_calc_safe</span>
 
     <span class="n">Bx_dot</span> <span class="o">=</span> <span class="n">fdm</span><span class="p">(</span><span class="n">Bx</span><span class="p">)</span>
     <span class="n">By_dot</span> <span class="o">=</span> <span class="n">fdm</span><span class="p">(</span><span class="n">By</span><span class="p">)</span>
@@ -213,7 +284,7 @@
         <span class="n">columns</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">Bx_dot</span><span class="p">,</span> <span class="n">By_dot</span><span class="p">,</span> <span class="n">Bz_dot</span><span class="p">])</span>
 
     <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">s</span> <span class="ow">in</span> <span class="n">terms_set</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;bias&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">)):</span>
-        <span class="n">columns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Bt_calc</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">Bt_calc</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
+        <span class="n">columns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Bt_calc_safe</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">Bt_calc_safe</span><span class="o">.</span><span class="n">dtype</span><span class="p">))</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">columns</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Terms </span><span class="si">{</span><span class="n">terms</span><span class="si">}</span><span class="s2"> are invalid or result in no columns for the A matrix.&quot;</span><span class="p">)</span>
@@ -222,12 +293,12 @@
 
     <span class="k">if</span> <span class="n">return_B</span><span class="p">:</span>
         <span class="n">B_dot_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">Bx_dot</span><span class="p">,</span> <span class="n">By_dot</span><span class="p">,</span> <span class="n">Bz_dot</span><span class="p">])</span>
-        <span class="k">return</span> <span class="n">A</span><span class="p">,</span> <span class="n">Bt_calc</span><span class="p">,</span> <span class="n">B_dot_matrix</span>
+        <span class="k">return</span> <span class="n">A</span><span class="p">,</span> <span class="n">Bt_calc</span><span class="p">,</span> <span class="n">B_dot_matrix</span> <span class="c1"># Return original Bt_calc, not Bt_calc_safe</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">A</span>
 
 <div class="viewcode-block" id="create_TL_A">
-<a class="viewcode-back" href="../../comp.html#magnavpy.tolles_lawson.create_TL_A">[docs]</a>
+<a class="viewcode-back" href="../../comp.html#magnavpy.magnav.create_TL_A">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">create_TL_A</span><span class="p">(</span><span class="n">flux_or_Bx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">MagV</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
                 <span class="n">By</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                 <span class="n">Bz</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -240,29 +311,55 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create Tolles-Lawson `A` matrix. See _create_TL_A_components for details.</span>
 <span class="sd">    Handles MagV input or Bx,By,Bz components.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        flux_or_Bx: MagV object or Bx (x-component) as np.ndarray.</span>
+<span class="sd">        By: If flux_or_Bx is Bx array, this is By (y-component).</span>
+<span class="sd">        Bz: If flux_or_Bx is Bx array, this is Bz (z-component).</span>
+<span class="sd">        ind: If flux_or_Bx is MagV, this is `ind` (selected indices, optional boolean array).</span>
+<span class="sd">        Bt: (optional) Magnitude of vector magnetometer measurements or scalar</span>
+<span class="sd">            magnetometer measurements for modified Tolles-Lawson [nT].</span>
+<span class="sd">        terms: (optional) Tolles-Lawson terms to use.</span>
+<span class="sd">        Bt_scale: (optional) Scaling factor for induced &amp; eddy current terms [nT].</span>
+<span class="sd">        return_B: (optional) If true, also return `Bt_calc` &amp; `B_dot_matrix`.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tolles-Lawson `A` matrix, and optionally `Bt_calc` and `B_dot_matrix`.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">_Bx_comp</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
     <span class="n">_By_comp</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
     <span class="n">_Bz_comp</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
     <span class="n">_Bt_for_helper</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="n">Bt</span> 
+    <span class="n">_ind_actual</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="n">ind</span>
 
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">flux_or_Bx</span><span class="p">,</span> <span class="n">MagV</span><span class="p">):</span>
         <span class="n">flux</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">MagV</span><span class="p">,</span> <span class="n">flux_or_Bx</span><span class="p">)</span>
-        <span class="n">_ind_actual</span> <span class="o">=</span> <span class="n">ind</span> <span class="k">if</span> <span class="n">ind</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">_ind_actual</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">_ind_actual</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="nb">bool</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">_ind_actual</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`ind` must be a boolean array of the same length as MagV data.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_ind_actual</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
         
         <span class="n">_Bx_comp</span><span class="p">,</span> <span class="n">_By_comp</span><span class="p">,</span> <span class="n">_Bz_comp</span> <span class="o">=</span> <span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">],</span> <span class="n">flux</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">],</span> <span class="n">flux</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">]</span>
         
-        <span class="k">if</span> <span class="n">Bt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Bt</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">]):</span>
-                 <span class="n">_Bt_for_helper</span> <span class="o">=</span> <span class="n">Bt</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">_Bt_for_helper</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">_Bt_for_helper</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">):</span> <span class="c1"># Original length before indexing</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Provided `Bt` must have the same original length as MagV data.&quot;</span><span class="p">)</span>
+            <span class="n">_Bt_for_helper</span> <span class="o">=</span> <span class="n">_Bt_for_helper</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">]</span>
+
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">flux_or_Bx</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">By</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">Bz</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;If first argument is Bx array, By and Bz must also be provided.&quot;</span><span class="p">)</span>
         <span class="n">_Bx_comp</span><span class="p">,</span> <span class="n">_By_comp</span><span class="p">,</span> <span class="n">_Bz_comp</span> <span class="o">=</span> <span class="n">flux_or_Bx</span><span class="p">,</span> <span class="n">By</span><span class="p">,</span> <span class="n">Bz</span>
+        <span class="k">if</span> <span class="n">_ind_actual</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;`ind` argument is ignored when Bx, By, Bz arrays are provided directly.&quot;</span><span class="p">)</span>
+        <span class="c1"># If Bt is provided, it should match the length of Bx, By, Bz</span>
+        <span class="k">if</span> <span class="n">_Bt_for_helper</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">_Bt_for_helper</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">_Bx_comp</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Provided `Bt` must have the same length as Bx, By, Bz arrays.&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;First argument must be a MagV object or a NumPy array for Bx.&quot;</span><span class="p">)</span>
 
-    <span class="n">current_terms_str</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">terms</span><span class="p">)</span>
+    <span class="n">current_terms_str</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">terms</span><span class="p">)</span> <span class="c1"># TL_TermType is a subset of str</span>
     <span class="k">return</span> <span class="n">_create_TL_A_components</span><span class="p">(</span><span class="n">_Bx_comp</span><span class="p">,</span> <span class="n">_By_comp</span><span class="p">,</span> <span class="n">_Bz_comp</span><span class="p">,</span>
                                    <span class="n">Bt_actual</span><span class="o">=</span><span class="n">_Bt_for_helper</span><span class="p">,</span>
                                    <span class="n">terms</span><span class="o">=</span><span class="n">current_terms_str</span><span class="p">,</span>
@@ -289,31 +386,33 @@
         <span class="n">perform_filter</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="n">bpf_coeffs</span> <span class="o">=</span> <span class="n">get_bpf_sos</span><span class="p">(</span><span class="n">pass1</span><span class="o">=</span><span class="n">pass1</span><span class="p">,</span> <span class="n">pass2</span><span class="o">=</span><span class="n">pass2</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span> <span class="n">pole</span><span class="o">=</span><span class="n">pole</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Not filtering (or trimming) Tolles-Lawson data as pass frequencies are out of range.&quot;</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Not filtering (or trimming) Tolles-Lawson data as pass frequencies are out of range or zero.&quot;</span><span class="p">)</span>
 
-    <span class="n">A_unfiltered</span> <span class="o">=</span> <span class="n">_create_TL_A_components</span><span class="p">(</span><span class="n">Bx</span><span class="p">,</span> <span class="n">By</span><span class="p">,</span> <span class="n">Bz</span><span class="p">,</span>
+    <span class="n">A_unfiltered_obj</span> <span class="o">=</span> <span class="n">_create_TL_A_components</span><span class="p">(</span><span class="n">Bx</span><span class="p">,</span> <span class="n">By</span><span class="p">,</span> <span class="n">Bz</span><span class="p">,</span>
                                 <span class="n">Bt_actual</span><span class="o">=</span><span class="n">Bt_actual</span><span class="p">,</span>
                                 <span class="n">terms</span><span class="o">=</span><span class="n">terms</span><span class="p">,</span>
                                 <span class="n">Bt_scale</span><span class="o">=</span><span class="n">Bt_scale</span><span class="p">,</span>
-                                <span class="n">return_B</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">A_unfiltered</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">A_unfiltered</span><span class="p">)</span>
+                                <span class="n">return_B</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="c1"># We only need A matrix here</span>
+    <span class="n">A_unfiltered</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">A_unfiltered_obj</span><span class="p">)</span>
     
     <span class="n">A_to_use</span> <span class="o">=</span> <span class="n">A_unfiltered</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="n">B_to_use</span> <span class="o">=</span> <span class="n">B_scalar</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
     <span class="k">if</span> <span class="n">perform_filter</span> <span class="ow">and</span> <span class="n">bpf_coeffs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">A_filt</span> <span class="o">=</span> <span class="n">bpf_data</span><span class="p">(</span><span class="n">A_to_use</span><span class="p">,</span> <span class="n">sos</span><span class="o">=</span><span class="n">bpf_coeffs</span><span class="p">)</span> <span class="c1"># Assuming bpf_data handles 2D A</span>
-        <span class="n">B_filt</span> <span class="o">=</span> <span class="n">bpf_data</span><span class="p">(</span><span class="n">B_to_use</span><span class="p">,</span> <span class="n">sos</span><span class="o">=</span><span class="n">bpf_coeffs</span><span class="p">)</span>
+        <span class="c1"># Ensure A_to_use is 2D for bpf_data if it expects that</span>
+        <span class="k">if</span> <span class="n">A_to_use</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">A_to_use</span> <span class="o">=</span> <span class="n">A_to_use</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="n">A_filt</span> <span class="o">=</span> <span class="n">bpf_data</span><span class="p">(</span><span class="n">A_to_use</span><span class="p">,</span> <span class="n">sos</span><span class="o">=</span><span class="n">bpf_coeffs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># Apply filter along time axis (axis 0)</span>
+        <span class="n">B_filt</span> <span class="o">=</span> <span class="n">bpf_data</span><span class="p">(</span><span class="n">B_to_use</span><span class="p">,</span> <span class="n">sos</span><span class="o">=</span><span class="n">bpf_coeffs</span><span class="p">)</span> <span class="c1"># Assuming B_to_use is 1D</span>
         
         <span class="k">if</span> <span class="n">trim</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">A_filt</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">trim</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">B_filt</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">trim</span> <span class="p">:</span>
+            <span class="k">if</span> <span class="n">A_filt</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">trim</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">B_filt</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">trim</span> <span class="p">:</span>
                 <span class="n">A_to_use</span> <span class="o">=</span> <span class="n">A_filt</span><span class="p">[</span><span class="n">trim</span><span class="p">:</span><span class="o">-</span><span class="n">trim</span><span class="p">,</span> <span class="p">:]</span>
                 <span class="n">B_to_use</span> <span class="o">=</span> <span class="n">B_filt</span><span class="p">[</span><span class="n">trim</span><span class="p">:</span><span class="o">-</span><span class="n">trim</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot trim </span><span class="si">{</span><span class="n">trim</span><span class="si">}</span><span class="s2"> samples, data too short. Using untrimmed filtered data.&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot trim </span><span class="si">{</span><span class="n">trim</span><span class="si">}</span><span class="s2"> samples, data too short (</span><span class="si">{</span><span class="n">A_filt</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> samples). Using untrimmed filtered data.&quot;</span><span class="p">)</span>
                 <span class="n">A_to_use</span> <span class="o">=</span> <span class="n">A_filt</span>
                 <span class="n">B_to_use</span> <span class="o">=</span> <span class="n">B_filt</span>
-        <span class="k">else</span><span class="p">:</span> <span class="c1"># trim is 0</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># trim is 0 or negative (no trimming)</span>
             <span class="n">A_to_use</span> <span class="o">=</span> <span class="n">A_filt</span>
             <span class="n">B_to_use</span> <span class="o">=</span> <span class="n">B_filt</span>
     
@@ -328,7 +427,7 @@
         <span class="k">return</span> <span class="n">coef</span>
 
 <div class="viewcode-block" id="create_TL_coef">
-<a class="viewcode-back" href="../../comp.html#magnavpy.tolles_lawson.create_TL_coef">[docs]</a>
+<a class="viewcode-back" href="../../comp.html#magnavpy.magnav.create_TL_coef">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">create_TL_coef</span><span class="p">(</span><span class="n">flux_or_Bx</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">MagV</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span>
                    <span class="n">arg2</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> 
                    <span class="n">arg3</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -345,17 +444,29 @@
                    <span class="n">Bt_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50000.0</span><span class="p">,</span>
                    <span class="n">return_var</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Create Tolles-Lawson coefficients. See _create_TL_coef_components for details.</span>
-<span class="sd">    Handles MagV input or Bx,By,Bz components.</span>
+<span class="sd">    Create Tolles-Lawson coefficients.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        flux_or_Bx: MagV object or Bx (x-component) as np.ndarray.</span>
 <span class="sd">        arg2: If flux_or_Bx is MagV, this is B_scalar (scalar measurements).</span>
 <span class="sd">              If flux_or_Bx is Bx (array), this is By (y-component).</span>
-<span class="sd">        arg3: If flux_or_Bx is MagV, this is `ind` (selected indices, optional).</span>
+<span class="sd">        arg3: If flux_or_Bx is MagV, this is `ind` (selected indices, optional boolean array).</span>
 <span class="sd">              If flux_or_Bx is Bx (array), this is Bz (z-component).</span>
 <span class="sd">        B_scalar_for_bx_case: Scalar measurements [nT]. Required if using Bx,By,Bz components.</span>
-<span class="sd">        (Keyword arguments follow)</span>
+<span class="sd">        Bt: (optional) Magnitude of vector magnetometer measurements or scalar</span>
+<span class="sd">            magnetometer measurements for modified Tolles-Lawson [nT].</span>
+<span class="sd">        lambda_val: (optional) Ridge parameter for linear regression.</span>
+<span class="sd">        terms: (optional) Tolles-Lawson terms to use.</span>
+<span class="sd">        pass1: (optional) First passband frequency for filtering [Hz].</span>
+<span class="sd">        pass2: (optional) Second passband frequency for filtering [Hz].</span>
+<span class="sd">        fs: (optional) Sampling frequency [Hz].</span>
+<span class="sd">        pole: (optional) Number of poles for Butterworth filter.</span>
+<span class="sd">        trim: (optional) Number of elements to trim from each end after filtering.</span>
+<span class="sd">        Bt_scale: (optional) Scaling factor for induced &amp; eddy current terms [nT].</span>
+<span class="sd">        return_var: (optional) If true, also return fit error variance.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tolles-Lawson coefficients, and optionally fit error variance.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">_Bx_comp</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
     <span class="n">_By_comp</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
@@ -366,15 +477,20 @@
 
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">flux_or_Bx</span><span class="p">,</span> <span class="n">MagV</span><span class="p">):</span>
         <span class="n">flux</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">MagV</span><span class="p">,</span> <span class="n">flux_or_Bx</span><span class="p">)</span>
-        <span class="n">_B_scalar_comp</span> <span class="o">=</span> <span class="n">arg2</span> 
-        <span class="n">_ind_actual</span> <span class="o">=</span> <span class="n">arg3</span> <span class="k">if</span> <span class="p">(</span><span class="n">arg3</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">arg3</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="nb">bool</span><span class="p">)</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">_B_scalar_comp_all</span> <span class="o">=</span> <span class="n">arg2</span> <span class="c1"># This is B_scalar before indexing</span>
+        <span class="n">_ind_actual</span> <span class="o">=</span> <span class="n">arg3</span> <span class="k">if</span> <span class="p">(</span><span class="n">arg3</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">arg3</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="nb">bool</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">arg3</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">))</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
         
         <span class="n">_Bx_comp</span><span class="p">,</span> <span class="n">_By_comp</span><span class="p">,</span> <span class="n">_Bz_comp</span> <span class="o">=</span> <span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">],</span> <span class="n">flux</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">],</span> <span class="n">flux</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">]</span>
-        <span class="n">_B_scalar_comp</span> <span class="o">=</span> <span class="n">_B_scalar_comp</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">]</span>
+        
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">_B_scalar_comp_all</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`B_scalar` (arg2) must have the same length as MagV data before indexing.&quot;</span><span class="p">)</span>
+        <span class="n">_B_scalar_comp</span> <span class="o">=</span> <span class="n">_B_scalar_comp_all</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">]</span>
 
-        <span class="k">if</span> <span class="n">Bt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">Bt</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">]):</span>
-                <span class="n">_Bt_for_helper</span> <span class="o">=</span> <span class="n">Bt</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">_Bt_for_helper</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">_Bt_for_helper</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">):</span> <span class="c1"># Original length</span>
+                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Provided `Bt` must have the same original length as MagV data.&quot;</span><span class="p">)</span>
+            <span class="n">_Bt_for_helper</span> <span class="o">=</span> <span class="n">_Bt_for_helper</span><span class="p">[</span><span class="n">_ind_actual</span><span class="p">]</span>
+            
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">flux_or_Bx</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
         <span class="n">_Bx_comp</span> <span class="o">=</span> <span class="n">flux_or_Bx</span>
         <span class="n">_By_comp</span> <span class="o">=</span> <span class="n">arg2</span> 
@@ -383,6 +499,12 @@
         <span class="k">if</span> <span class="n">B_scalar_for_bx_case</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;B_scalar_for_bx_case must be provided if flux_or_Bx is Bx array.&quot;</span><span class="p">)</span>
         <span class="n">_B_scalar_comp</span> <span class="o">=</span> <span class="n">B_scalar_for_bx_case</span>
+        
+        <span class="c1"># Length checks for array inputs</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">_Bx_comp</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">_By_comp</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">_Bz_comp</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">_B_scalar_comp</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Bx, By, Bz, and B_scalar_for_bx_case must all have the same length.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">_Bt_for_helper</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">_Bt_for_helper</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">_Bx_comp</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Provided `Bt` must have the same length as Bx, By, Bz arrays.&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;First argument must be a MagV object or a NumPy array for Bx.&quot;</span><span class="p">)</span>
 
@@ -396,88 +518,139 @@
 
 
 <div class="viewcode-block" id="get_TL_term_ind">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.tolles_lawson.get_TL_term_ind">[docs]</a>
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.magnav.get_TL_term_ind">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_TL_term_ind</span><span class="p">(</span><span class="n">term_to_find</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
                     <span class="n">current_terms</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Finds indices corresponding to `term_to_find` in a TL coefficient vector</span>
-<span class="sd">    generated using `current_terms`.</span>
+<span class="sd">    Finds boolean indices corresponding to `term_to_find` in a Tolles-Lawson</span>
+<span class="sd">    coefficient vector that would be generated using `current_terms`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        term_to_find: The specific Tolles-Lawson term (e.g., &quot;permanent&quot;, &quot;induced3&quot;)</span>
+<span class="sd">                      whose column indices are sought.</span>
+<span class="sd">        current_terms: A sequence of Tolles-Lawson terms that define the full</span>
+<span class="sd">                       set of columns in the &#39;A&#39; matrix (and thus the coefficient vector).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A boolean numpy array indicating the positions of `term_to_find`&#39;s</span>
+<span class="sd">        coefficients within the full coefficient vector.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">terms_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">current_terms</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">current_terms</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="p">[</span><span class="n">current_terms</span><span class="p">]</span>
+    <span class="c1"># Use a minimal dummy dataset that satisfies fdm&#39;s length requirements for all schemes</span>
+    <span class="c1"># Length 5 is needed for &#39;fourth&#39;/&#39;central4&#39; scheme in fdm.</span>
+    <span class="n">x_dummy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="c1"># Create a dummy Bt that is non-zero to avoid division by zero issues.</span>
+    <span class="c1"># Bt_dummy must have the same length as x_dummy.</span>
+    <span class="n">bt_dummy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">x_dummy</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">x_dummy</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">x_dummy</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># Example: Bx=By=Bz=x_dummy</span>
 
-    <span class="n">x_dummy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">,</span> <span class="mf">5.0</span><span class="p">])</span> <span class="c1"># Min length for all fdm schemes</span>
-    <span class="n">bt_dummy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span> <span class="o">*</span> <span class="n">x_dummy</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># Dummy Bt</span>
-
+    <span class="c1"># Get the total number of columns for all current_terms</span>
     <span class="n">A_total_obj</span> <span class="o">=</span> <span class="n">_create_TL_A_components</span><span class="p">(</span><span class="n">x_dummy</span><span class="p">,</span> <span class="n">x_dummy</span><span class="p">,</span> <span class="n">x_dummy</span><span class="p">,</span>
-                                          <span class="n">Bt_actual</span><span class="o">=</span><span class="n">bt_dummy</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="n">terms_list</span><span class="p">,</span>
+                                          <span class="n">Bt_actual</span><span class="o">=</span><span class="n">bt_dummy</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">current_terms</span><span class="p">),</span>
                                           <span class="n">Bt_scale</span><span class="o">=</span><span class="mf">50000.0</span><span class="p">,</span> <span class="n">return_B</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="n">N_total_cols</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">A_total_obj</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
     
     <span class="n">N_cols_for_term_to_find</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># Get the number of columns generated by term_to_find alone</span>
         <span class="n">A_for_term_obj</span> <span class="o">=</span> <span class="n">_create_TL_A_components</span><span class="p">(</span><span class="n">x_dummy</span><span class="p">,</span> <span class="n">x_dummy</span><span class="p">,</span> <span class="n">x_dummy</span><span class="p">,</span>
                                                  <span class="n">Bt_actual</span><span class="o">=</span><span class="n">bt_dummy</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="p">[</span><span class="n">term_to_find</span><span class="p">],</span>
                                                  <span class="n">Bt_scale</span><span class="o">=</span><span class="mf">50000.0</span><span class="p">,</span> <span class="n">return_B</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="n">N_cols_for_term_to_find</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">A_for_term_obj</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span> <span class="c1"># term_to_find alone might be invalid</span>
-        <span class="k">pass</span> <span class="c1"># N_cols_for_term_to_find remains 0</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="c1"># This can happen if term_to_find is not a valid term string on its own</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Term &#39;</span><span class="si">{</span><span class="n">term_to_find</span><span class="si">}</span><span class="s2">&#39; might be invalid or not produce columns alone.&quot;</span><span class="p">)</span>
+        <span class="c1"># N_cols_for_term_to_find remains 0, leading to empty indices.</span>
+        <span class="k">pass</span> 
 
     <span class="n">offset_cols</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="c1"># Iterate through terms_list to find the first occurrence of term_to_find or its category</span>
-    <span class="c1"># This logic needs to correctly identify the block of columns.</span>
-    <span class="c1"># The Julia code `findfirst(term .== terms)` is simpler if `term` is a main category</span>
-    <span class="c1"># and `terms` is a list of main categories.</span>
-    <span class="c1"># This Python version assumes term_to_find is a string that would activate a block in _create_TL_A_components.</span>
+    <span class="c1"># Find the first occurrence of term_to_find or a term that activates the same block</span>
+    <span class="c1"># This requires careful handling of aliases (e.g., &quot;p&quot; for &quot;permanent&quot;).</span>
+    <span class="c1"># The most straightforward way is to iterate through current_terms and sum up</span>
+    <span class="c1"># columns from terms *before* the one that matches/includes term_to_find.</span>
     
-    <span class="c1"># Simplified: find the first term in terms_list that *activates* term_to_find&#39;s block</span>
-    <span class="c1"># This is still complex. The original Julia `get_TL_term_ind` is likely used with</span>
-    <span class="c1"># `term` being one of the main categories like `:permanent` and `terms` being the</span>
-    <span class="c1"># list of main categories used for the full A matrix.</span>
+    <span class="c1"># Simplified approach: find the first term in current_terms that IS term_to_find</span>
+    <span class="c1"># or an alias that would trigger the same block as term_to_find.</span>
+    <span class="c1"># This is complex due to aliases. The Julia version `findfirst(term .== terms)`</span>
+    <span class="c1"># implies `term` is a primary category and `terms` is a list of primary categories.</span>
+    <span class="c1"># Python&#39;s `TL_TermType` includes aliases.</span>
     
-    <span class="c1"># Replicating the Julia structure more directly:</span>
-    <span class="c1"># Assume term_to_find is a primary category.</span>
-    <span class="c1"># Find its position in current_terms (if current_terms contains primary categories).</span>
-    
-    <span class="c1"># This function is hard to translate perfectly without knowing its exact usage context</span>
-    <span class="c1"># regarding aliases vs primary terms in `term_to_find` and `current_terms`.</span>
-    <span class="c1"># The provided Julia code: `i_term  = findfirst(term .== terms)`</span>
-    <span class="c1"># This implies `term` (e.g. `:permanent`) must be literally in `terms`.</span>
-    
-    <span class="n">idx_in_list</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">idx_in_list</span> <span class="o">=</span> <span class="n">terms_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">term_to_find</span><span class="p">)</span> <span class="c1"># term_to_find must be literally in terms_list</span>
-    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
-         <span class="c1"># If term_to_find is not literally in terms_list, the Julia logic would fail.</span>
-         <span class="c1"># Return empty or raise error, as per Julia&#39;s implicit behavior or assert.</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Term &#39;</span><span class="si">{</span><span class="n">term_to_find</span><span class="si">}</span><span class="s2">&#39; not directly in current_terms: </span><span class="si">{</span><span class="n">terms_list</span><span class="si">}</span><span class="s2">. &quot;</span>
-                       <span class="s2">&quot;get_TL_term_ind might not work as expected.&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N_total_cols</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="c1"># Iterate through current_terms to find the starting position</span>
+    <span class="n">found_term_block</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">term_in_list</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">current_terms</span><span class="p">):</span>
+        <span class="c1"># Check if term_in_list is term_to_find or an alias that activates the same block</span>
+        <span class="c1"># This check needs to be robust to aliases.</span>
+        <span class="c1"># For simplicity, we assume term_to_find is one of the primary categories</span>
+        <span class="c1"># or a specific alias that uniquely identifies a block.</span>
+        
+        <span class="c1"># A practical way: if term_to_find is &quot;permanent&quot;, it matches &quot;p&quot;, &quot;permanent3&quot; etc.</span>
+        <span class="c1"># This requires mapping term_to_find to its canonical block.</span>
+        <span class="c1"># For now, let&#39;s assume term_to_find is one of the keys in the if-conditions</span>
+        <span class="c1"># of _create_TL_A_components.</span>
+        
+        <span class="c1"># If term_in_list activates the block corresponding to term_to_find</span>
+        <span class="c1"># This is tricky. Let&#39;s use the Julia approach: find term_to_find *literally*</span>
+        <span class="c1"># in current_terms, or a primary term it maps to.</span>
+        
+        <span class="c1"># The most direct translation of Julia&#39;s `findfirst(term .== terms)`</span>
+        <span class="c1"># is to find `term_to_find` literally in `current_terms`.</span>
+        
+        <span class="n">temp_A_before_obj</span> <span class="o">=</span> <span class="n">_create_TL_A_components</span><span class="p">(</span><span class="n">x_dummy</span><span class="p">,</span> <span class="n">x_dummy</span><span class="p">,</span> <span class="n">x_dummy</span><span class="p">,</span>
+                                                    <span class="n">Bt_actual</span><span class="o">=</span><span class="n">bt_dummy</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="p">[</span><span class="n">term_in_list</span><span class="p">],</span>
+                                                    <span class="n">Bt_scale</span><span class="o">=</span><span class="mf">50000.0</span><span class="p">,</span> <span class="n">return_B</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">cols_for_this_term_in_list</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">temp_A_before_obj</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 
+        <span class="c1"># This logic is to find the *first* term in current_terms that term_to_find belongs to.</span>
+        <span class="c1"># Example: if term_to_find=&quot;p&quot; and current_terms=[&quot;permanent&quot;, &quot;induced&quot;]</span>
+        <span class="c1"># &quot;permanent&quot; is the block &quot;p&quot; belongs to.</span>
+        <span class="c1"># This requires a mapping from term_to_find to its canonical block.</span>
+        <span class="c1"># For now, we assume term_to_find is a canonical term or a unique alias.</span>
+        
+        <span class="c1"># A simpler interpretation: find the offset by summing columns of terms *before*</span>
+        <span class="c1"># the first term in `current_terms` that is `term_to_find` or an alias for the same block.</span>
+        <span class="c1"># The current Python code tries to find `term_to_find` literally.</span>
+        
+        <span class="n">is_matching_block</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">term_to_find</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;permanent&quot;</span><span class="p">,</span> <span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="s2">&quot;permanent3&quot;</span><span class="p">,</span> <span class="s2">&quot;p3&quot;</span><span class="p">)</span> <span class="ow">and</span> \
+           <span class="n">term_in_list</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;permanent&quot;</span><span class="p">,</span> <span class="s2">&quot;p&quot;</span><span class="p">,</span> <span class="s2">&quot;permanent3&quot;</span><span class="p">,</span> <span class="s2">&quot;p3&quot;</span><span class="p">):</span> <span class="n">is_matching_block</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">term_to_find</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;induced&quot;</span><span class="p">,</span> <span class="s2">&quot;i&quot;</span><span class="p">,</span> <span class="s2">&quot;induced6&quot;</span><span class="p">,</span> <span class="s2">&quot;i6&quot;</span><span class="p">)</span> <span class="ow">and</span> \
+             <span class="n">term_in_list</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;induced&quot;</span><span class="p">,</span> <span class="s2">&quot;i&quot;</span><span class="p">,</span> <span class="s2">&quot;induced6&quot;</span><span class="p">,</span> <span class="s2">&quot;i6&quot;</span><span class="p">):</span> <span class="n">is_matching_block</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">term_to_find</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;induced5&quot;</span><span class="p">,</span> <span class="s2">&quot;i5&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">term_in_list</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;induced5&quot;</span><span class="p">,</span> <span class="s2">&quot;i5&quot;</span><span class="p">):</span> <span class="n">is_matching_block</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">term_to_find</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;induced3&quot;</span><span class="p">,</span> <span class="s2">&quot;i3&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">term_in_list</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;induced3&quot;</span><span class="p">,</span> <span class="s2">&quot;i3&quot;</span><span class="p">):</span> <span class="n">is_matching_block</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">term_to_find</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;eddy&quot;</span><span class="p">,</span> <span class="s2">&quot;e&quot;</span><span class="p">,</span> <span class="s2">&quot;eddy9&quot;</span><span class="p">,</span> <span class="s2">&quot;e9&quot;</span><span class="p">)</span> <span class="ow">and</span> \
+             <span class="n">term_in_list</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;eddy&quot;</span><span class="p">,</span> <span class="s2">&quot;e&quot;</span><span class="p">,</span> <span class="s2">&quot;eddy9&quot;</span><span class="p">,</span> <span class="s2">&quot;e9&quot;</span><span class="p">):</span> <span class="n">is_matching_block</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">term_to_find</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;eddy8&quot;</span><span class="p">,</span> <span class="s2">&quot;e8&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">term_in_list</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;eddy8&quot;</span><span class="p">,</span> <span class="s2">&quot;e8&quot;</span><span class="p">):</span> <span class="n">is_matching_block</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">term_to_find</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;eddy3&quot;</span><span class="p">,</span> <span class="s2">&quot;e3&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">term_in_list</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;eddy3&quot;</span><span class="p">,</span> <span class="s2">&quot;e3&quot;</span><span class="p">):</span> <span class="n">is_matching_block</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">term_to_find</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;fdm&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">,</span> <span class="s2">&quot;fdm3&quot;</span><span class="p">,</span> <span class="s2">&quot;f3&quot;</span><span class="p">)</span> <span class="ow">and</span> \
+             <span class="n">term_in_list</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;fdm&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">,</span> <span class="s2">&quot;fdm3&quot;</span><span class="p">,</span> <span class="s2">&quot;f3&quot;</span><span class="p">):</span> <span class="n">is_matching_block</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">term_to_find</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;bias&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">term_in_list</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;bias&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">):</span> <span class="n">is_matching_block</span> <span class="o">=</span> <span class="kc">True</span>
+        
+        <span class="k">if</span> <span class="n">is_matching_block</span><span class="p">:</span>
+            <span class="n">found_term_block</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="c1"># N_cols_for_term_to_find should be the number of columns this block (term_in_list) generates</span>
+            <span class="n">A_block_obj</span> <span class="o">=</span> <span class="n">_create_TL_A_components</span><span class="p">(</span><span class="n">x_dummy</span><span class="p">,</span> <span class="n">x_dummy</span><span class="p">,</span> <span class="n">x_dummy</span><span class="p">,</span>
+                                                  <span class="n">Bt_actual</span><span class="o">=</span><span class="n">bt_dummy</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="p">[</span><span class="n">term_in_list</span><span class="p">],</span>
+                                                  <span class="n">Bt_scale</span><span class="o">=</span><span class="mf">50000.0</span><span class="p">,</span> <span class="n">return_B</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">N_cols_for_term_to_find</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">A_block_obj</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">break</span> <span class="c1"># Found the start of the relevant block</span>
 
-    <span class="n">terms_before_it</span> <span class="o">=</span> <span class="n">terms_list</span><span class="p">[:</span><span class="n">idx_in_list</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">terms_before_it</span><span class="p">:</span>
-        <span class="n">A_before_obj</span> <span class="o">=</span> <span class="n">_create_TL_A_components</span><span class="p">(</span><span class="n">x_dummy</span><span class="p">,</span> <span class="n">x_dummy</span><span class="p">,</span> <span class="n">x_dummy</span><span class="p">,</span>
-                                               <span class="n">Bt_actual</span><span class="o">=</span><span class="n">bt_dummy</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="n">terms_before_it</span><span class="p">,</span>
-                                               <span class="n">Bt_scale</span><span class="o">=</span><span class="mf">50000.0</span><span class="p">,</span> <span class="n">return_B</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="n">offset_cols</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">A_before_obj</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-    
-    <span class="c1"># N_cols_for_term_to_find is how many columns `term_to_find` *itself* generates.</span>
-    <span class="c1"># This was calculated earlier.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">found_term_block</span><span class="p">:</span>
+            <span class="n">offset_cols</span> <span class="o">+=</span> <span class="n">cols_for_this_term_in_list</span>
 
     <span class="n">bool_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N_total_cols</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">N_cols_for_term_to_find</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">found_term_block</span> <span class="ow">and</span> <span class="n">N_cols_for_term_to_find</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">start_idx</span> <span class="o">=</span> <span class="n">offset_cols</span>
         <span class="n">end_idx</span> <span class="o">=</span> <span class="n">offset_cols</span> <span class="o">+</span> <span class="n">N_cols_for_term_to_find</span>
-        <span class="k">if</span> <span class="n">end_idx</span> <span class="o">&lt;=</span> <span class="n">N_total_cols</span><span class="p">:</span> <span class="c1"># Ensure indices are within bounds</span>
+        <span class="k">if</span> <span class="n">end_idx</span> <span class="o">&lt;=</span> <span class="n">N_total_cols</span><span class="p">:</span>
             <span class="n">bool_indices</span><span class="p">[</span><span class="n">start_idx</span><span class="p">:</span><span class="n">end_idx</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Calculated indices for &#39;</span><span class="si">{</span><span class="n">term_to_find</span><span class="si">}</span><span class="s2">&#39; [</span><span class="si">{</span><span class="n">start_idx</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">end_idx</span><span class="si">}</span><span class="s2">] &quot;</span>
-                           <span class="sa">f</span><span class="s2">&quot;exceed total columns </span><span class="si">{</span><span class="n">N_total_cols</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-            <span class="c1"># Partial fill if possible</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Calculated indices for &#39;</span><span class="si">{</span><span class="n">term_to_find</span><span class="si">}</span><span class="s2">&#39; (as part of block &#39;</span><span class="si">{</span><span class="n">term_in_list</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">found_term_block</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="si">}</span><span class="s2">&#39;) &quot;</span>
+                           <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">start_idx</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">end_idx</span><span class="si">}</span><span class="s2">] exceed total columns </span><span class="si">{</span><span class="n">N_total_cols</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+            <span class="c1"># Attempt partial fill if start_idx is valid</span>
             <span class="n">valid_end_idx</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">end_idx</span><span class="p">,</span> <span class="n">N_total_cols</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">start_idx</span> <span class="o">&lt;</span> <span class="n">valid_end_idx</span><span class="p">:</span>
                  <span class="n">bool_indices</span><span class="p">[</span><span class="n">start_idx</span><span class="p">:</span><span class="n">valid_end_idx</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
-
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">found_term_block</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Term block for &#39;</span><span class="si">{</span><span class="n">term_to_find</span><span class="si">}</span><span class="s2">&#39; not found in current_terms: </span><span class="si">{</span><span class="n">current_terms</span><span class="si">}</span><span class="s2">. &quot;</span>
+                       <span class="s2">&quot;get_TL_term_ind will return all False.&quot;</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">bool_indices</span></div>
 
@@ -487,62 +660,10 @@
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="Main">
-        <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="../../index.html">MagNavPy</a></h1>
-
-
-
-
-
-
-
-
-
-<search id="searchbox" style="display: none" role="search">
-    <div class="searchformwrapper">
-    <form class="search" action="../../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</search>
-<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../data.html">Flight Path &amp; INS Data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../maps.html">Magnetic Anomaly Maps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../comp.html">Aeromagnetic Compensation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../nncomp.html">Neural Network-Based Model Diagrams</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../nav.html">Navigation Algorithms</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api_functions.html">API: Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api_structs.html">API: Structs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api_reference.html">API Reference</a></li>
-</ul>
-
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../../index.html">Documentation overview</a><ul>
-  <li><a href="../index.html">Module code</a><ul>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
-
-
-
-
-
-
-
-
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
+    <div class="clearer"></div>
+  </div>
     <div class="footer">
-      &#169;2024, MagNav.jl Authors & AI Porting Team.
+      &#169;2020-2023, Original MagNav.jl Authors; 2024-2025, Manas Pandey.
       
       |
       Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>

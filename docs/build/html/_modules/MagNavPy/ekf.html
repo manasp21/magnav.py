@@ -7,7 +7,7 @@
     <title>magnavpy.ekf &#8212; MagNavPy 0.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
-    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=73454398" />
     <script src="../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
@@ -21,9 +21,68 @@
   
 
   </head><body>
-  
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">MagNavPy</a></h1>
 
-    <div class="document">
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=manasp21&repo=magnav.py&type=star&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../data.html">Flight Path &amp; INS Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maps.html">Magnetic Anomaly Maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../comp.html">Aeromagnetic Compensation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../nncomp.html">Neural Network-Based Model Diagrams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../nav.html">Navigation Algorithms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../status.html">Current Status and Known Issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_functions.html">API: Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_structs.html">API: Structs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_reference.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
       <div class="documentwrapper">
         <div class="bodywrapper">
           
@@ -32,13 +91,16 @@
             
   <h1>Source code for magnavpy.ekf</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span> <span class="c1"># Add Union to this import</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.common_types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MapS</span><span class="p">,</span> <span class="n">MapS3D</span><span class="p">,</span> <span class="n">MapCache</span> <span class="c1"># Import MapS, MapS3D, and MapCache</span>
 
-<span class="c1"># Assuming FILTres, EKF_RT, INS, Map_Cache, get_cached_map are defined/imported in .magnav</span>
+<span class="c1"># Assuming FILTres, EKF_RT, INS, get_cached_map are defined/imported in .magnav</span>
 <span class="c1"># If get_cached_map is elsewhere, adjust import.</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.magnav</span><span class="w"> </span><span class="kn">import</span> <span class="n">FILTres</span><span class="p">,</span> <span class="n">EKF_RT</span><span class="p">,</span> <span class="n">INS</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.common_types</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_cached_map</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.common_types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MapCache</span>
+<span class="c1"># MapCache is already imported from .common_types on line 3</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.model_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_Phi</span><span class="p">,</span> <span class="n">get_H</span><span class="p">,</span> <span class="n">create_P0</span><span class="p">,</span> <span class="n">create_Qd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.map_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">map_interpolate</span> <span class="c1"># Moved from local import</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.core_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_years</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.model_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_h</span> <span class="c1"># Explicitly import get_h from model_functions</span>
 
@@ -137,19 +199,71 @@
         <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="n">itp_mapS_arg</span>
         <span class="n">current_der_mapS_for_step</span> <span class="o">=</span> <span class="n">der_mapS</span>
 
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">itp_mapS_arg</span><span class="p">,</span> <span class="n">Map_Cache</span><span class="p">):</span>
-            <span class="c1"># get_cached_map returns the interpolator for the current location</span>
-            <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="n">get_cached_map</span><span class="p">(</span><span class="n">itp_mapS_arg</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-            <span class="c1"># In Julia, if map_cache is used, der_mapS is effectively ignored for get_h in RT.</span>
-            <span class="c1"># For batch, der_mapS is passed along. Here we assume der_mapS is independent or also cached.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">itp_mapS_arg</span><span class="p">,</span> <span class="n">MapCache</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">maps</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">interpolators</span><span class="p">:</span>
+                <span class="c1"># Fallback or error if MapCache is empty</span>
+                <span class="c1"># For now, let&#39;s assume it might use its fallback_map&#39;s interpolator if available</span>
+                <span class="c1"># This part needs robust handling based on MapCache&#39;s design for fallbacks</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">itp_mapS_arg</span><span class="p">,</span> <span class="s1">&#39;fallback_map_interpolator&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">fallback_map_interpolator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">fallback_map_interpolator</span>
+                <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">itp_mapS_arg</span><span class="p">,</span> <span class="s1">&#39;fallback_map&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">fallback_map</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># Attempt to create interpolator from fallback_map if not pre-cached</span>
+                    <span class="c1"># This requires map_interpolate from map_utils</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="c1"># from .map_utils import map_interpolate # Moved to top</span>
+                        <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="n">map_interpolate</span><span class="p">(</span><span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">fallback_map</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">current_itp_mapS_for_step</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Fallback interpolator creation failed.&quot;</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e_interp</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: MapCache empty and fallback interpolator failed/unavailable: </span><span class="si">{</span><span class="n">e_interp</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="c1"># As a last resort, if no interpolator, get_h/get_H will fail.</span>
+                        <span class="c1"># Or, we could make current_itp_mapS_for_step a dummy that returns NaNs.</span>
+                        <span class="c1"># For now, let it proceed and fail in get_h/get_H if interpolator is None.</span>
+                        <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># This will likely cause issues downstream</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: MapCache is empty and no fallback available. Interpolation will likely fail.&quot;</span><span class="p">)</span>
+                    <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># This will likely cause issues downstream</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Select interpolator from MapCache based on closest altitude</span>
+                <span class="n">map_altitudes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">m</span><span class="o">.</span><span class="n">alt</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">maps</span><span class="p">])</span>
+                <span class="c1"># Ensure alt[t] is a scalar for comparison</span>
+                <span class="n">current_alt_scalar</span> <span class="o">=</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+                <span class="n">closest_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">map_altitudes</span> <span class="o">-</span> <span class="n">current_alt_scalar</span><span class="p">))</span>
+                <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">interpolators</span><span class="p">[</span><span class="n">closest_idx</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">current_itp_mapS_for_step</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="c1"># This specific interpolator might be None if its map was problematic</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Selected interpolator from MapCache at index </span><span class="si">{</span><span class="n">closest_idx</span><span class="si">}</span><span class="s2"> is None.&quot;</span><span class="p">)</span>
+                    <span class="c1"># Potentially use fallback logic here too</span>
+                    <span class="c1"># For now, allow None to propagate; get_h/get_H should handle it or error out.</span>
+
+            <span class="c1"># der_mapS handling: if itp_mapS is MapCache, Julia often ignores der_mapS for get_h.</span>
+            <span class="c1"># If get_h/get_H are robust to current_itp_mapS_for_step being None, this is okay.</span>
+            <span class="c1"># The original der_mapS (passed to ekf) is used for current_der_mapS_for_step.</span>
 
         <span class="n">_Cnb_t</span> <span class="o">=</span> <span class="n">Cnb</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">t</span><span class="p">]</span> <span class="k">if</span> <span class="n">Cnb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span> <span class="k">else</span> <span class="n">Cnb</span>
 
-        <span class="n">Phi</span> <span class="o">=</span> <span class="n">get_Phi</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">vn</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">ve</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">vd</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fn</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fe</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fd</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">_Cnb_t</span><span class="p">,</span>
+        <span class="c1"># Ensure Cnb is 2D for get_Phi</span>
+        <span class="n">_Cnb_t_for_phi</span> <span class="o">=</span> <span class="n">_Cnb_t</span>
+        <span class="k">if</span> <span class="n">_Cnb_t</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">_Cnb_t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">_Cnb_t_for_phi</span> <span class="o">=</span> <span class="n">_Cnb_t</span><span class="p">[:,:,</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span> <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cnb for get_Phi should be a 2D matrix for a single time step.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Direct indexing, assuming lat, vn etc. are 1D arrays of scalars</span>
+        <span class="n">lat_t</span> <span class="o">=</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+        <span class="n">lon_t</span> <span class="o">=</span> <span class="n">lon</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+        <span class="n">alt_t</span> <span class="o">=</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+        <span class="n">vn_t</span>  <span class="o">=</span> <span class="n">vn</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+        <span class="n">ve_t</span>  <span class="o">=</span> <span class="n">ve</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+        <span class="n">vd_t</span>  <span class="o">=</span> <span class="n">vd</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+        <span class="n">fn_t</span>  <span class="o">=</span> <span class="n">fn</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+        <span class="n">fe_t</span>  <span class="o">=</span> <span class="n">fe</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+        <span class="n">fd_t</span>  <span class="o">=</span> <span class="n">fd</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+
+        <span class="n">Phi</span> <span class="o">=</span> <span class="n">get_Phi</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">lat_t</span><span class="p">,</span> <span class="n">vn_t</span><span class="p">,</span> <span class="n">ve_t</span><span class="p">,</span> <span class="n">vd_t</span><span class="p">,</span> <span class="n">fn_t</span><span class="p">,</span> <span class="n">fe_t</span><span class="p">,</span> <span class="n">fd_t</span><span class="p">,</span> <span class="n">_Cnb_t_for_phi</span><span class="p">,</span>
                       <span class="n">baro_tau</span><span class="p">,</span> <span class="n">acc_tau</span><span class="p">,</span> <span class="n">gyro_tau</span><span class="p">,</span> <span class="n">fogm_tau</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
 
-        <span class="n">h_pred</span> <span class="o">=</span> <span class="n">get_h</span><span class="p">(</span><span class="n">current_itp_mapS_for_step</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">],</span>
-                       <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span><span class="p">,</span> <span class="n">der_map</span><span class="o">=</span><span class="n">current_der_mapS_for_step</span><span class="p">,</span> <span class="n">map_alt</span><span class="o">=</span><span class="n">map_alt</span><span class="p">)</span>
+        <span class="n">h_pred</span> <span class="o">=</span> <span class="n">get_h</span><span class="p">(</span><span class="n">current_itp_mapS_for_step</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">lat_t</span><span class="p">,</span> <span class="n">lon_t</span><span class="p">,</span> <span class="n">alt_t</span><span class="p">,</span>
+                        <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span><span class="p">,</span> <span class="n">der_map</span><span class="o">=</span><span class="n">current_der_mapS_for_step</span><span class="p">,</span> <span class="n">map_alt</span><span class="o">=</span><span class="n">map_alt</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">h_pred</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">)):</span> <span class="n">h_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">h_pred</span><span class="p">])</span>
         <span class="k">if</span> <span class="n">h_pred</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">h_pred</span> <span class="o">=</span> <span class="n">h_pred</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
@@ -158,7 +272,7 @@
 
         <span class="n">r_out</span><span class="p">[:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">resid</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
-        <span class="n">H_m</span> <span class="o">=</span> <span class="n">get_H</span><span class="p">(</span><span class="n">current_itp_mapS_for_step</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">],</span>
+        <span class="n">H_m</span> <span class="o">=</span> <span class="n">get_H</span><span class="p">(</span><span class="n">current_itp_mapS_for_step</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">lat_t</span><span class="p">,</span> <span class="n">lon_t</span><span class="p">,</span> <span class="n">alt_t</span><span class="p">,</span>
                     <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span><span class="p">)</span> <span class="c1"># Expected (nx,) or (1,nx)</span>
         <span class="k">if</span> <span class="n">H_m</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">H_m</span> <span class="o">=</span> <span class="n">H_m</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># Ensure (1,nx)</span>
         
@@ -289,14 +403,14 @@
 
     <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="n">itp_mapS</span>
     <span class="n">current_der_mapS_for_step</span> <span class="o">=</span> <span class="n">der_mapS</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">,</span> <span class="n">Map_Cache</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">,</span> <span class="n">MapCache</span><span class="p">):</span>
         <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="n">get_cached_map</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">,</span> <span class="n">lat_curr</span><span class="p">,</span> <span class="n">lon_curr</span><span class="p">,</span> <span class="n">alt_curr</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="c1"># Julia: der_mapS = nothing if itp_mapS is Map_Cache</span>
         <span class="n">current_der_mapS_for_step</span> <span class="o">=</span> <span class="kc">None</span> 
 
     <span class="n">h_pred</span> <span class="o">=</span> <span class="n">get_h</span><span class="p">(</span><span class="n">current_itp_mapS_for_step</span><span class="p">,</span> <span class="n">ekf_rt</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">lat_curr</span><span class="p">,</span> <span class="n">lon_curr</span><span class="p">,</span> <span class="n">alt_curr</span><span class="p">,</span>
                    <span class="n">date</span><span class="o">=</span><span class="n">ekf_rt</span><span class="o">.</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">ekf_rt</span><span class="o">.</span><span class="n">core</span><span class="p">,</span> 
-                   <span class="n">der_map</span><span class="o">=</span><span class="n">current_der_mapS_for_step</span><span class="p">,</span> <span class="n">map_alt</span><span class="o">=</span><span class="n">map_alt</span> <span class="k">if</span> <span class="n">map_alt</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span> <span class="c1"># map_alt default in get_h?</span>
+                   <span class="n">der_map</span><span class="o">=</span><span class="n">current_der_mapS_for_step</span><span class="p">,</span> <span class="n">map_alt</span><span class="o">=</span><span class="n">map_alt</span> <span class="k">if</span> <span class="n">map_alt</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="k">else</span> <span class="mi">0</span><span class="p">)</span> 
     
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">h_pred</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">)):</span> <span class="n">h_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">h_pred</span><span class="p">])</span>
     <span class="k">if</span> <span class="n">h_pred</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">h_pred</span> <span class="o">=</span> <span class="n">h_pred</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># to (1,1)</span>
@@ -376,44 +490,606 @@
 
 <div class="viewcode-block" id="crlb">
 <a class="viewcode-back" href="../../nav.html#magnavpy.ekf.crlb">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">crlb</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for Cramer-Rao Lower Bound calculation.&quot;&quot;&quot;</span>
-    <span class="k">pass</span></div>
+<span class="k">def</span><span class="w"> </span><span class="nf">crlb</span><span class="p">(</span>
+    <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">alt</span><span class="p">,</span> <span class="n">vn</span><span class="p">,</span> <span class="n">ve</span><span class="p">,</span> <span class="n">vd</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">fe</span><span class="p">,</span> <span class="n">fd</span><span class="p">,</span> <span class="n">Cnb</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">itp_mapS</span><span class="p">,</span>
+    <span class="n">P0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Qd</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">baro_tau</span><span class="o">=</span><span class="mf">3600.0</span><span class="p">,</span> <span class="n">acc_tau</span><span class="o">=</span><span class="mf">3600.0</span><span class="p">,</span> <span class="n">gyro_tau</span><span class="o">=</span><span class="mf">3600.0</span><span class="p">,</span> <span class="n">fogm_tau</span><span class="o">=</span><span class="mf">600.0</span><span class="p">,</span>
+    <span class="n">date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Cramér-Rao lower bound (CRLB) computed with classic Kalman Filter.</span>
+<span class="sd">    Equations evaluated about true trajectory.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        lat (np.ndarray): Latitude [rad], shape (N,)</span>
+<span class="sd">        lon (np.ndarray): Longitude [rad], shape (N,)</span>
+<span class="sd">        alt (np.ndarray): Altitude [m], shape (N,)</span>
+<span class="sd">        vn (np.ndarray): North velocity [m/s], shape (N,)</span>
+<span class="sd">        ve (np.ndarray): East velocity [m/s], shape (N,)</span>
+<span class="sd">        vd (np.ndarray): Down velocity [m/s], shape (N,)</span>
+<span class="sd">        fn (np.ndarray): North specific force [m/s^2], shape (N,)</span>
+<span class="sd">        fe (np.ndarray): East specific force [m/s^2], shape (N,)</span>
+<span class="sd">        fd (np.ndarray): Down specific force [m/s^2], shape (N,)</span>
+<span class="sd">        Cnb (np.ndarray): Direction cosine matrix (body to navigation), shape (3,3,N) or (3,3)</span>
+<span class="sd">        dt (float): Measurement time step [s]</span>
+<span class="sd">        itp_mapS (callable or MapCache): Scalar map interpolation function or MapCache.</span>
+<span class="sd">        P0 (np.ndarray, optional): Initial covariance matrix, shape (nx,nx).</span>
+<span class="sd">                                   Defaults to create_P0().</span>
+<span class="sd">        Qd (np.ndarray, optional): Discrete time process/system noise matrix, shape (nx,nx).</span>
+<span class="sd">                                   Defaults to create_Qd().</span>
+<span class="sd">        R (float or tuple, optional): Measurement noise variance. If tuple, mean is used.</span>
+<span class="sd">                                      Defaults to 1.0.</span>
+<span class="sd">        baro_tau (float, optional): Barometer time constant [s]. Defaults to 3600.0.</span>
+<span class="sd">        acc_tau (float, optional): Accelerometer time constant [s]. Defaults to 3600.0.</span>
+<span class="sd">        gyro_tau (float, optional): Gyroscope time constant [s]. Defaults to 3600.0.</span>
+<span class="sd">        fogm_tau (float, optional): FOGM catch-all time constant [s]. Defaults to 600.0.</span>
+<span class="sd">        date (float, optional): Measurement date (decimal year) for IGRF [yr].</span>
+<span class="sd">                                Defaults to get_years(2020,185).</span>
+<span class="sd">        core (bool, optional): If true, include core magnetic field in measurement. Defaults to False.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        np.ndarray: Non-linear covariance matrix P_out [nx,nx,N]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">P0</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">P0</span> <span class="o">=</span> <span class="n">create_P0</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">Qd</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">Qd</span> <span class="o">=</span> <span class="n">create_Qd</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">date</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">date</span> <span class="o">=</span> <span class="n">get_years</span><span class="p">(</span><span class="mi">2020</span><span class="p">,</span> <span class="mi">185</span><span class="p">)</span>
+
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span>
+    <span class="n">nx</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">P_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nx</span><span class="p">,</span> <span class="n">nx</span><span class="p">,</span> <span class="n">N</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">P0</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">x_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">P0</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>  <span class="c1"># CRLB evaluated about true trajectory (zero error state)</span>
+    <span class="n">P</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="n">R_val</span> <span class="o">=</span> <span class="n">R</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">R</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">R_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">R</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">)):</span>
+        <span class="c1"># Assuming R is already a scalar or a compatible numpy type</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">R</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">R_val</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;R must be a scalar or a (min,max) tuple.&quot;</span><span class="p">)</span>
+
+
+    <span class="n">itp_mapS_arg</span> <span class="o">=</span> <span class="n">itp_mapS</span>
+
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+        <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="n">itp_mapS_arg</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">itp_mapS_arg</span><span class="p">,</span> <span class="n">MapCache</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">maps</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">interpolators</span><span class="p">:</span>
+                <span class="c1"># Fallback or error if MapCache is empty (similar to EKF logic)</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">itp_mapS_arg</span><span class="p">,</span> <span class="s1">&#39;fallback_map_interpolator&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">fallback_map_interpolator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">fallback_map_interpolator</span>
+                <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">itp_mapS_arg</span><span class="p">,</span> <span class="s1">&#39;fallback_map&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">fallback_map</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="c1"># from .map_utils import map_interpolate # Moved to top</span>
+                        <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="n">map_interpolate</span><span class="p">(</span><span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">fallback_map</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">current_itp_mapS_for_step</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Fallback interpolator creation failed for CRLB.&quot;</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e_interp_crlb</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: CRLB MapCache empty and fallback interpolator failed: </span><span class="si">{</span><span class="n">e_interp_crlb</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: CRLB MapCache is empty and no fallback. Interpolation will likely fail.&quot;</span><span class="p">)</span>
+                    <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">map_altitudes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">m</span><span class="o">.</span><span class="n">alt</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">maps</span><span class="p">])</span>
+                <span class="n">current_alt_scalar</span> <span class="o">=</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="k">else</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+                <span class="n">closest_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">map_altitudes</span> <span class="o">-</span> <span class="n">current_alt_scalar</span><span class="p">))</span>
+                <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="n">itp_mapS_arg</span><span class="o">.</span><span class="n">interpolators</span><span class="p">[</span><span class="n">closest_idx</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">current_itp_mapS_for_step</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Selected interpolator for CRLB from MapCache at index </span><span class="si">{</span><span class="n">closest_idx</span><span class="si">}</span><span class="s2"> is None.&quot;</span><span class="p">)</span>
+            <span class="c1"># For CRLB, der_mapS is not used by get_H, so no special handling for it here.</span>
+
+        <span class="n">_Cnb_t</span> <span class="o">=</span> <span class="n">Cnb</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">t</span><span class="p">]</span> <span class="k">if</span> <span class="n">Cnb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span> <span class="k">else</span> <span class="n">Cnb</span>
+        
+        <span class="c1"># Ensure Cnb is 2D for get_Phi</span>
+        <span class="n">_Cnb_t_for_phi</span> <span class="o">=</span> <span class="n">_Cnb_t</span>
+        <span class="k">if</span> <span class="n">_Cnb_t</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">_Cnb_t</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">_Cnb_t_for_phi</span> <span class="o">=</span> <span class="n">_Cnb_t</span><span class="p">[:,:,</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># Should not happen if Cnb is (3,3,N)</span>
+            <span class="c1"># else: raise ValueError(&quot;Cnb for get_Phi should be a 2D matrix for a single time step.&quot;)</span>
+            <span class="c1"># This case is handled by Cnb[:,:,t] above for (3,3,N)</span>
+
+        <span class="n">lat_t</span><span class="p">,</span> <span class="n">lon_t</span><span class="p">,</span> <span class="n">alt_t</span> <span class="o">=</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+        <span class="n">vn_t</span><span class="p">,</span> <span class="n">ve_t</span><span class="p">,</span> <span class="n">vd_t</span> <span class="o">=</span> <span class="n">vn</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">ve</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">vd</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+        <span class="n">fn_t</span><span class="p">,</span> <span class="n">fe_t</span><span class="p">,</span> <span class="n">fd_t</span> <span class="o">=</span> <span class="n">fn</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fe</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fd</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>
+
+        <span class="n">Phi</span> <span class="o">=</span> <span class="n">get_Phi</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">lat_t</span><span class="p">,</span> <span class="n">vn_t</span><span class="p">,</span> <span class="n">ve_t</span><span class="p">,</span> <span class="n">vd_t</span><span class="p">,</span> <span class="n">fn_t</span><span class="p">,</span> <span class="n">fe_t</span><span class="p">,</span> <span class="n">fd_t</span><span class="p">,</span> <span class="n">_Cnb_t_for_phi</span><span class="p">,</span>
+                      <span class="n">baro_tau</span><span class="p">,</span> <span class="n">acc_tau</span><span class="p">,</span> <span class="n">gyro_tau</span><span class="p">,</span> <span class="n">fogm_tau</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+
+        <span class="c1"># H is (1, nx) for scalar measurement</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">current_itp_mapS_for_step</span><span class="p">,</span> <span class="p">(</span><span class="n">MapS</span><span class="p">,</span> <span class="n">MapS3D</span><span class="p">)):</span>
+            <span class="c1"># This check assumes get_H expects MapS or MapS3D directly.</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;map_obj for get_H in crlb must be MapS or MapS3D, but got </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">current_itp_mapS_for_step</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">H_m</span> <span class="o">=</span> <span class="n">get_H</span><span class="p">(</span><span class="n">current_itp_mapS_for_step</span><span class="p">,</span> <span class="n">x_true</span><span class="p">,</span> <span class="n">lat_t</span><span class="p">,</span> <span class="n">lon_t</span><span class="p">,</span> <span class="n">alt_t</span><span class="p">,</span> <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">H_m</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">H_m</span> <span class="o">=</span> <span class="n">H_m</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># Ensure (1,nx)</span>
+
+        <span class="c1"># S = H P H&#39; + R</span>
+        <span class="n">S_val</span> <span class="o">=</span> <span class="n">H_m</span> <span class="o">@</span> <span class="n">P</span> <span class="o">@</span> <span class="n">H_m</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">R_val</span>
+        <span class="k">if</span> <span class="n">S_val</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="n">S_val</span> <span class="o">=</span> <span class="n">S_val</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># Ensure S_val is 2D</span>
+
+        <span class="c1"># K = P H&#39; S^-1</span>
+        <span class="c1"># K_val = (P @ H_m.T) @ np.linalg.inv(S_val) # Direct inversion</span>
+        <span class="n">K_val</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">S_val</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">H_m</span> <span class="o">@</span> <span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">T</span> <span class="c1"># Using solve</span>
+
+        <span class="c1"># P_update = (I - K H) P</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">P</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">-</span> <span class="n">K_val</span> <span class="o">@</span> <span class="n">H_m</span><span class="p">)</span> <span class="o">@</span> <span class="n">P</span>
+        
+        <span class="n">P_out</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">P</span>
+
+        <span class="c1"># P_propagate = Phi P_update Phi&#39; + Qd</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">Phi</span> <span class="o">@</span> <span class="n">P</span> <span class="o">@</span> <span class="n">Phi</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">Qd</span>
+
+    <span class="k">return</span> <span class="n">P_out</span></div>
+
+
+<div class="viewcode-block" id="crlb_ins">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.ekf.crlb_ins">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">crlb_ins</span><span class="p">(</span>
+    <span class="n">ins</span><span class="p">:</span> <span class="n">INS</span><span class="p">,</span> <span class="n">itp_mapS</span><span class="p">,</span>
+    <span class="n">P0</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">Qd</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">baro_tau</span><span class="o">=</span><span class="mf">3600.0</span><span class="p">,</span> <span class="n">acc_tau</span><span class="o">=</span><span class="mf">3600.0</span><span class="p">,</span> <span class="n">gyro_tau</span><span class="o">=</span><span class="mf">3600.0</span><span class="p">,</span> <span class="n">fogm_tau</span><span class="o">=</span><span class="mf">600.0</span><span class="p">,</span>
+    <span class="n">date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    CRLB overload for INS data structure.</span>
+<span class="sd">    See `crlb` for argument details. `ins.dt` is used for the time step.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">crlb</span><span class="p">(</span>
+        <span class="n">ins</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">alt</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">vn</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">ve</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">vd</span><span class="p">,</span>
+        <span class="n">ins</span><span class="o">.</span><span class="n">fn</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">fe</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">fd</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">Cnb</span><span class="p">,</span>
+        <span class="n">ins</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="n">itp_mapS</span><span class="p">,</span>
+        <span class="n">P0</span><span class="o">=</span><span class="n">P0</span><span class="p">,</span> <span class="n">Qd</span><span class="o">=</span><span class="n">Qd</span><span class="p">,</span> <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span>
+        <span class="n">baro_tau</span><span class="o">=</span><span class="n">baro_tau</span><span class="p">,</span> <span class="n">acc_tau</span><span class="o">=</span><span class="n">acc_tau</span><span class="p">,</span> <span class="n">gyro_tau</span><span class="o">=</span><span class="n">gyro_tau</span><span class="p">,</span> <span class="n">fogm_tau</span><span class="o">=</span><span class="n">fogm_tau</span><span class="p">,</span>
+        <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span>
+    <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="calc_crlb_pos">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.ekf.calc_crlb_pos">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_pos</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for CRLB position calculation.&quot;&quot;&quot;</span>
-    <span class="k">pass</span></div>
+<span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_pos</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate position CRLB (standard deviation) from CRLB covariance matrices.</span>
+<span class="sd">    Assumes P_crlb is [nx,nx,N] or [nx,nx].</span>
+<span class="sd">    States 0,1,2 are position errors (N, E, D).</span>
+<span class="sd">    Returns sqrt(diag(P_pos)) for each time step, shape (3,N) or (3,).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">P_crlb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis1</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">P_crlb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;P_crlb must be 2D or 3D array&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="calc_crlb_vel">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.ekf.calc_crlb_vel">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_vel</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for CRLB velocity calculation.&quot;&quot;&quot;</span>
-    <span class="k">pass</span></div>
+<span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_vel</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate velocity CRLB (standard deviation) from CRLB covariance matrices.</span>
+<span class="sd">    Assumes P_crlb is [nx,nx,N] or [nx,nx].</span>
+<span class="sd">    States 3,4,5 are velocity errors (N, E, D).</span>
+<span class="sd">    Returns sqrt(diag(P_vel)) for each time step, shape (3,N) or (3,).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">P_crlb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">[</span><span class="mi">3</span><span class="p">:</span><span class="mi">6</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span><span class="mi">6</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis1</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">P_crlb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">[</span><span class="mi">3</span><span class="p">:</span><span class="mi">6</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span><span class="mi">6</span><span class="p">]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;P_crlb must be 2D or 3D array&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="calc_crlb_att">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.ekf.calc_crlb_att">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_att</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for CRLB attitude calculation.&quot;&quot;&quot;</span>
-    <span class="k">pass</span></div>
+<span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_att</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate attitude CRLB (standard deviation) from CRLB covariance matrices.</span>
+<span class="sd">    Assumes P_crlb is [nx,nx,N] or [nx,nx].</span>
+<span class="sd">    States 6,7,8 are attitude errors.</span>
+<span class="sd">    Returns sqrt(diag(P_att)) for each time step, shape (3,N) or (3,).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">P_crlb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diagonal</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">[</span><span class="mi">6</span><span class="p">:</span><span class="mi">9</span><span class="p">,</span> <span class="mi">6</span><span class="p">:</span><span class="mi">9</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis1</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">axis2</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">P_crlb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">[</span><span class="mi">6</span><span class="p">:</span><span class="mi">9</span><span class="p">,</span> <span class="mi">6</span><span class="p">:</span><span class="mi">9</span><span class="p">]))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;P_crlb must be 2D or 3D array&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="calc_crlb_fogm">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.ekf.calc_crlb_fogm">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_fogm</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for CRLB FOGM calculation.&quot;&quot;&quot;</span>
-    <span class="k">pass</span></div>
+<span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_fogm</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate FOGM bias CRLB (standard deviation) from CRLB covariance matrices.</span>
+<span class="sd">    Assumes P_crlb is [nx,nx,N] or [nx,nx].</span>
+<span class="sd">    State 16 is FOGM bias (assuming nx &gt;= 17).</span>
+<span class="sd">    Returns sqrt(P_fogm_bias) for each time step, shape (N,) or scalar.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">P_crlb</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">17</span><span class="p">:</span> <span class="c1"># nx must be at least 17</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;P_crlb does not have enough states for FOGM bias (expected nx &gt;= 17).&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">P_crlb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="p">:])</span>
+    <span class="k">elif</span> <span class="n">P_crlb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">[</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;P_crlb must be 2D or 3D array&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="calc_crlb_map">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.ekf.calc_crlb_map">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_map</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for CRLB map calculation.&quot;&quot;&quot;</span>
-    <span class="k">pass</span></div>
+<span class="k">def</span><span class="w"> </span><span class="nf">calc_crlb_map</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate map bias CRLB (standard deviation) from CRLB covariance matrices.</span>
+<span class="sd">    Assumes P_crlb is [nx,nx,N] or [nx,nx].</span>
+<span class="sd">    State 17 is map bias (assuming nx &gt;= 18).</span>
+<span class="sd">    Returns sqrt(P_map_bias) for each time step, shape (N,) or scalar.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">P_crlb</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">18</span><span class="p">:</span> <span class="c1"># nx must be at least 18</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;P_crlb does not have enough states for map bias (expected nx &gt;= 18).&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">P_crlb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">[</span><span class="mi">17</span><span class="p">,</span> <span class="mi">17</span><span class="p">,</span> <span class="p">:])</span>
+    <span class="k">elif</span> <span class="n">P_crlb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">P_crlb</span><span class="p">[</span><span class="mi">17</span><span class="p">,</span> <span class="mi">17</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;P_crlb must be 2D or 3D array&quot;</span><span class="p">)</span></div>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.common_types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MagV</span> <span class="c1"># MagV needed for ekf_online</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.tolles_lawson</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_TL_A</span><span class="p">,</span> <span class="n">create_TL_coef</span><span class="p">,</span> <span class="n">get_TL_term_ind</span> <span class="c1"># For online TL EKF</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.linalg</span><span class="w"> </span><span class="kn">import</span> <span class="n">block_diag</span> <span class="c1"># For constructing block diagonal matrices</span>
+
+<span class="c1"># Default terms for Tolles-Lawson in online EKF, mapping from common names to short codes</span>
+<span class="c1"># Ensure these short codes are compatible with create_TL_A and create_TL_coef</span>
+<span class="n">DEFAULT_TL_TERMS_ONLINE</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;p&#39;</span><span class="p">,</span> <span class="s1">&#39;i&#39;</span><span class="p">,</span> <span class="s1">&#39;e&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">]</span> <span class="c1"># permanent, induced, eddy, bias</span>
+
+<div class="viewcode-block" id="ekf_online_setup">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.ekf.ekf_online_setup">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ekf_online_setup</span><span class="p">(</span>
+    <span class="n">flux</span><span class="p">:</span> <span class="n">MagV</span><span class="p">,</span>
+    <span class="n">meas</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">ind</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">Bt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">lam</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.025</span><span class="p">,</span> <span class="c1"># lam is lambda in Julia</span>
+    <span class="n">terms</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># Uses short codes e.g. [&#39;p&#39;, &#39;i&#39;, &#39;e&#39;, &#39;b&#39;]</span>
+    <span class="n">pass1</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+    <span class="n">pass2</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.9</span><span class="p">,</span>
+    <span class="n">fs</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span>
+    <span class="n">pole</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="n">trim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span><span class="p">,</span>
+    <span class="n">N_sigma</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>
+    <span class="n">Bt_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50000.0</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Setup for Extended Kalman Filter (EKF) with online learning of Tolles-Lawson coefficients.</span>
+<span class="sd">    Ports MagNav.jl/src/ekf_online.jl -&gt; ekf_online_setup.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        flux (MagV): Vector magnetometer measurement struct.</span>
+<span class="sd">        meas (np.ndarray): Scalar magnetometer measurement [nT].</span>
+<span class="sd">        ind (np.ndarray, optional): Selected data indices. Defaults to all true.</span>
+<span class="sd">        Bt (np.ndarray, optional): Magnitude of vector magnetometer measurements or</span>
+<span class="sd">                                   scalar magnetometer measurements for modified Tolles-Lawson [nT].</span>
+<span class="sd">                                   Defaults to norm of flux components.</span>
+<span class="sd">        lam (float, optional): Ridge parameter for create_TL_coef. Defaults to 0.025.</span>
+<span class="sd">        terms (List[str], optional): Tolles-Lawson terms to use (e.g., [&#39;p&#39;,&#39;i&#39;,&#39;e&#39;,&#39;b&#39;]).</span>
+<span class="sd">                                     Defaults to [&#39;p&#39;, &#39;i&#39;, &#39;e&#39;, &#39;b&#39;].</span>
+<span class="sd">        pass1 (float, optional): First passband frequency [Hz] for create_TL_coef. Defaults to 0.1.</span>
+<span class="sd">        pass2 (float, optional): Second passband frequency [Hz] for create_TL_coef. Defaults to 0.9.</span>
+<span class="sd">        fs (float, optional): Sampling frequency [Hz] for create_TL_coef. Defaults to 10.0.</span>
+<span class="sd">        pole (int, optional): Number of poles for Butterworth filter in create_TL_coef. Defaults to 4.</span>
+<span class="sd">        trim (int, optional): Number of elements to trim after filtering in create_TL_coef. Defaults to 20.</span>
+<span class="sd">        N_sigma (int, optional): Number of Tolles-Lawson coefficient sets to use to create TL_sigma.</span>
+<span class="sd">                                 Defaults to 100.</span>
+<span class="sd">        Bt_scale (float, optional): Scaling factor for induced &amp; eddy current terms [nT]. Defaults to 50000.0.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: (x0_TL, P0_TL, TL_sigma)</span>
+<span class="sd">            - x0_TL (np.ndarray): Initial Tolles-Lawson coefficient states.</span>
+<span class="sd">            - P0_TL (np.ndarray): Initial Tolles-Lawson covariance matrix.</span>
+<span class="sd">            - TL_sigma (np.ndarray): Tolles-Lawson coefficients process noise std dev.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">ind</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">ind</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">meas</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">terms</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">terms</span> <span class="o">=</span> <span class="n">DEFAULT_TL_TERMS_ONLINE</span>
+
+    <span class="c1"># Calculate Bt if not provided, using only indexed data for consistency</span>
+    <span class="k">if</span> <span class="n">Bt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">flux</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">flux</span><span class="o">.</span><span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;flux.x, flux.y, flux.z must have the same shape.&quot;</span><span class="p">)</span>
+        <span class="n">Bt_full</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">flux</span><span class="o">.</span><span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">flux</span><span class="o">.</span><span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">Bt_calc</span> <span class="o">=</span> <span class="n">Bt_full</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">Bt_calc</span> <span class="o">=</span> <span class="n">Bt</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="k">if</span> <span class="n">Bt</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">ind</span><span class="o">.</span><span class="n">shape</span> <span class="k">else</span> <span class="n">Bt</span> <span class="c1"># Assume Bt is already indexed if not matching ind shape</span>
+
+    <span class="n">x0_TL</span><span class="p">,</span> <span class="n">y_var</span> <span class="o">=</span> <span class="n">create_TL_coef</span><span class="p">(</span>
+        <span class="n">flux_or_Bx</span><span class="o">=</span><span class="n">flux</span><span class="p">,</span> <span class="n">meas_or_By</span><span class="o">=</span><span class="n">meas</span><span class="p">,</span> <span class="c1"># Pass full flux and meas</span>
+        <span class="n">ind</span><span class="o">=</span><span class="n">ind</span><span class="p">,</span> <span class="c1"># Pass indexer</span>
+        <span class="n">Bt</span><span class="o">=</span><span class="n">Bt_calc</span><span class="p">,</span> <span class="c1"># Pass indexed Bt</span>
+        <span class="n">lam</span><span class="o">=</span><span class="n">lam</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="n">terms</span><span class="p">,</span> <span class="n">pass1</span><span class="o">=</span><span class="n">pass1</span><span class="p">,</span> <span class="n">pass2</span><span class="o">=</span><span class="n">pass2</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span>
+        <span class="n">pole</span><span class="o">=</span><span class="n">pole</span><span class="p">,</span> <span class="n">trim</span><span class="o">=</span><span class="n">trim</span><span class="p">,</span> <span class="n">Bt_scale</span><span class="o">=</span><span class="n">Bt_scale</span><span class="p">,</span> <span class="n">return_y_var</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+
+    <span class="n">A</span> <span class="o">=</span> <span class="n">create_TL_A</span><span class="p">(</span>
+        <span class="n">flux_or_Bx</span><span class="o">=</span><span class="n">flux</span><span class="p">,</span> <span class="n">ind</span><span class="o">=</span><span class="n">ind</span><span class="p">,</span> <span class="c1"># Pass indexer</span>
+        <span class="n">Bt</span><span class="o">=</span><span class="n">Bt_calc</span><span class="p">,</span> <span class="c1"># Pass indexed Bt</span>
+        <span class="n">terms</span><span class="o">=</span><span class="n">terms</span><span class="p">,</span> <span class="n">Bt_scale</span><span class="o">=</span><span class="n">Bt_scale</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># No data selected by ind</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No data selected by &#39;ind&#39;, A matrix is empty.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="c1"># Not enough data points for a full rank A&#39;A, use pseudo-inverse</span>
+        <span class="n">P0_TL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">A</span><span class="p">)</span> <span class="o">*</span> <span class="n">y_var</span> <span class="k">if</span> <span class="n">y_var</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">A</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">P0_TL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">A</span><span class="p">)</span> <span class="o">*</span> <span class="n">y_var</span> <span class="k">if</span> <span class="n">y_var</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">A</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span> <span class="c1"># If singular</span>
+             <span class="n">P0_TL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">A</span><span class="p">)</span> <span class="o">*</span> <span class="n">y_var</span> <span class="k">if</span> <span class="n">y_var</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">pinv</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">A</span><span class="p">)</span>
+
+
+    <span class="n">true_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">ind</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">N_ind</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">true_indices</span><span class="p">)</span>
+    
+    <span class="c1"># Ensure N_sigma calculation is robust</span>
+    <span class="n">min_data_for_tl_coef</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">trim</span><span class="p">,</span> <span class="mi">50</span><span class="p">)</span> <span class="c1"># Minimum data points for one create_TL_coef call</span>
+    <span class="k">if</span> <span class="n">N_ind</span> <span class="o">&lt;</span> <span class="n">min_data_for_tl_coef</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Not enough data points (</span><span class="si">{</span><span class="n">N_ind</span><span class="si">}</span><span class="s2">) after indexing. Need at least </span><span class="si">{</span><span class="n">min_data_for_tl_coef</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># N is the number of windows to process</span>
+    <span class="c1"># window_len is the length of data in each window</span>
+    <span class="c1"># N_sigma is the desired number of coefficient sets</span>
+    
+    <span class="c1"># Max possible windows of at least min_data_for_tl_coef length</span>
+    <span class="n">max_possible_N</span> <span class="o">=</span> <span class="n">N_ind</span> <span class="o">-</span> <span class="n">min_data_for_tl_coef</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">max_possible_N</span><span class="p">,</span> <span class="n">N_sigma</span><span class="p">)</span>
+
+    <span class="n">N_min_loops</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Julia has N_min = 10</span>
+    <span class="k">if</span> <span class="n">N</span> <span class="o">&lt;</span> <span class="n">N_min_loops</span> <span class="ow">and</span> <span class="n">N_ind</span> <span class="o">&gt;=</span> <span class="n">min_data_for_tl_coef</span> <span class="p">:</span> <span class="c1"># if we can make at least one window</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: ekf_online_setup: N_sigma reduced from </span><span class="si">{</span><span class="n">N_sigma</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">N</span><span class="si">}</span><span class="s2"> due to limited data (</span><span class="si">{</span><span class="n">N_ind</span><span class="si">}</span><span class="s2"> points). Minimum </span><span class="si">{</span><span class="n">N_min_loops</span><span class="si">}</span><span class="s2"> preferred.&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">N_ind</span> <span class="o">&lt;</span> <span class="n">min_data_for_tl_coef</span><span class="p">:</span>
+         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;ekf_online_setup: Not enough data (</span><span class="si">{</span><span class="n">N_ind</span><span class="si">}</span><span class="s2"> points) to create even one TL coefficient set. Need at least </span><span class="si">{</span><span class="n">min_data_for_tl_coef</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">N</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">N</span> <span class="o">=</span> <span class="mi">1</span> <span class="c1"># Ensure at least one loop if possible</span>
+
+    <span class="n">window_len</span> <span class="o">=</span> <span class="n">N_ind</span> <span class="o">-</span> <span class="n">N</span> <span class="o">+</span> <span class="mi">1</span> <span class="c1"># Length of data for each call to create_TL_coef</span>
+
+    <span class="n">coef_set</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">x0_TL</span><span class="p">),</span> <span class="n">N</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+        <span class="n">current_window_indices</span> <span class="o">=</span> <span class="n">true_indices</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">window_len</span><span class="p">]</span>
+        
+        <span class="c1"># Bt for the current window</span>
+        <span class="k">if</span> <span class="n">Bt</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+             <span class="n">Bt_window</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">current_window_indices</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> \
+                                 <span class="n">flux</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">current_window_indices</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> \
+                                 <span class="n">flux</span><span class="o">.</span><span class="n">z</span><span class="p">[</span><span class="n">current_window_indices</span><span class="p">]</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># If Bt was provided, assume it&#39;s full and slice, or it&#39;s pre-indexed and we need to be careful</span>
+             <span class="c1"># This part is tricky if Bt is pre-indexed. Assuming full Bt for simplicity here.</span>
+             <span class="n">Bt_window</span> <span class="o">=</span> <span class="n">Bt</span><span class="p">[</span><span class="n">current_window_indices</span><span class="p">]</span>
+
+
+        <span class="n">coef_set</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">create_TL_coef</span><span class="p">(</span>
+            <span class="n">flux_or_Bx</span><span class="o">=</span><span class="n">flux</span><span class="p">,</span> <span class="n">meas_or_By</span><span class="o">=</span><span class="n">meas</span><span class="p">,</span> <span class="c1"># Pass full flux and meas</span>
+            <span class="n">ind</span><span class="o">=</span><span class="n">current_window_indices</span><span class="p">,</span> <span class="c1"># Pass current window&#39;s indices</span>
+            <span class="n">Bt</span><span class="o">=</span><span class="n">Bt_window</span><span class="p">,</span>
+            <span class="n">lam</span><span class="o">=</span><span class="n">lam</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="n">terms</span><span class="p">,</span> <span class="n">pass1</span><span class="o">=</span><span class="n">pass1</span><span class="p">,</span> <span class="n">pass2</span><span class="o">=</span><span class="n">pass2</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">fs</span><span class="p">,</span>
+            <span class="n">pole</span><span class="o">=</span><span class="n">pole</span><span class="p">,</span> <span class="n">trim</span><span class="o">=</span><span class="n">trim</span><span class="p">,</span> <span class="n">Bt_scale</span><span class="o">=</span><span class="n">Bt_scale</span><span class="p">,</span> <span class="n">return_y_var</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+
+    <span class="n">TL_sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">coef_set</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">x0_TL</span><span class="p">,</span> <span class="n">P0_TL</span><span class="p">,</span> <span class="n">TL_sigma</span></div>
+
+
+
+<div class="viewcode-block" id="ekf_online">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.ekf.ekf_online">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ekf_online</span><span class="p">(</span>
+    <span class="n">lat</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">lon</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">alt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">vn</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ve</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">vd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">fn</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Cnb</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">meas</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">flux</span><span class="p">:</span> <span class="n">MagV</span><span class="p">,</span> <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">itp_mapS</span><span class="p">,</span>
+    <span class="n">x0_TL</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">P0_tl</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">tl_proc_noise_std</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">R</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">P0_nav</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">Qd_nav</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">baro_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span> <span class="n">acc_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span>
+    <span class="n">gyro_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span> <span class="n">fogm_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">600.0</span><span class="p">,</span>
+    <span class="n">date</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">core</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">terms</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">Bt_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50000.0</span><span class="p">,</span>
+    <span class="n">map_alt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">der_mapS</span><span class="o">=</span><span class="kc">None</span> <span class="c1"># For consistency with batch EKF, though get_H might not use it for scalar</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extended Kalman Filter (EKF) with online learning of Tolles-Lawson coefficients.</span>
+<span class="sd">    Ports MagNav.jl/src/ekf_online.jl -&gt; ekf_online.</span>
+<span class="sd">    Assumes nx_vec = 0 (no estimation of vector magnetometer errors in state).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        lat, lon, alt, vn, ve, vd, fn, fe, fd, Cnb: Standard navigation inputs.</span>
+<span class="sd">        meas (np.ndarray): Scalar magnetometer measurement [nT].</span>
+<span class="sd">        flux (MagV): Vector magnetometer measurements (for TL A matrix).</span>
+<span class="sd">        dt (float): Measurement time step [s].</span>
+<span class="sd">        itp_mapS: Scalar map interpolation function or MapCache.</span>
+<span class="sd">        x0_TL (np.ndarray): Initial Tolles-Lawson coefficient states.</span>
+<span class="sd">        P0_tl (np.ndarray): Initial covariance for TL states.</span>
+<span class="sd">        tl_proc_noise_std (np.ndarray): Process noise standard deviation for TL states.</span>
+<span class="sd">        R (float or np.ndarray): Measurement noise variance. Defaults to 1.0.</span>
+<span class="sd">        P0_nav (np.ndarray, optional): Initial covariance for navigation states (18 states).</span>
+<span class="sd">                                       Defaults to create_P0().</span>
+<span class="sd">        Qd_nav (np.ndarray, optional): Process noise for navigation states (18 states).</span>
+<span class="sd">                                       Defaults to create_Qd().</span>
+<span class="sd">        baro_tau, acc_tau, gyro_tau, fogm_tau: Time constants.</span>
+<span class="sd">        date (float, optional): Measurement date for IGRF. Defaults to get_years(2020,185).</span>
+<span class="sd">        core (bool, optional): If true, include core field. Defaults to False.</span>
+<span class="sd">        terms (List[str], optional): Tolles-Lawson terms for A matrix. Defaults to [&#39;p&#39;,&#39;i&#39;,&#39;e&#39;,&#39;b&#39;].</span>
+<span class="sd">        Bt_scale (float, optional): Scaling for TL A matrix. Defaults to 50000.0.</span>
+<span class="sd">        map_alt (float, optional): Map altitude. Defaults to 0.</span>
+<span class="sd">        der_mapS (callable, optional): Scalar map vertical derivative interpolator.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        FILTres: Filter results struct.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">P0_nav</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">P0_nav</span> <span class="o">=</span> <span class="n">create_P0</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">Qd_nav</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">Qd_nav</span> <span class="o">=</span> <span class="n">create_Qd</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">date</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">date</span> <span class="o">=</span> <span class="n">get_years</span><span class="p">(</span><span class="mi">2020</span><span class="p">,</span> <span class="mi">185</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">terms</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> <span class="n">terms</span> <span class="o">=</span> <span class="n">DEFAULT_TL_TERMS_ONLINE</span>
+
+    <span class="n">N_data</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span>
+    <span class="n">nx_nav</span> <span class="o">=</span> <span class="n">P0_nav</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c1"># Should be 18</span>
+    <span class="n">nx_TL</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x0_TL</span><span class="p">)</span>
+    <span class="n">nx_full</span> <span class="o">=</span> <span class="n">nx_nav</span> <span class="o">+</span> <span class="n">nx_TL</span>
+
+    <span class="k">if</span> <span class="n">P0_nav</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">nx_nav</span><span class="p">,</span> <span class="n">nx_nav</span><span class="p">)</span> <span class="ow">or</span> <span class="n">Qd_nav</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">nx_nav</span><span class="p">,</span> <span class="n">nx_nav</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;P0_nav and Qd_nav must be square matrices of size </span><span class="si">{</span><span class="n">nx_nav</span><span class="si">}</span><span class="s2">x</span><span class="si">{</span><span class="n">nx_nav</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">P0_tl</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">nx_TL</span><span class="p">,</span> <span class="n">nx_TL</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;P0_tl must be a square matrix of size </span><span class="si">{</span><span class="n">nx_TL</span><span class="si">}</span><span class="s2">x</span><span class="si">{</span><span class="n">nx_TL</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tl_proc_noise_std</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="p">(</span><span class="n">nx_TL</span><span class="p">,):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;tl_proc_noise_std must be of length </span><span class="si">{</span><span class="n">nx_TL</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Construct full P0 and Qd</span>
+    <span class="n">P0_full</span> <span class="o">=</span> <span class="n">block_diag</span><span class="p">(</span><span class="n">P0_nav</span><span class="p">,</span> <span class="n">P0_tl</span><span class="p">)</span>
+    <span class="n">Qd_tl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">tl_proc_noise_std</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">Qd_full</span> <span class="o">=</span> <span class="n">block_diag</span><span class="p">(</span><span class="n">Qd_nav</span><span class="p">,</span> <span class="n">Qd_tl</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">meas</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">ny</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">_meas_internal</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">meas</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">meas</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">ny</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">_meas_internal</span> <span class="o">=</span> <span class="n">meas</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;meas must be a 1D array or a 2D array with one column.&quot;</span><span class="p">)</span>
+
+    <span class="n">x_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nx_full</span><span class="p">,</span> <span class="n">N_data</span><span class="p">))</span>
+    <span class="n">P_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nx_full</span><span class="p">,</span> <span class="n">nx_full</span><span class="p">,</span> <span class="n">N_data</span><span class="p">))</span>
+    <span class="n">r_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">ny</span><span class="p">,</span> <span class="n">N_data</span><span class="p">))</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nx_full</span><span class="p">)</span>
+    <span class="n">x</span><span class="p">[</span><span class="n">nx_nav</span> <span class="p">:</span> <span class="n">nx_full</span><span class="p">]</span> <span class="o">=</span> <span class="n">x0_TL</span> <span class="c1"># Nav states start at zero error</span>
+    <span class="n">P</span> <span class="o">=</span> <span class="n">P0_full</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="c1"># Create the Tolles-Lawson A matrix (design matrix)</span>
+    <span class="c1"># Bt for A matrix construction - use full flux data for consistency with Julia</span>
+    <span class="c1"># The create_TL_A function handles indexing if `ind` is passed, but here we need A for all time steps.</span>
+    <span class="c1"># So, we pass full flux and it should return A for all time steps.</span>
+    <span class="n">Bt_for_A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">flux</span><span class="o">.</span><span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">flux</span><span class="o">.</span><span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">flux</span><span class="o">.</span><span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">A_tl_matrix</span> <span class="o">=</span> <span class="n">create_TL_A</span><span class="p">(</span><span class="n">flux_or_Bx</span><span class="o">=</span><span class="n">flux</span><span class="p">,</span> <span class="n">Bt</span><span class="o">=</span><span class="n">Bt_for_A</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="n">terms</span><span class="p">,</span> <span class="n">Bt_scale</span><span class="o">=</span><span class="n">Bt_scale</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">A_tl_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">N_data</span> <span class="ow">or</span> <span class="n">A_tl_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">nx_TL</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;A_tl_matrix shape mismatch. Expected (</span><span class="si">{</span><span class="n">N_data</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">nx_TL</span><span class="si">}</span><span class="s2">), got </span><span class="si">{</span><span class="n">A_tl_matrix</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">itp_mapS_arg</span> <span class="o">=</span> <span class="n">itp_mapS</span> <span class="c1"># To handle MapCache if passed</span>
+
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_data</span><span class="p">):</span>
+        <span class="n">current_itp_mapS_for_step</span> <span class="o">=</span> <span class="n">itp_mapS_arg</span>
+        <span class="n">current_der_mapS_for_step</span> <span class="o">=</span> <span class="n">der_mapS</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">itp_mapS_arg</span><span class="p">,</span> <span class="n">MapCache</span><span class="p">):</span>
+            <span class="c1"># This assumes a function _get_interpolator_from_cache exists or</span>
+            <span class="c1"># get_h/get_H can handle MapCache directly.</span>
+            <span class="c1"># For now, pass the cache and let get_h/get_H resolve.</span>
+            <span class="c1"># If get_h/get_H expect only interpolators, this needs adjustment:</span>
+            <span class="c1"># current_itp_mapS_for_step = _get_interpolator_from_cache(itp_mapS_arg, lat[t], lon[t], alt[t])</span>
+            <span class="c1"># current_der_mapS_for_step = _get_interpolator_from_cache(der_mapS, lat[t], lon[t], alt[t]) if isinstance(der_mapS, MapCache) else der_mapS</span>
+            <span class="k">pass</span> <span class="c1"># Assuming get_h/get_H handle MapCache</span>
+
+        <span class="n">_Cnb_t</span> <span class="o">=</span> <span class="n">Cnb</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">t</span><span class="p">]</span> <span class="k">if</span> <span class="n">Cnb</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">3</span> <span class="k">else</span> <span class="n">Cnb</span>
+
+        <span class="c1"># 1. Construct full Phi</span>
+        <span class="n">Phi_nav_t</span> <span class="o">=</span> <span class="n">get_Phi</span><span class="p">(</span><span class="n">nx_nav</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">vn</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">ve</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">vd</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fn</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fe</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fd</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">_Cnb_t</span><span class="p">,</span>
+                            <span class="n">baro_tau</span><span class="p">,</span> <span class="n">acc_tau</span><span class="p">,</span> <span class="n">gyro_tau</span><span class="p">,</span> <span class="n">fogm_tau</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+        <span class="n">Phi_tl_t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">nx_TL</span><span class="p">)</span> <span class="c1"># TL states are random walk or constant</span>
+        <span class="n">Phi_full_t</span> <span class="o">=</span> <span class="n">block_diag</span><span class="p">(</span><span class="n">Phi_nav_t</span><span class="p">,</span> <span class="n">Phi_tl_t</span><span class="p">)</span>
+
+        <span class="c1"># 2. Predict measurement</span>
+        <span class="n">x_nav_t</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:</span><span class="n">nx_nav</span><span class="p">]</span>
+        <span class="n">x_tl_t</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="n">nx_nav</span><span class="p">:]</span>
+        
+        <span class="n">A_row_t</span> <span class="o">=</span> <span class="n">A_tl_matrix</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="n">h_tl_comp</span> <span class="o">=</span> <span class="n">A_row_t</span> <span class="o">@</span> <span class="n">x_tl_t</span>
+        
+        <span class="c1"># get_h expects nav states (including map bias if it&#39;s part of its state definition)</span>
+        <span class="n">h_map_pred</span> <span class="o">=</span> <span class="n">get_h</span><span class="p">(</span><span class="n">current_itp_mapS_for_step</span><span class="p">,</span> <span class="n">x_nav_t</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">],</span>
+                           <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span><span class="p">,</span> <span class="n">der_map</span><span class="o">=</span><span class="n">current_der_mapS_for_step</span><span class="p">,</span> <span class="n">map_alt</span><span class="o">=</span><span class="n">map_alt</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">h_map_pred</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">)):</span> <span class="n">h_map_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">h_map_pred</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">h_map_pred</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">h_map_pred</span> <span class="o">=</span> <span class="n">h_map_pred</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># to (1,1)</span>
+
+        <span class="n">h_full_pred</span> <span class="o">=</span> <span class="n">h_tl_comp</span> <span class="o">+</span> <span class="n">h_map_pred</span>
+        <span class="n">resid</span> <span class="o">=</span> <span class="n">_meas_internal</span><span class="p">[</span><span class="n">t</span><span class="p">,</span> <span class="p">:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">h_full_pred</span>
+        <span class="n">r_out</span><span class="p">[:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">resid</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+        <span class="c1"># 3. Construct full H</span>
+        <span class="c1"># get_H returns Jacobian for nav states (1 x nx_nav)</span>
+        <span class="n">H_nav_t</span> <span class="o">=</span> <span class="n">get_H</span><span class="p">(</span><span class="n">current_itp_mapS_for_step</span><span class="p">,</span> <span class="n">x_nav_t</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">],</span>
+                        <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">H_nav_t</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="n">H_nav_t</span> <span class="o">=</span> <span class="n">H_nav_t</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># Ensure (1, nx_nav)</span>
+
+        <span class="n">H_tl_t</span> <span class="o">=</span> <span class="n">A_row_t</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># (1 x nx_TL)</span>
+        <span class="n">H_full_t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">H_nav_t</span><span class="p">,</span> <span class="n">H_tl_t</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># (1 x nx_full)</span>
+
+        <span class="c1"># 4. Kalman Update</span>
+        <span class="n">S_matrix_term</span> <span class="o">=</span> <span class="n">H_full_t</span> <span class="o">@</span> <span class="n">P</span> <span class="o">@</span> <span class="n">H_full_t</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">_R_val</span> <span class="o">=</span> <span class="n">R</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">R</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="n">_R_val</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="c1"># Handle 0-dim array R</span>
+
+        <span class="k">if</span> <span class="n">ny</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">_R_val</span><span class="p">,</span> <span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">)):</span>
+            <span class="n">S_val</span> <span class="o">=</span> <span class="n">S_matrix_term</span> <span class="o">+</span> <span class="n">_R_val</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">_R_val</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_R_val</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="p">(</span><span class="n">ny</span><span class="p">,</span> <span class="n">ny</span><span class="p">):</span>
+            <span class="n">S_val</span> <span class="o">=</span> <span class="n">S_matrix_term</span> <span class="o">+</span> <span class="n">_R_val</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># Fallback for ny &gt; 1 and R_val scalar (though ny=1 here)</span>
+            <span class="n">S_val</span> <span class="o">=</span> <span class="n">S_matrix_term</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">ny</span><span class="p">)</span> <span class="o">*</span> <span class="n">_R_val</span>
+        <span class="k">if</span> <span class="n">S_val</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="n">S_val</span> <span class="o">=</span> <span class="n">S_val</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">K_val</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">S_val</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">H_full_t</span> <span class="o">@</span> <span class="n">P</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">K_val</span> <span class="o">@</span> <span class="n">resid</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">nx_full</span><span class="p">)</span> <span class="o">-</span> <span class="n">K_val</span> <span class="o">@</span> <span class="n">H_full_t</span><span class="p">)</span> <span class="o">@</span> <span class="n">P</span>
+        
+        <span class="n">x_out</span><span class="p">[:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="n">P_out</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">P</span>
+
+        <span class="c1"># 5. Propagate</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">Phi_full_t</span> <span class="o">@</span> <span class="n">x</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="n">Phi_full_t</span> <span class="o">@</span> <span class="n">P</span> <span class="o">@</span> <span class="n">Phi_full_t</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">Qd_full</span>
+        
+    <span class="k">return</span> <span class="n">FILTres</span><span class="p">(</span><span class="n">x_out</span><span class="p">,</span> <span class="n">P_out</span><span class="p">,</span> <span class="n">r_out</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="ekf_online_ins">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.ekf.ekf_online_ins">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ekf_online_ins</span><span class="p">(</span>
+    <span class="n">ins</span><span class="p">:</span> <span class="n">INS</span><span class="p">,</span>
+    <span class="n">meas</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">flux</span><span class="p">:</span> <span class="n">MagV</span><span class="p">,</span>
+    <span class="n">itp_mapS</span><span class="p">,</span>
+    <span class="n">x0_TL</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">P0_tl</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">tl_proc_noise_std</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">R</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">P0_nav</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">Qd_nav</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">baro_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span> <span class="n">acc_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span>
+    <span class="n">gyro_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span> <span class="n">fogm_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">600.0</span><span class="p">,</span>
+    <span class="n">date</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">core</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">terms</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">Bt_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50000.0</span><span class="p">,</span>
+    <span class="n">map_alt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">der_mapS</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    EKF with online Tolles-Lawson learning, overload for INS data structure.</span>
+<span class="sd">    See `ekf_online` for detailed argument descriptions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">ekf_online</span><span class="p">(</span>
+        <span class="n">ins</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">alt</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">vn</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">ve</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">vd</span><span class="p">,</span>
+        <span class="n">ins</span><span class="o">.</span><span class="n">fn</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">fe</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">fd</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">Cnb</span><span class="p">,</span>
+        <span class="n">meas</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">ins</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="n">itp_mapS</span><span class="p">,</span>
+        <span class="n">x0_TL</span><span class="p">,</span> <span class="n">P0_tl</span><span class="p">,</span> <span class="n">tl_proc_noise_std</span><span class="p">,</span>
+        <span class="n">R</span><span class="o">=</span><span class="n">R</span><span class="p">,</span> <span class="n">P0_nav</span><span class="o">=</span><span class="n">P0_nav</span><span class="p">,</span> <span class="n">Qd_nav</span><span class="o">=</span><span class="n">Qd_nav</span><span class="p">,</span>
+        <span class="n">baro_tau</span><span class="o">=</span><span class="n">baro_tau</span><span class="p">,</span> <span class="n">acc_tau</span><span class="o">=</span><span class="n">acc_tau</span><span class="p">,</span> <span class="n">gyro_tau</span><span class="o">=</span><span class="n">gyro_tau</span><span class="p">,</span> <span class="n">fogm_tau</span><span class="o">=</span><span class="n">fogm_tau</span><span class="p">,</span>
+        <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span><span class="p">,</span> <span class="n">terms</span><span class="o">=</span><span class="n">terms</span><span class="p">,</span> <span class="n">Bt_scale</span><span class="o">=</span><span class="n">Bt_scale</span><span class="p">,</span>
+        <span class="n">map_alt</span><span class="o">=</span><span class="n">map_alt</span><span class="p">,</span> <span class="n">der_mapS</span><span class="o">=</span><span class="n">der_mapS</span>
+    <span class="p">)</span></div>
 
 </pre></div>
 
@@ -421,62 +1097,10 @@
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="Main">
-        <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="../../index.html">MagNavPy</a></h1>
-
-
-
-
-
-
-
-
-
-<search id="searchbox" style="display: none" role="search">
-    <div class="searchformwrapper">
-    <form class="search" action="../../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</search>
-<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../data.html">Flight Path &amp; INS Data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../maps.html">Magnetic Anomaly Maps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../comp.html">Aeromagnetic Compensation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../nncomp.html">Neural Network-Based Model Diagrams</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../nav.html">Navigation Algorithms</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api_functions.html">API: Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api_structs.html">API: Structs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api_reference.html">API Reference</a></li>
-</ul>
-
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../../index.html">Documentation overview</a><ul>
-  <li><a href="../index.html">Module code</a><ul>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
-
-
-
-
-
-
-
-
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
+    <div class="clearer"></div>
+  </div>
     <div class="footer">
-      &#169;2024, MagNav.jl Authors & AI Porting Team.
+      &#169;2020-2023, Original MagNav.jl Authors; 2024-2025, Manas Pandey.
       
       |
       Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>

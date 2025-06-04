@@ -35,7 +35,9 @@ This project is a Python conversion of the [MagNav.jl](https://github.com/MIT-AI
 ### Prerequisites
 
 *   Python 3.9 or higher.
-*   **GDAL**: This library has a dependency on GDAL, which needs to be installed manually on your system due to its complex installation process. Please refer to the [official GDAL installation guide](https://gdal.org/download.html#binaries) for instructions specific to your operating system.
+*   **GDAL**: This library depends on GDAL.
+    *   **For Windows users:** It is strongly recommended to install GDAL using pre-compiled wheels from sources like Christoph Gohlke's Unofficial Windows Binaries for Python Extension Packages. Ensure you download the wheel compatible with your Python version (e.g., Python 3.13) and system architecture (e.g., `win_amd64`). Direct installation via `pip install gdal` can often lead to compilation issues on Windows. After downloading the appropriate `.whl` file, you can install it using pip (e.g., `pip install GDAL-3.9.0-cp313-cp313-win_amd64.whl`).
+    *   **For other operating systems:** Please refer to the [official GDAL installation guide](https://gdal.org/download.html#binaries) for instructions.
 
 ### Project Dependencies
 
@@ -82,6 +84,16 @@ Please ensure GDAL is installed on your system *before* running `pip install -r 
     pip install -e .
     ```
 
+## Data and Artifact Management
+
+MagNavPy requires specific data artifacts, such as magnetic anomaly maps and flight datasets, to function correctly. Currently, these artifacts are not managed or downloaded automatically by this Python port.
+
+**Manual Placement:**
+Users are required to manually obtain these artifacts and place them in a directory named `artifacts_data`. This directory should be located at the **root of the `MagNavPy` repository** (e.g., if you cloned the repository into a folder named `MagNavPy`, the path would be `MagNavPy/artifacts_data/`).
+
+**Obtaining Artifacts:**
+Information regarding the required artifacts and their original sources can be found in the [`Artifacts.toml`](../MagNav.jl/Artifacts.toml:1) file of the original [MagNav.jl project](https://github.com/MIT-AI-Accelerator/MagNav.jl/blob/main/Artifacts.toml). Please refer to this file to identify and download the necessary data.
+
 ## Usage
 
 MagNavPy provides functions for various stages of magnetic navigation processing. Here are examples of key functions:
@@ -120,6 +132,16 @@ To run the test suite, navigate to the root directory of the project and use `py
 pytest tests/
 ```
 This will execute all tests defined in the `tests/` directory.
+
+## Current Status and Known Issues
+
+This Python port of MagNav.jl is an ongoing development effort. While significant progress has been made, users should be aware of the following:
+
+*   **Ongoing Porting:** The library is actively being ported from Julia. Not all features and functionalities of the original MagNav.jl may be fully implemented or tested.
+*   **Environment and Imports:** Initial challenges with setting up the Python environment, particularly GDAL installation and resolving relative import paths within the `magnavpy` package, have been largely addressed.
+*   **Testing Coverage:** The original task mentioned "pytest errors and otherwise." A comprehensive review and execution of the `pytest` test suite to ensure full functionality and identify remaining issues is still pending.
+*   **Manual Data Artifacts:** As detailed in the "Data and Artifact Management" section, data artifacts are currently handled manually. There is no automated download or management system within this Python port.
+*   **Documentation:** Documentation is being actively developed. While Sphinx documentation is available, it may not yet cover all aspects of the Python port comprehensively.
 
 ## Contributing
 

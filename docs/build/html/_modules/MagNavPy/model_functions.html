@@ -7,7 +7,7 @@
     <title>magnavpy.model_functions &#8212; MagNavPy 0.1.0 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
-    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=73454398" />
     <script src="../../_static/documentation_options.js?v=01f34227"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
@@ -21,9 +21,68 @@
   
 
   </head><body>
-  
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">MagNavPy</a></h1>
 
-    <div class="document">
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=manasp21&repo=magnav.py&type=star&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../data.html">Flight Path &amp; INS Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maps.html">Magnetic Anomaly Maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../comp.html">Aeromagnetic Compensation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../nncomp.html">Neural Network-Based Model Diagrams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../nav.html">Navigation Algorithms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../status.html">Current Status and Known Issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_functions.html">API: Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_structs.html">API: Structs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_reference.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
       <div class="documentwrapper">
         <div class="bodywrapper">
           
@@ -40,7 +99,7 @@
 <span class="c1"># These imports assume specific functions and constants exist in these files.</span>
 <span class="c1"># If they don&#39;t, these would need to be defined or adjusted.</span>
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">.magnav</span><span class="w"> </span><span class="kn">import</span> <span class="n">r_earth</span><span class="p">,</span> <span class="n">omega_earth</span> <span class="c1"># ω_earth as omega_earth</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">R_EARTH</span><span class="p">,</span> <span class="n">OMEGA_EARTH</span> <span class="c1"># Import from constants.py</span>
     <span class="c1"># Placeholder for IGRF calculation functions, assuming they might be in magnav or a dedicated util</span>
     <span class="c1"># These would need to be properly implemented or imported from a library like pyIGRF,</span>
     <span class="c1"># ensuring correct unit handling (e.g., IGRF typically uses degrees for lat/lon, km for alt).</span>
@@ -66,28 +125,10 @@
 
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">.core_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_years</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.core_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_years</span><span class="p">,</span> <span class="n">dn2dlat</span><span class="p">,</span> <span class="n">de2dlon</span><span class="p">,</span> <span class="n">dlat2dn</span><span class="p">,</span> <span class="n">dlon2de</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Could not import get_years from .core_utils. Defining placeholder.&quot;</span><span class="p">)</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_years</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="n">day_of_year</span><span class="p">):</span> <span class="k">return</span> <span class="n">year</span> <span class="o">+</span> <span class="p">(</span><span class="n">day_of_year</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mf">365.25</span> <span class="c1"># Simplified</span>
-
-<span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span><span class="w"> </span><span class="nn">.analysis_util</span><span class="w"> </span><span class="kn">import</span> <span class="n">dlat2dn</span><span class="p">,</span> <span class="n">dn2dlat</span><span class="p">,</span> <span class="n">de2dlon</span>
-<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Could not import dlat2dn, dn2dlat, de2dlon from .analysis_util. Defining placeholders.&quot;</span><span class="p">)</span>
-<div class="viewcode-block" id="dlat2dn">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.model_functions.dlat2dn">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">dlat2dn</span><span class="p">(</span><span class="n">dlat_rad</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">):</span> <span class="k">return</span> <span class="n">dlat_rad</span> <span class="o">*</span> <span class="n">r_earth</span> <span class="c1"># Simplified</span></div>
-
-<div class="viewcode-block" id="dn2dlat">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.model_functions.dn2dlat">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">dn2dlat</span><span class="p">(</span><span class="n">dn_m</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">):</span> <span class="k">return</span> <span class="n">dn_m</span> <span class="o">/</span> <span class="n">r_earth</span> <span class="c1"># Simplified</span></div>
-
-<div class="viewcode-block" id="de2dlon">
-<a class="viewcode-back" href="../../api_reference.html#magnavpy.model_functions.de2dlon">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">de2dlon</span><span class="p">(</span><span class="n">de_m</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">):</span> <span class="k">return</span> <span class="n">de_m</span> <span class="o">/</span> <span class="p">(</span><span class="n">r_earth</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">lat_rad</span><span class="p">))</span> <span class="c1"># Simplified</span></div>
-
-
 
 <div class="viewcode-block" id="deg2rad">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.model_functions.deg2rad">[docs]</a>
@@ -325,6 +366,7 @@
     <span class="n">R_val</span> <span class="o">=</span> <span class="n">meas_var</span>  <span class="c1"># R is typically a scalar or matrix. Here it&#39;s scalar.</span>
     <span class="k">return</span> <span class="n">P0</span><span class="p">,</span> <span class="n">Qd</span><span class="p">,</span> <span class="n">R_val</span></div>
 
+
 <div class="viewcode-block" id="get_pinson">
 <a class="viewcode-back" href="../../nav.html#magnavpy.model_functions.get_pinson">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_pinson</span><span class="p">(</span><span class="n">nx</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">vn</span><span class="p">,</span> <span class="n">ve</span><span class="p">,</span> <span class="n">vd</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">fe</span><span class="p">,</span> <span class="n">fd</span><span class="p">,</span> <span class="n">Cnb</span><span class="p">,</span>
@@ -354,6 +396,16 @@
     <span class="c1"># sin_l = math.sin(lat_rad) # Not used directly in original F matrix construction with these vars</span>
 
     <span class="n">F</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nx</span><span class="p">,</span> <span class="n">nx</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="c1"># Debugging: Print nx and F shape</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DEBUG: get_pinson - nx: </span><span class="si">{</span><span class="n">nx</span><span class="si">}</span><span class="s2">, F shape: </span><span class="si">{</span><span class="n">F</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># Debugging: Print input types and values</span>
+    <span class="c1"># print(f&quot;DEBUG: get_pinson inputs - lat_rad: {lat_rad} (type: {type(lat_rad)})&quot;)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DEBUG: get_pinson inputs - vn: </span><span class="si">{</span><span class="n">vn</span><span class="si">}</span><span class="s2"> (type: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">vn</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+    <span class="c1"># print(f&quot;DEBUG: get_pinson inputs - ve: {ve} (type: {type(ve)})&quot;)</span>
+    <span class="c1"># print(f&quot;DEBUG: get_pinson inputs - vd: {vd} (type: {type(vd)})&quot;)</span>
+    <span class="c1"># print(f&quot;DEBUG: get_pinson inputs - fn: {fn} (type: {type(fn)})&quot;)</span>
+    <span class="c1"># print(f&quot;DEBUG: get_pinson inputs - fe: {fe} (type: {type(fe)})&quot;)</span>
+    <span class="c1"># print(f&quot;DEBUG: get_pinson inputs - fd: {fd} (type: {type(fd)})&quot;)</span>
 
     <span class="c1"># Pinson matrix population (0-indexed)</span>
     <span class="c1"># Row 0 (d(lat_err)/dt)</span>
@@ -510,11 +562,23 @@
 <span class="sd">    :returns: state transition matrix Phi (NumPy array)</span>
 <span class="sd">    :rtype: numpy.ndarray</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">F_matrix</span> <span class="o">=</span> <span class="n">get_pinson</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">vn</span><span class="p">,</span> <span class="n">ve</span><span class="p">,</span> <span class="n">vd</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">fe</span><span class="p">,</span> <span class="n">fd</span><span class="p">,</span> <span class="n">Cnb</span><span class="p">,</span>
+    <span class="c1"># Ensure scalar values are passed to get_pinson</span>
+    <span class="c1"># If the input is a numpy array, try to extract its scalar value.</span>
+    <span class="c1"># This assumes that at this stage of the EKF (processing a single time step),</span>
+    <span class="c1"># these navigation parameters should be scalars.</span>
+    <span class="n">_lat_rad</span> <span class="o">=</span> <span class="n">lat_rad</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lat_rad</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="ow">and</span> <span class="n">lat_rad</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="n">lat_rad</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">lat_rad</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">lat_rad</span><span class="p">))</span>
+    <span class="n">_vn</span> <span class="o">=</span> <span class="n">vn</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vn</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="ow">and</span> <span class="n">vn</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="n">vn</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vn</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">vn</span><span class="p">))</span>
+    <span class="n">_ve</span> <span class="o">=</span> <span class="n">ve</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ve</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="ow">and</span> <span class="n">ve</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="n">ve</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ve</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">ve</span><span class="p">))</span>
+    <span class="n">_vd</span> <span class="o">=</span> <span class="n">vd</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vd</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="ow">and</span> <span class="n">vd</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="n">vd</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vd</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">vd</span><span class="p">))</span>
+    <span class="n">_fn</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="ow">and</span> <span class="n">fn</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="n">fn</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">fn</span><span class="p">))</span>
+    <span class="n">_fe</span> <span class="o">=</span> <span class="n">fe</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fe</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="ow">and</span> <span class="n">fe</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="n">fe</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fe</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">fe</span><span class="p">))</span>
+    <span class="n">_fd</span> <span class="o">=</span> <span class="n">fd</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="ow">and</span> <span class="n">fd</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="p">(</span><span class="n">fd</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">generic</span><span class="p">))</span> <span class="k">else</span> <span class="nb">float</span><span class="p">(</span><span class="n">fd</span><span class="p">))</span>
+
+    <span class="n">F_matrix</span> <span class="o">=</span> <span class="n">get_pinson</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">_lat_rad</span><span class="p">,</span> <span class="n">_vn</span><span class="p">,</span> <span class="n">_ve</span><span class="p">,</span> <span class="n">_vd</span><span class="p">,</span> <span class="n">_fn</span><span class="p">,</span> <span class="n">_fe</span><span class="p">,</span> <span class="n">_fd</span><span class="p">,</span> <span class="n">Cnb</span><span class="p">,</span>
                    <span class="n">baro_tau</span><span class="o">=</span><span class="n">baro_tau</span><span class="p">,</span> <span class="n">acc_tau</span><span class="o">=</span><span class="n">acc_tau</span><span class="p">,</span> <span class="n">gyro_tau</span><span class="o">=</span><span class="n">gyro_tau</span><span class="p">,</span>
                    <span class="n">fogm_tau</span><span class="o">=</span><span class="n">fogm_tau</span><span class="p">,</span> <span class="n">vec_states</span><span class="o">=</span><span class="n">vec_states</span><span class="p">,</span> <span class="n">fogm_state</span><span class="o">=</span><span class="n">fogm_state</span><span class="p">,</span>
                    <span class="o">**</span><span class="n">pinson_kwargs</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">expm</span><span class="p">(</span><span class="n">F_matrix</span> <span class="o">*</span> <span class="n">dt</span><span class="p">)</span> <span class="c1"># Corrected variable name</span></div>
+    <span class="k">return</span> <span class="n">expm</span><span class="p">(</span><span class="n">F_matrix</span> <span class="o">*</span> <span class="n">dt</span><span class="p">)</span></div>
 
 
 
@@ -563,14 +627,14 @@
     <span class="n">grad_lat</span> <span class="o">=</span> <span class="p">(</span><span class="n">val_plus_dlat</span> <span class="o">-</span> <span class="n">val_minus_dlat</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dlat_rad</span><span class="p">)</span>
 
     <span class="c1"># Gradient w.r.t. longitude</span>
-    <span class="n">val_plus_dlon</span> <span class="o">=</span> <span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">alt_m</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">lon_rad</span> <span class="o">+</span> <span class="n">dlon_rad</span><span class="p">)</span>
-    <span class="n">val_minus_dlon</span> <span class="o">=</span> <span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">alt_m</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">lon_rad</span> <span class="o">-</span> <span class="n">dlon_rad</span><span class="p">)</span>
-    <span class="n">grad_lon</span> <span class="o">=</span> <span class="p">(</span><span class="n">val_plus_dlon</span> <span class="o">-</span> <span class="n">val_minus_dlon</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dlon_rad</span><span class="p">)</span>
+    <span class="n">val_plus_lon</span> <span class="o">=</span> <span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">alt_m</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">lon_rad</span> <span class="o">+</span> <span class="n">dlon_rad</span><span class="p">)</span>
+    <span class="n">val_minus_lon</span> <span class="o">=</span> <span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">alt_m</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">lon_rad</span> <span class="o">-</span> <span class="n">dlon_rad</span><span class="p">)</span>
+    <span class="n">grad_lon</span> <span class="o">=</span> <span class="p">(</span><span class="n">val_plus_lon</span> <span class="o">-</span> <span class="n">val_minus_lon</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dlon_rad</span><span class="p">)</span>
 
     <span class="c1"># Gradient w.r.t. altitude</span>
-    <span class="n">val_plus_dalt</span> <span class="o">=</span> <span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">alt_m</span> <span class="o">+</span> <span class="n">dalt_m</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">lon_rad</span><span class="p">)</span>
-    <span class="n">val_minus_dalt</span> <span class="o">=</span> <span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">alt_m</span> <span class="o">-</span> <span class="n">dalt_m</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">lon_rad</span><span class="p">)</span>
-    <span class="n">grad_alt</span> <span class="o">=</span> <span class="p">(</span><span class="n">val_plus_dalt</span> <span class="o">-</span> <span class="n">val_minus_dalt</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dalt_m</span><span class="p">)</span>
+    <span class="n">val_plus_alt</span> <span class="o">=</span> <span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">alt_m</span> <span class="o">+</span> <span class="n">dalt_m</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">lon_rad</span><span class="p">)</span>
+    <span class="n">val_minus_alt</span> <span class="o">=</span> <span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">alt_m</span> <span class="o">-</span> <span class="n">dalt_m</span><span class="p">,</span> <span class="n">lat_rad</span><span class="p">,</span> <span class="n">lon_rad</span><span class="p">)</span>
+    <span class="n">grad_alt</span> <span class="o">=</span> <span class="p">(</span><span class="n">val_plus_alt</span> <span class="o">-</span> <span class="n">val_minus_alt</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dalt_m</span><span class="p">)</span>
     
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">grad_lat</span><span class="p">,</span> <span class="n">grad_lon</span><span class="p">,</span> <span class="n">grad_alt</span><span class="p">])</span></div>
 
@@ -579,152 +643,330 @@
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.model_functions.get_H">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_H</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">,</span> <span class="n">x_state_error</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">lat_true_rad</span><span class="p">,</span> <span class="n">lon_true_rad</span><span class="p">,</span> <span class="n">alt_true_m</span><span class="p">,</span>
           <span class="n">date</span><span class="o">=</span><span class="n">get_years</span><span class="p">(</span><span class="mi">2020</span><span class="p">,</span> <span class="mi">185</span><span class="p">),</span>
-          <span class="n">core</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+          <span class="n">core</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+          <span class="n">vec_states</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+          <span class="n">fogm_state</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+          <span class="n">TL_coeffs_len</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="c1"># Length of Tolles-Lawson coefficients if present</span>
+          <span class="n">delta_rad</span><span class="o">=</span><span class="mf">1.0e-8</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Internal helper function to get expected magnetic measurement Jacobian H.</span>
-<span class="sd">    x_state_error: current state error estimate [lat_err, lon_err, alt_err, ..., S_err]</span>
-<span class="sd">    lat_true_rad, lon_true_rad, alt_true_m: current true/reference position</span>
+<span class="sd">    Get measurement matrix H.</span>
+<span class="sd">    itp_mapS: scalar map interpolation function f(lat_rad, lon_rad, alt_m)</span>
+<span class="sd">    x_state_error: current state error vector (used to determine nx)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Position errors are x_state_error[0], x_state_error[1], x_state_error[2]</span>
-    <span class="c1"># FOGM state error S_err is x_state_error[-1]</span>
-    
-    <span class="c1"># Calculate gradient at the estimated true position (true + error)</span>
-    <span class="n">est_lat_rad</span> <span class="o">=</span> <span class="n">lat_true_rad</span> <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">est_lon_rad</span> <span class="o">=</span> <span class="n">lon_true_rad</span> <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-    <span class="n">est_alt_m</span>   <span class="o">=</span> <span class="n">alt_true_m</span>   <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">nx</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 
-    <span class="n">map_gradient</span> <span class="o">=</span> <span class="n">map_grad</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">,</span> <span class="n">est_lat_rad</span><span class="p">,</span> <span class="n">est_lon_rad</span><span class="p">,</span> <span class="n">est_alt_m</span><span class="p">)</span>
+    <span class="c1"># Calculate map gradient at true location</span>
+    <span class="n">map_grad_vals</span> <span class="o">=</span> <span class="n">map_grad</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">,</span> <span class="n">lat_true_rad</span><span class="p">,</span> <span class="n">lon_true_rad</span><span class="p">,</span> <span class="n">alt_true_m</span><span class="p">,</span> <span class="n">delta_rad</span><span class="p">)</span>
     
+    <span class="c1"># d(map)/d(lat_err) = d(map)/d(lat) * d(lat)/d(lat_err)</span>
+    <span class="c1"># Assuming lat_err is in radians, d(lat)/d(lat_err) = 1</span>
+    <span class="n">H</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_grad_vals</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># dmap/dlat (nT/rad)</span>
+    <span class="n">H</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_grad_vals</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>  <span class="c1"># dmap/dlon (nT/rad)</span>
+    <span class="n">H</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">map_grad_vals</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>  <span class="c1"># dmap/dalt (nT/m)</span>
+
     <span class="k">if</span> <span class="n">core</span><span class="p">:</span>
-        <span class="n">core_field_gradient</span> <span class="o">=</span> <span class="n">igrf_grad</span><span class="p">(</span><span class="n">est_lat_rad</span><span class="p">,</span> <span class="n">est_lon_rad</span><span class="p">,</span> <span class="n">est_alt_m</span><span class="p">,</span> <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">)</span>
-        <span class="n">total_gradient_pos</span> <span class="o">=</span> <span class="n">map_gradient</span> <span class="o">+</span> <span class="n">core_field_gradient</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">total_gradient_pos</span> <span class="o">=</span> <span class="n">map_gradient</span>
-        
-    <span class="c1"># H matrix row vector: [d(mag)/d(pos_err), zeros for vel,att,biases etc., d(mag)/d(S_err)]</span>
-    <span class="c1"># Assuming S_err (FOGM bias) is the last state if fogm_state=True in P0/Qd setup.</span>
-    <span class="c1"># The size of x_state_error determines the number of zeros.</span>
+        <span class="n">core_grad_vals</span> <span class="o">=</span> <span class="n">igrf_grad</span><span class="p">(</span><span class="n">lat_true_rad</span><span class="p">,</span> <span class="n">lon_true_rad</span><span class="p">,</span> <span class="n">alt_true_m</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">delta_rad</span><span class="p">)</span>
+        <span class="n">H</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">core_grad_vals</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">H</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">core_grad_vals</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">H</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="n">core_grad_vals</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+    <span class="c1"># Optional states</span>
+    <span class="c1"># Standard states end at index 16 (17 states total 0-16)</span>
+    <span class="c1"># Tolles-Lawson coeffs start after standard states</span>
+    <span class="c1"># Vector mag biases start after TL coeffs</span>
+    <span class="c1"># FOGM state is last</span>
     
-    <span class="c1"># num_intermediate_states = len(x_state_error) - 3 - 1 # Total - pos_states - S_state</span>
-    
-    <span class="n">H_row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x_state_error</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-    <span class="n">H_row</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_gradient_pos</span> <span class="c1"># d(mag)/d(lat_err), d(mag)/d(lon_err), d(mag)/d(alt_err)</span>
-    <span class="c1"># H_row[3 : 3 + num_intermediate_states] remains zero</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_state_error</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="p">:</span> <span class="c1"># Check if S_err state exists</span>
-        <span class="n">H_row</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="c1"># d(mag)/d(S_err) assuming S is additive bias</span>
-    
-    <span class="k">return</span> <span class="n">H_row</span> <span class="c1"># This is a 1D array, effectively a row vector</span></div>
+    <span class="n">idx_fogm</span> <span class="o">=</span> <span class="n">nx</span> <span class="o">-</span><span class="mi">1</span> <span class="c1"># FOGM state is always the last one if present</span>
+
+    <span class="k">if</span> <span class="n">fogm_state</span><span class="p">:</span>
+        <span class="n">H</span><span class="p">[</span><span class="n">idx_fogm</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="c1"># d(meas)/d(S_err) = 1</span>
+
+    <span class="c1"># Vector magnetometer biases (if vec_states is True)</span>
+    <span class="c1"># These would affect the measurement if the measurement model included them.</span>
+    <span class="c1"># For a scalar magnetometer, these biases don&#39;t directly appear in H for total field.</span>
+    <span class="c1"># If this H is for a vector measurement, this part would need adjustment.</span>
+    <span class="c1"># Assuming for now this H is for a scalar total field measurement.</span>
+    <span class="c1"># If vec_states are present, they are before fogm_state (if both true)</span>
+    <span class="c1"># The Julia code has a section for `vec_states` in `get_H_core` which is more complex</span>
+    <span class="c1"># and depends on the core field vector. This simplified H assumes scalar measurement.</span>
+
+    <span class="k">return</span> <span class="n">H</span> <span class="c1"># Returns a 1D array (1,nx) effectively for scalar measurement</span></div>
 
 
-<span class="c1"># Overloaded get_h function. Python handles this with default args or different names.</span>
-<span class="c1"># For clarity, I&#39;ll name them get_h_basic and get_h_with_derivative.</span>
+<span class="c1"># --- Measurement Prediction Functions (h(x)) ---</span>
 
 <div class="viewcode-block" id="get_h_basic">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.model_functions.get_h_basic">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_h_basic</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">,</span> <span class="n">x_state_error</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">lat_true_rad</span><span class="p">,</span> <span class="n">lon_true_rad</span><span class="p">,</span> <span class="n">alt_true_m</span><span class="p">,</span>
                 <span class="n">date</span><span class="o">=</span><span class="n">get_years</span><span class="p">(</span><span class="mi">2020</span><span class="p">,</span> <span class="mi">185</span><span class="p">),</span>
-                <span class="n">core</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+                <span class="n">core</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                <span class="n">vec_states</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Placeholder, not used in basic scalar</span>
+                <span class="n">fogm_state</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="n">TL_coeffs_len</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span> <span class="c1"># Placeholder, not used in basic scalar</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Expected magnetic measurement h(x).</span>
-<span class="sd">    x_state_error is a 1D array for a single point, or 2D (num_states, num_points) for multiple.</span>
-<span class="sd">    This implementation assumes x_state_error is for a single point or needs vectorization for itp_mapS.</span>
-<span class="sd">    The Julia version itp_mapS.(...) implies itp_mapS can take array args or is broadcasted.</span>
-<span class="sd">    We assume itp_mapS and _calculate_igrf_intensity_at_point handle scalar inputs here,</span>
-<span class="sd">    and vectorization would be done by caller if needed for multiple particles.</span>
+<span class="sd">    Basic measurement prediction h(x) for scalar magnetometer.</span>
+<span class="sd">    itp_mapS: scalar map interpolation function f(lat_rad, lon_rad, alt_m)</span>
+<span class="sd">    x_state_error: current state error vector</span>
+<span class="sd">    Other args: true navigation parameters</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Extract error states</span>
+    <span class="n">dlat_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">dlon_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">dalt_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="c1"># Other error states (velocity, attitude, biases) are not directly used in h_basic</span>
+    <span class="c1"># for map value prediction, but are part of x_state_error.</span>
+
+    <span class="c1"># Predicted location based on true + error</span>
+    <span class="n">lat_pred_rad</span> <span class="o">=</span> <span class="n">lat_true_rad</span> <span class="o">+</span> <span class="n">dlat_err</span>
+    <span class="n">lon_pred_rad</span> <span class="o">=</span> <span class="n">lon_true_rad</span> <span class="o">+</span> <span class="n">dlon_err</span>
+    <span class="n">alt_pred_m</span>   <span class="o">=</span> <span class="n">alt_true_m</span>   <span class="o">+</span> <span class="n">dalt_err</span>
+
+    <span class="c1"># Interpolate map at predicted location</span>
+    <span class="n">map_val_pred</span> <span class="o">=</span> <span class="n">itp_mapS</span><span class="p">(</span><span class="n">lat_pred_rad</span><span class="p">,</span> <span class="n">lon_pred_rad</span><span class="p">,</span> <span class="n">alt_pred_m</span><span class="p">)</span>
     
-    <span class="c1"># If x_state_error is for multiple particles (e.g., shape [num_states, num_particles])</span>
-    <span class="k">if</span> <span class="n">x_state_error</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-        <span class="n">est_lat_rad</span> <span class="o">=</span> <span class="n">lat_true_rad</span> <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span> <span class="c1"># Array of lats</span>
-        <span class="n">est_lon_rad</span> <span class="o">=</span> <span class="n">lon_true_rad</span> <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="c1"># Array of lons</span>
-        <span class="n">est_alt_m</span>   <span class="o">=</span> <span class="n">alt_true_m</span>   <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span> <span class="c1"># Array of alts</span>
-        <span class="n">s_bias</span>      <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="k">if</span> <span class="n">x_state_error</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="k">else</span> <span class="mf">0.0</span> <span class="c1"># Array of S_biases</span>
-        
-        <span class="c1"># itp_mapS needs to be able to handle array inputs for lat, lon, alt</span>
-        <span class="c1"># or we need to loop. Assuming it can handle arrays:</span>
-        <span class="n">map_val</span> <span class="o">=</span> <span class="n">itp_mapS</span><span class="p">(</span><span class="n">est_lat_rad</span><span class="p">,</span> <span class="n">est_lon_rad</span><span class="p">,</span> <span class="n">est_alt_m</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span> <span class="c1"># Single point</span>
-        <span class="n">est_lat_rad</span> <span class="o">=</span> <span class="n">lat_true_rad</span> <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">est_lon_rad</span> <span class="o">=</span> <span class="n">lon_true_rad</span> <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">est_alt_m</span>   <span class="o">=</span> <span class="n">alt_true_m</span>   <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-        <span class="n">s_bias</span>      <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_state_error</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="k">else</span> <span class="mf">0.0</span>
-        <span class="n">map_val</span> <span class="o">=</span> <span class="n">itp_mapS</span><span class="p">(</span><span class="n">est_lat_rad</span><span class="p">,</span> <span class="n">est_lon_rad</span><span class="p">,</span> <span class="n">est_alt_m</span><span class="p">)</span>
+    <span class="n">h_val</span> <span class="o">=</span> <span class="n">map_val_pred</span>
 
     <span class="k">if</span> <span class="n">core</span><span class="p">:</span>
-        <span class="c1"># _calculate_igrf_intensity_at_point needs to handle array inputs or be looped</span>
-        <span class="k">if</span> <span class="n">x_state_error</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="n">core_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">alt</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span>
-                                 <span class="k">for</span> <span class="n">alt</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">est_alt_m</span><span class="p">,</span> <span class="n">est_lat_rad</span><span class="p">,</span> <span class="n">est_lon_rad</span><span class="p">)])</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">core_val</span> <span class="o">=</span> <span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">est_alt_m</span><span class="p">,</span> <span class="n">est_lat_rad</span><span class="p">,</span> <span class="n">est_lon_rad</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">map_val</span> <span class="o">+</span> <span class="n">s_bias</span> <span class="o">+</span> <span class="n">core_val</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">map_val</span> <span class="o">+</span> <span class="n">s_bias</span></div>
+        <span class="c1"># Add core field at predicted location</span>
+        <span class="n">core_val_pred</span> <span class="o">=</span> <span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">alt_pred_m</span><span class="p">,</span> <span class="n">lat_pred_rad</span><span class="p">,</span> <span class="n">lon_pred_rad</span><span class="p">)</span>
+        <span class="n">h_val</span> <span class="o">+=</span> <span class="n">core_val_pred</span>
+
+    <span class="c1"># Add FOGM catch-all bias if it&#39;s a state</span>
+    <span class="k">if</span> <span class="n">fogm_state</span><span class="p">:</span>
+        <span class="n">nx</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">s_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="n">nx</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># FOGM error is the last state</span>
+        <span class="n">h_val</span> <span class="o">+=</span> <span class="n">s_err</span>
+        
+    <span class="c1"># Tolles-Lawson and Vector magnetometer biases are not directly added in this basic scalar h(x)</span>
+    <span class="c1"># Their effect would be through how they influence the state estimate x,</span>
+    <span class="c1"># or if the measurement model was more complex (e.g. vector measurements).</span>
+
+    <span class="k">return</span> <span class="n">h_val</span></div>
+
 
 
 <div class="viewcode-block" id="get_h_with_derivative">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.model_functions.get_h_with_derivative">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_h_with_derivative</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">,</span> <span class="n">der_mapS</span><span class="p">,</span> <span class="n">x_state_error</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
-                          <span class="n">lat_true_rad</span><span class="p">,</span> <span class="n">lon_true_rad</span><span class="p">,</span> <span class="n">alt_true_m</span><span class="p">,</span> <span class="n">map_comp_alt_m</span><span class="p">,</span> <span class="c1"># map_alt in Julia</span>
+                          <span class="n">lat_true_rad</span><span class="p">,</span> <span class="n">lon_true_rad</span><span class="p">,</span> <span class="n">alt_true_m</span><span class="p">,</span>
                           <span class="n">date</span><span class="o">=</span><span class="n">get_years</span><span class="p">(</span><span class="mi">2020</span><span class="p">,</span> <span class="mi">185</span><span class="p">),</span>
-                          <span class="n">core</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+                          <span class="n">core</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                          <span class="n">vec_states</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Placeholder</span>
+                          <span class="n">fogm_state</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                          <span class="n">TL_coeffs_len</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="c1"># Placeholder</span>
+                          <span class="n">map_alt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span> <span class="c1"># Altitude of the map if der_mapS is 2D</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Expected magnetic measurement h(x) including vertical derivative.</span>
-<span class="sd">    map_comp_alt_m: map compilation altitude [m]</span>
-<span class="sd">    Similar vectorization considerations as get_h_basic.</span>
+<span class="sd">    Measurement prediction h(x) using map and its vertical derivative.</span>
+<span class="sd">    itp_mapS: scalar map interpolation function f(lat, lon, alt)</span>
+<span class="sd">    der_mapS: scalar map vertical derivative interpolation function df/dalt(lat, lon) - assumed at map_alt</span>
+<span class="sd">    x_state_error: current state error vector</span>
+<span class="sd">    map_alt: altitude of the der_mapS plane [m]</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">x_state_error</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-        <span class="n">est_lat_rad</span> <span class="o">=</span> <span class="n">lat_true_rad</span> <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
-        <span class="n">est_lon_rad</span> <span class="o">=</span> <span class="n">lon_true_rad</span> <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
-        <span class="n">est_alt_m</span>   <span class="o">=</span> <span class="n">alt_true_m</span>   <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span>
-        <span class="n">s_bias</span>      <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="k">if</span> <span class="n">x_state_error</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="k">else</span> <span class="mf">0.0</span>
-        
-        <span class="n">map_val</span> <span class="o">=</span> <span class="n">itp_mapS</span><span class="p">(</span><span class="n">est_lat_rad</span><span class="p">,</span> <span class="n">est_lon_rad</span><span class="p">,</span> <span class="n">est_alt_m</span><span class="p">)</span>
-        <span class="n">der_val</span> <span class="o">=</span> <span class="n">der_mapS</span><span class="p">(</span><span class="n">est_lat_rad</span><span class="p">,</span> <span class="n">est_lon_rad</span><span class="p">,</span> <span class="n">est_alt_m</span><span class="p">)</span> <span class="c1"># Vertical derivative from map</span>
-    <span class="k">else</span><span class="p">:</span> <span class="c1"># Single point</span>
-        <span class="n">est_lat_rad</span> <span class="o">=</span> <span class="n">lat_true_rad</span> <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">est_lon_rad</span> <span class="o">=</span> <span class="n">lon_true_rad</span> <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">est_alt_m</span>   <span class="o">=</span> <span class="n">alt_true_m</span>   <span class="o">+</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
-        <span class="n">s_bias</span>      <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">x_state_error</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">3</span> <span class="k">else</span> <span class="mf">0.0</span>
-        <span class="n">map_val</span> <span class="o">=</span> <span class="n">itp_mapS</span><span class="p">(</span><span class="n">est_lat_rad</span><span class="p">,</span> <span class="n">est_lon_rad</span><span class="p">,</span> <span class="n">est_alt_m</span><span class="p">)</span>
-        <span class="n">der_val</span> <span class="o">=</span> <span class="n">der_mapS</span><span class="p">(</span><span class="n">est_lat_rad</span><span class="p">,</span> <span class="n">est_lon_rad</span><span class="p">,</span> <span class="n">est_alt_m</span><span class="p">)</span>
+    <span class="c1"># Extract error states</span>
+    <span class="n">dlat_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">dlon_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">dalt_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
 
-    <span class="c1"># Term for vertical correction: der_val * (current_alt - map_compilation_alt)</span>
-    <span class="n">vertical_correction</span> <span class="o">=</span> <span class="n">der_val</span> <span class="o">*</span> <span class="p">(</span><span class="n">est_alt_m</span> <span class="o">-</span> <span class="n">map_comp_alt_m</span><span class="p">)</span>
-    
-    <span class="n">h_val</span> <span class="o">=</span> <span class="n">map_val</span> <span class="o">+</span> <span class="n">s_bias</span> <span class="o">+</span> <span class="n">vertical_correction</span>
+    <span class="c1"># Predicted location</span>
+    <span class="n">lat_pred_rad</span> <span class="o">=</span> <span class="n">lat_true_rad</span> <span class="o">+</span> <span class="n">dlat_err</span>
+    <span class="n">lon_pred_rad</span> <span class="o">=</span> <span class="n">lon_true_rad</span> <span class="o">+</span> <span class="n">dlon_err</span>
+    <span class="n">alt_pred_m</span>   <span class="o">=</span> <span class="n">alt_true_m</span>   <span class="o">+</span> <span class="n">dalt_err</span>
+
+    <span class="c1"># Map value at predicted aircraft altitude (alt_pred_m)</span>
+    <span class="c1"># This uses the 3D interpolator itp_mapS</span>
+    <span class="n">map_val_at_ac_alt</span> <span class="o">=</span> <span class="n">itp_mapS</span><span class="p">(</span><span class="n">lat_pred_rad</span><span class="p">,</span> <span class="n">lon_pred_rad</span><span class="p">,</span> <span class="n">alt_pred_m</span><span class="p">)</span>
+    <span class="n">h_val</span> <span class="o">=</span> <span class="n">map_val_at_ac_alt</span>
+
+    <span class="c1"># If der_mapS is provided, it&#39;s typically a 2D map of d(map)/d(alt) at a specific map altitude.</span>
+    <span class="c1"># The term (alt_pred_m - map_alt) * der_mapS(...) is a first-order Taylor expansion</span>
+    <span class="c1"># to adjust the map value from map_alt to alt_pred_m, if itp_mapS was only 2D.</span>
+    <span class="c1"># However, if itp_mapS is already a 3D interpolator, this adjustment might be redundant</span>
+    <span class="c1"># or represent a different physical model (e.g., accounting for drape).</span>
+    <span class="c1"># The Julia code implies der_mapS is used when available.</span>
+    <span class="c1"># Let&#39;s assume der_mapS is d(map)/dz at the map&#39;s reference altitude (map_alt).</span>
+    <span class="k">if</span> <span class="n">der_mapS</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Interpolate vertical derivative at predicted lat/lon, on the map&#39;s altitude plane</span>
+        <span class="n">map_deriv_val</span> <span class="o">=</span> <span class="n">der_mapS</span><span class="p">(</span><span class="n">lat_pred_rad</span><span class="p">,</span> <span class="n">lon_pred_rad</span><span class="p">)</span> <span class="c1"># This is (dmap/dalt) at map_alt</span>
+        
+        <span class="c1"># This term seems to be an adjustment based on the difference between aircraft altitude</span>
+        <span class="c1"># and the altitude of the derivative map.</span>
+        <span class="c1"># If itp_mapS is a 3D interpolator, map_val_at_ac_alt is already at the correct altitude.</span>
+        <span class="c1"># This suggests der_mapS might be used for a different purpose or under specific assumptions.</span>
+        <span class="c1"># For now, translating the structure from potential Julia logic:</span>
+        <span class="c1"># h_val = map_val_at_map_alt + (alt_pred_m - map_alt) * map_deriv_val</span>
+        <span class="c1"># If itp_mapS is 3D, map_val_at_ac_alt is preferred.</span>
+        <span class="c1"># If itp_mapS is 2D (at map_alt) and der_mapS is its derivative, then:</span>
+        <span class="c1"># map_val_at_map_alt_plane = itp_mapS(lat_pred_rad, lon_pred_rad) # Assuming itp_mapS is 2D if der_mapS is used like this</span>
+        <span class="c1"># h_val = map_val_at_map_alt_plane + (alt_pred_m - map_alt) * map_deriv_val</span>
+        <span class="c1"># Given the problem description implies itp_mapS can be a 3D interpolator from MapCache,</span>
+        <span class="c1"># the addition of (alt_pred_m - map_alt) * map_deriv_val needs careful interpretation.</span>
+        <span class="c1"># If itp_mapS is already giving the value at alt_pred_m, this term might be an additional model component.</span>
+        <span class="c1"># Let&#39;s assume the intention is to use the derivative for a correction or refinement if available.</span>
+        <span class="c1"># This part is a bit ambiguous without more context on how der_mapS is generated and used.</span>
+        <span class="c1"># A common use of vertical derivative is in the H matrix, not directly in h(x) like this</span>
+        <span class="c1"># unless it&#39;s part of a specific measurement model (e.g., gradiometer or specific field model).</span>
+        <span class="c1"># For now, let&#39;s assume it&#39;s an additive term if present, as implied by some EKF formulations</span>
+        <span class="c1"># where h(x) might include such terms.</span>
+        <span class="c1"># However, the most straightforward h(x) is just the map value at (lat_pred, lon_pred, alt_pred).</span>
+        <span class="c1"># The Julia EKF_RT call passes der_mapS and map_alt to get_h.</span>
+        <span class="c1"># Let&#39;s assume if der_mapS is present, it&#39;s used for a linear extrapolation from map_alt</span>
+        <span class="c1"># and itp_mapS is then considered to be the map at map_alt.</span>
+        <span class="c1"># This is a common simplification if only a 2D map and its vertical derivative are available.</span>
+        
+        <span class="c1"># Re-evaluating: if itp_mapS is a 3D interpolator, it already gives the value at alt_pred_m.</span>
+        <span class="c1"># The der_mapS term is more likely used in H.</span>
+        <span class="c1"># If itp_mapS is a MapCache, it will select the best map and interpolate.</span>
+        <span class="c1"># The `get_h` in Julia&#39;s EKF.jl has:</span>
+        <span class="c1"># `map_val = itp_mapS(lat,lon,alt) + (der_mapS === nothing ? 0.0 : (alt - map_alt)*der_mapS(lat,lon))`</span>
+        <span class="c1"># This implies itp_mapS gives value at &#39;alt&#39;, and der_mapS provides an additional adjustment.</span>
+        <span class="c1"># This is unusual if itp_mapS is a full 3D interpolator.</span>
+        <span class="c1"># It makes more sense if itp_mapS was a 2D map at some reference altitude, and der_mapS corrects from that.</span>
+        <span class="c1"># Given the Python structure, let&#39;s assume itp_mapS gives the value at the query altitude.</span>
+        <span class="c1"># The der_mapS term in h(x) will be omitted for now as its role is unclear with a 3D itp_mapS.</span>
+        <span class="c1"># It&#39;s primarily used in H. If it *must* be in h(x), the model needs clarification.</span>
+        <span class="c1"># For now: h_val = map_val_at_ac_alt (from 3D itp_mapS)</span>
+        <span class="k">pass</span> <span class="c1"># Keeping h_val as map_val_at_ac_alt</span>
 
     <span class="k">if</span> <span class="n">core</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">x_state_error</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-            <span class="n">core_val</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">alt</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">)</span>
-                                 <span class="k">for</span> <span class="n">alt</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">est_alt_m</span><span class="p">,</span> <span class="n">est_lat_rad</span><span class="p">,</span> <span class="n">est_lon_rad</span><span class="p">)])</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">core_val</span> <span class="o">=</span> <span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">est_alt_m</span><span class="p">,</span> <span class="n">est_lat_rad</span><span class="p">,</span> <span class="n">est_lon_rad</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">h_val</span> <span class="o">+</span> <span class="n">core_val</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">h_val</span></div>
+        <span class="n">core_val_pred</span> <span class="o">=</span> <span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">alt_pred_m</span><span class="p">,</span> <span class="n">lat_pred_rad</span><span class="p">,</span> <span class="n">lon_pred_rad</span><span class="p">)</span>
+        <span class="n">h_val</span> <span class="o">+=</span> <span class="n">core_val_pred</span>
+
+    <span class="k">if</span> <span class="n">fogm_state</span><span class="p">:</span>
+        <span class="n">nx</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">s_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="n">nx</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">h_val</span> <span class="o">+=</span> <span class="n">s_err</span>
+        
+    <span class="k">return</span> <span class="n">h_val</span></div>
+
+
+<div class="viewcode-block" id="get_h">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.model_functions.get_h">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_h</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">,</span> <span class="n">x_state_error</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">lat_true_rad</span><span class="p">,</span> <span class="n">lon_true_rad</span><span class="p">,</span> <span class="n">alt_true_m</span><span class="p">,</span>
+          <span class="n">date</span><span class="o">=</span><span class="n">get_years</span><span class="p">(</span><span class="mi">2020</span><span class="p">,</span> <span class="mi">185</span><span class="p">),</span>
+          <span class="n">core</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+          <span class="n">vec_states</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+          <span class="n">fogm_state</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+          <span class="n">TL_coeffs_len</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+          <span class="n">der_mapS</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># Added der_mapS</span>
+          <span class="n">map_alt</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span> <span class="c1"># Added map_alt</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Unified measurement prediction function.</span>
+<span class="sd">    Selects basic or derivative-based h(x) based on der_mapS.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">der_mapS</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># This implies a model where der_mapS is used to adjust a base map value.</span>
+        <span class="c1"># The interpretation of how itp_mapS and der_mapS combine is crucial.</span>
+        <span class="c1"># Following the Julia structure: h = map_at_alt + (alt_ac - alt_map)*derivative_at_map_alt</span>
+        <span class="c1"># This assumes itp_mapS gives the map value at alt_true_m (aircraft altitude)</span>
+        <span class="c1"># and then an additional term is added if der_mapS is available.</span>
+        <span class="c1"># This is somewhat counter-intuitive if itp_mapS is a 3D interpolator.</span>
+        <span class="c1"># A more common model: h = map_at_map_reference_alt + (alt_ac - alt_map_ref)*derivative_at_map_ref</span>
+        <span class="c1"># Let&#39;s assume itp_mapS gives the value at the query point (lat_pred, lon_pred, alt_pred).</span>
+        <span class="c1"># The Julia line: map_val = itp_mapS(lat,lon,alt) + (der_mapS === nothing ? 0.0 : (alt - map_alt)*der_mapS(lat,lon))</span>
+        <span class="c1"># Here, (lat,lon,alt) are the *predicted* coordinates.</span>
+        
+        <span class="n">dlat_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">dlon_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">dalt_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">lat_pred_rad</span> <span class="o">=</span> <span class="n">lat_true_rad</span> <span class="o">+</span> <span class="n">dlat_err</span>
+        <span class="n">lon_pred_rad</span> <span class="o">=</span> <span class="n">lon_true_rad</span> <span class="o">+</span> <span class="n">dlon_err</span>
+        <span class="n">alt_pred_m</span>   <span class="o">=</span> <span class="n">alt_true_m</span>   <span class="o">+</span> <span class="n">dalt_err</span>
+
+        <span class="n">h_val</span> <span class="o">=</span> <span class="n">itp_mapS</span><span class="p">(</span><span class="n">lat_pred_rad</span><span class="p">,</span> <span class="n">lon_pred_rad</span><span class="p">,</span> <span class="n">alt_pred_m</span><span class="p">)</span> <span class="c1"># Value from map at aircraft&#39;s predicted altitude</span>
+        
+        <span class="c1"># Add derivative term as per Julia&#39;s apparent model</span>
+        <span class="n">h_val</span> <span class="o">+=</span> <span class="p">(</span><span class="n">alt_pred_m</span> <span class="o">-</span> <span class="n">map_alt</span><span class="p">)</span> <span class="o">*</span> <span class="n">der_mapS</span><span class="p">(</span><span class="n">lat_pred_rad</span><span class="p">,</span> <span class="n">lon_pred_rad</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span> <span class="c1"># Basic h(x) if no derivative map</span>
+        <span class="n">h_val</span> <span class="o">=</span> <span class="n">get_h_basic</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">,</span> <span class="n">x_state_error</span><span class="p">,</span> <span class="n">lat_true_rad</span><span class="p">,</span> <span class="n">lon_true_rad</span><span class="p">,</span> <span class="n">alt_true_m</span><span class="p">,</span>
+                            <span class="n">date</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span><span class="p">,</span> <span class="n">vec_states</span><span class="o">=</span><span class="n">vec_states</span><span class="p">,</span>
+                            <span class="n">fogm_state</span><span class="o">=</span><span class="n">fogm_state</span><span class="p">,</span> <span class="n">TL_coeffs_len</span><span class="o">=</span><span class="n">TL_coeffs_len</span><span class="p">)</span>
+    
+    <span class="c1"># Add core and FOGM bias contributions if they were not handled by the chosen h_function</span>
+    <span class="c1"># This logic is a bit redundant if get_h_basic already adds them.</span>
+    <span class="c1"># Refactoring to ensure core and fogm are added once.</span>
+
+    <span class="c1"># The core and fogm_state additions are now inside get_h_basic and the if der_mapS block.</span>
+    <span class="c1"># So, we just return h_val.</span>
+    <span class="c1"># However, the Julia structure adds core and S_err *after* the map_val + derivative term.</span>
+    <span class="c1"># Let&#39;s adjust to match that more closely.</span>
+
+    <span class="c1"># Recalculate predicted coords for clarity if not done above</span>
+    <span class="n">dlat_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">dlon_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">dalt_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">lat_pred_rad</span> <span class="o">=</span> <span class="n">lat_true_rad</span> <span class="o">+</span> <span class="n">dlat_err</span>
+    <span class="n">lon_pred_rad</span> <span class="o">=</span> <span class="n">lon_true_rad</span> <span class="o">+</span> <span class="n">dlon_err</span>
+    <span class="n">alt_pred_m</span>   <span class="o">=</span> <span class="n">alt_true_m</span>   <span class="o">+</span> <span class="n">dalt_err</span>
+
+    <span class="k">if</span> <span class="n">der_mapS</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># This assumes itp_mapS gives value at some reference plane if der_mapS is used for extrapolation</span>
+        <span class="c1"># Or, if itp_mapS is 3D, it gives value at alt_pred_m.</span>
+        <span class="c1"># Let&#39;s assume itp_mapS(lat,lon,alt) is the primary map value at aircraft altitude.</span>
+        <span class="n">map_component</span> <span class="o">=</span> <span class="n">itp_mapS</span><span class="p">(</span><span class="n">lat_pred_rad</span><span class="p">,</span> <span class="n">lon_pred_rad</span><span class="p">,</span> <span class="n">alt_pred_m</span><span class="p">)</span>
+        <span class="c1"># The derivative term in Julia&#39;s get_h seems to be an *additional* component, not just for extrapolation</span>
+        <span class="c1"># from a 2D map. This is unusual.</span>
+        <span class="c1"># map_component += (alt_pred_m - map_alt) * der_mapS(lat_pred_rad, lon_pred_rad)</span>
+        <span class="c1"># Sticking to the simpler: map value at predicted location.</span>
+        <span class="c1"># The H matrix handles derivatives. If h(x) needs this term, the model is specific.</span>
+        <span class="c1"># For now, let&#39;s assume h(x) is the field value at the point.</span>
+        <span class="c1"># The Julia EKF.jl&#39;s `get_h` function has:</span>
+        <span class="c1"># `map_val  = itp_mapS(lat,lon,alt) + (der_mapS === nothing ? 0.0 : (alt - map_alt)*der_mapS(lat,lon))`</span>
+        <span class="c1"># This implies `itp_mapS` is value at `alt` (predicted aircraft alt)</span>
+        <span class="c1"># and `der_mapS` is used for an additional term.</span>
+        <span class="c1"># This is not a standard Taylor expansion for map value if `itp_mapS` is already 3D.</span>
+        <span class="c1"># It might be a specific model feature.</span>
+        
+        <span class="c1"># Let&#39;s follow the Julia structure literally for now:</span>
+        <span class="n">h_map_term</span> <span class="o">=</span> <span class="n">itp_mapS</span><span class="p">(</span><span class="n">lat_pred_rad</span><span class="p">,</span> <span class="n">lon_pred_rad</span><span class="p">,</span> <span class="n">alt_pred_m</span><span class="p">)</span>
+        <span class="n">h_map_term</span> <span class="o">+=</span> <span class="p">(</span><span class="n">alt_pred_m</span> <span class="o">-</span> <span class="n">map_alt</span><span class="p">)</span> <span class="o">*</span> <span class="n">der_mapS</span><span class="p">(</span><span class="n">lat_pred_rad</span><span class="p">,</span> <span class="n">lon_pred_rad</span><span class="p">)</span>
+
+    <span class="k">else</span><span class="p">:</span> <span class="c1"># Basic h(x) if no derivative map</span>
+        <span class="c1"># get_h_basic already calculates map_val at predicted location</span>
+        <span class="c1"># and adds core and fogm if states are true.</span>
+        <span class="c1"># To avoid double-adding core/fogm, call a simpler version or extract map part.</span>
+        
+        <span class="c1"># Simpler: just map value at predicted location</span>
+        <span class="n">h_map_term</span> <span class="o">=</span> <span class="n">itp_mapS</span><span class="p">(</span><span class="n">lat_pred_rad</span><span class="p">,</span> <span class="n">lon_pred_rad</span><span class="p">,</span> <span class="n">alt_pred_m</span><span class="p">)</span>
+
+    <span class="c1"># Add core field contribution</span>
+    <span class="k">if</span> <span class="n">core</span><span class="p">:</span>
+        <span class="n">h_map_term</span> <span class="o">+=</span> <span class="n">_calculate_igrf_intensity_at_point</span><span class="p">(</span><span class="n">date</span><span class="p">,</span> <span class="n">alt_pred_m</span><span class="p">,</span> <span class="n">lat_pred_rad</span><span class="p">,</span> <span class="n">lon_pred_rad</span><span class="p">)</span>
+
+    <span class="c1"># Add FOGM catch-all bias if it&#39;s a state</span>
+    <span class="k">if</span> <span class="n">fogm_state</span><span class="p">:</span>
+        <span class="n">nx_current</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">s_err</span> <span class="o">=</span> <span class="n">x_state_error</span><span class="p">[</span><span class="n">nx_current</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># FOGM error is the last state</span>
+        <span class="n">h_map_term</span> <span class="o">+=</span> <span class="n">s_err</span>
+        
+    <span class="k">return</span> <span class="n">h_map_term</span></div>
+
 
 
 <div class="viewcode-block" id="fogm">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.model_functions.fogm">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">fogm</span><span class="p">(</span><span class="n">sigma</span><span class="p">,</span> <span class="n">tau</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">N</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    First-order Gauss-Markov stochastic process.</span>
+<span class="sd">    Simulate first-order Gauss-Markov (FOGM) process.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">N</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">x</span>
-        
-    <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">()</span> <span class="c1"># randn() gives a single float</span>
-    <span class="n">phi_gm</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">dt</span> <span class="o">/</span> <span class="n">tau</span><span class="p">)</span> <span class="c1"># Renamed from Phi to avoid conflict with state transition matrix</span>
+    <span class="k">if</span> <span class="n">tau</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># White noise</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span>
     
-    <span class="n">q_drive_var_ct</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">tau</span>
-    <span class="n">q_drive_var_dt</span> <span class="o">=</span> <span class="n">q_drive_var_ct</span> <span class="o">*</span> <span class="n">dt</span> 
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">sigma</span><span class="p">)</span> <span class="c1"># Initialize from stationary distribution</span>
     
-    <span class="n">std_dev_noise_term</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">q_drive_var_dt</span><span class="p">)</span>
+    <span class="c1"># Parameters for FOGM</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">dt</span> <span class="o">/</span> <span class="n">tau</span><span class="p">)</span>
+    <span class="c1"># Variance of the driving white noise: sigma_w^2 = sigma^2 * (1 - alpha^2)</span>
+    <span class="c1"># Or, if sigma is the std dev of the driving noise: sigma_drive = sigma * sqrt(dt)</span>
+    <span class="c1"># The common FOGM model: x_k = alpha * x_{k-1} + w_k</span>
+    <span class="c1"># where w_k ~ N(0, sigma_w^2) and sigma_w^2 = sigma_process^2 * (1 - alpha^2)</span>
+    <span class="c1"># Here, &#39;sigma&#39; is the stationary std dev of the FOGM process itself.</span>
+    <span class="n">sigma_drive_noise</span> <span class="o">=</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">alpha</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
 
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">N</span><span class="p">):</span>
-        <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">phi_gm</span> <span class="o">*</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">std_dev_noise_term</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">()</span>
+        <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">sigma_drive_noise</span><span class="p">)</span>
         
     <span class="k">return</span> <span class="n">x</span></div>
 
@@ -733,76 +975,49 @@
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.model_functions.chol">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">chol</span><span class="p">(</span><span class="n">M</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Internal helper function to get the Cholesky factorization of matrix M,</span>
-<span class="sd">    returning the upper triangular factor U such that M = U.T @ U.</span>
-<span class="sd">    The matrix is made symmetric before factorization to handle potential</span>
-<span class="sd">    minor asymmetries from floating point errors.</span>
+<span class="sd">    Cholesky decomposition. Input M must be positive definite.</span>
+<span class="sd">    Returns upper triangular R such that M = R&#39;*R (MATLAB convention)</span>
+<span class="sd">    or lower triangular L such that M = L*L&#39; (SciPy convention).</span>
+<span class="sd">    This returns L (lower triangular) from SciPy.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">M_np</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">M</span><span class="p">)</span>
-    <span class="n">M_sym</span> <span class="o">=</span> <span class="p">(</span><span class="n">M_np</span> <span class="o">+</span> <span class="n">M_np</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">U</span> <span class="o">=</span> <span class="n">scipy_cholesky</span><span class="p">(</span><span class="n">M_sym</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">U</span>
-    <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cholesky decomposition failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. Matrix might not be positive definite.&quot;</span><span class="p">)</span>
-        <span class="k">raise</span> </div>
+        <span class="c1"># scipy.linalg.cholesky returns lower triangular L by default (L @ L.T = M)</span>
+        <span class="c1"># For upper triangular R (R.T @ R = M), use cholesky(M).T if M is symmetric.</span>
+        <span class="c1"># Or, if M is already upper triangular from a QR-like process, that&#39;s different.</span>
+        <span class="c1"># MATLAB&#39;s chol(M) returns upper R. Python&#39;s np.linalg.cholesky returns lower L.</span>
+        <span class="c1"># The Julia code uses `Matrix(cholesky(Hermitian(P)).U)` which means upper.</span>
+        <span class="c1"># So, we need L.T from scipy&#39;s cholesky.</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="n">scipy_cholesky</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">L</span> <span class="c1"># Returning L (lower) as per typical Python usage. If R (upper) is needed, use L.T</span>
+    <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+        <span class="c1"># print(&quot;Warning: Cholesky decomposition failed. Matrix may not be positive definite.&quot;, file=sys.stderr)</span>
+        <span class="c1"># Fallback: Add small identity matrix (jitter)</span>
+        <span class="c1"># This is a common technique but should be used cautiously.</span>
+        <span class="n">jitter</span> <span class="o">=</span> <span class="mf">1e-9</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">M</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">L</span> <span class="o">=</span> <span class="n">scipy_cholesky</span><span class="p">(</span><span class="n">M</span> <span class="o">+</span> <span class="n">jitter</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="c1"># print(&quot;Cholesky succeeded with jitter.&quot;, file=sys.stderr)</span>
+            <span class="k">return</span> <span class="n">L</span>
+        <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+            <span class="c1"># print(&quot;Error: Cholesky failed even with jitter. Returning empty array.&quot;, file=sys.stderr)</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span> <span class="c1"># Or raise error</span></div>
 
 
-<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;MagNavPy model_functions.py loaded and appended content.&quot;</span><span class="p">)</span>
-    
-    <span class="n">P0_test</span> <span class="o">=</span> <span class="n">create_P0</span><span class="p">(</span><span class="n">lat1_rad</span><span class="o">=</span><span class="n">deg2rad</span><span class="p">(</span><span class="mf">34.0</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;P0 shape: </span><span class="si">{</span><span class="n">P0_test</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="n">Qd_test</span> <span class="o">=</span> <span class="n">create_Qd</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Qd shape: </span><span class="si">{</span><span class="n">Qd_test</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="n">P0m</span><span class="p">,</span> <span class="n">Qdm</span><span class="p">,</span> <span class="n">Rm</span> <span class="o">=</span> <span class="n">create_model</span><span class="p">(</span><span class="n">dt</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">lat1_rad</span><span class="o">=</span><span class="n">deg2rad</span><span class="p">(</span><span class="mf">34.0</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;P0m shape: </span><span class="si">{</span><span class="n">P0m</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, Qdm shape: </span><span class="si">{</span><span class="n">Qdm</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, Rm: </span><span class="si">{</span><span class="n">Rm</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="n">Cnb_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
-    <span class="n">F_test</span> <span class="o">=</span> <span class="n">get_pinson</span><span class="p">(</span><span class="n">nx</span><span class="o">=</span><span class="mi">17</span><span class="p">,</span> <span class="n">lat_rad</span><span class="o">=</span><span class="n">deg2rad</span><span class="p">(</span><span class="mi">34</span><span class="p">),</span> <span class="n">vn</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">ve</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">vd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                        <span class="n">fn</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">fe</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">fd</span><span class="o">=</span><span class="mf">9.8</span><span class="p">,</span> <span class="n">Cnb</span><span class="o">=</span><span class="n">Cnb_test</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;F_pinson shape: </span><span class="si">{</span><span class="n">F_test</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="n">fogm_data</span> <span class="o">=</span> <span class="n">fogm</span><span class="p">(</span><span class="n">sigma</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">600.0</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;FOGM data example (first 5): </span><span class="si">{</span><span class="n">fogm_data</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="n">test_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="o">-</span><span class="mi">16</span><span class="p">],</span> <span class="p">[</span><span class="mi">12</span><span class="p">,</span> <span class="mi">37</span><span class="p">,</span> <span class="o">-</span><span class="mi">43</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mi">16</span><span class="p">,</span> <span class="o">-</span><span class="mi">43</span><span class="p">,</span> <span class="mi">98</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
-    <span class="n">U_chol</span> <span class="o">=</span> <span class="n">chol</span><span class="p">(</span><span class="n">test_matrix</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cholesky U for test_matrix:</span><span class="se">\n</span><span class="si">{</span><span class="n">U_chol</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;U.T @ U:</span><span class="se">\n</span><span class="si">{</span><span class="n">U_chol</span><span class="o">.</span><span class="n">T</span><span class="w"> </span><span class="o">@</span><span class="w"> </span><span class="n">U_chol</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">dummy_itp_mapS</span><span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">alt</span><span class="p">):</span>
-        <span class="k">return</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">lat</span> <span class="o">+</span> <span class="mi">5</span> <span class="o">*</span> <span class="n">lon</span> <span class="o">+</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">alt</span> 
-    
-    <span class="n">map_g</span> <span class="o">=</span> <span class="n">map_grad</span><span class="p">(</span><span class="n">dummy_itp_mapS</span><span class="p">,</span> <span class="n">deg2rad</span><span class="p">(</span><span class="mi">34</span><span class="p">),</span> <span class="n">deg2rad</span><span class="p">(</span><span class="o">-</span><span class="mi">118</span><span class="p">),</span> <span class="mi">1000</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;map_grad example: </span><span class="si">{</span><span class="n">map_g</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="n">igrf_g</span> <span class="o">=</span> <span class="n">igrf_grad</span><span class="p">(</span><span class="n">deg2rad</span><span class="p">(</span><span class="mi">34</span><span class="p">),</span> <span class="n">deg2rad</span><span class="p">(</span><span class="o">-</span><span class="mi">118</span><span class="p">),</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">date</span><span class="o">=</span><span class="mf">2021.5</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;igrf_grad example: </span><span class="si">{</span><span class="n">igrf_g</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> 
-
-    <span class="n">x_err_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">17</span><span class="p">)</span> 
-    <span class="n">H_test</span> <span class="o">=</span> <span class="n">get_H</span><span class="p">(</span><span class="n">dummy_itp_mapS</span><span class="p">,</span> <span class="n">x_err_test</span><span class="p">,</span> <span class="n">deg2rad</span><span class="p">(</span><span class="mi">34</span><span class="p">),</span> <span class="n">deg2rad</span><span class="p">(</span><span class="o">-</span><span class="mi">118</span><span class="p">),</span> <span class="mi">1000</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;get_H example: </span><span class="si">{</span><span class="n">H_test</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-
-    <span class="n">h_basic_test</span> <span class="o">=</span> <span class="n">get_h_basic</span><span class="p">(</span><span class="n">dummy_itp_mapS</span><span class="p">,</span> <span class="n">x_err_test</span><span class="p">,</span> <span class="n">deg2rad</span><span class="p">(</span><span class="mi">34</span><span class="p">),</span> <span class="n">deg2rad</span><span class="p">(</span><span class="o">-</span><span class="mi">118</span><span class="p">),</span> <span class="mi">1000</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;get_h_basic example: </span><span class="si">{</span><span class="n">h_basic_test</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="n">create_p0</span> <span class="o">=</span> <span class="n">create_P0</span>
-<span class="n">create_qd</span> <span class="o">=</span> <span class="n">create_Qd</span>
-<span class="n">get_h</span> <span class="o">=</span> <span class="n">get_h_basic</span>
-<span class="c1"># Aliases for compatibility</span>
-<span class="n">create_p0</span> <span class="o">=</span> <span class="n">create_P0</span>
-<span class="n">create_qd</span> <span class="o">=</span> <span class="n">create_Qd</span>
-<span class="n">get_h</span> <span class="o">=</span> <span class="n">get_h_basic</span>
+<span class="c1"># Placeholder for get_f, if it&#39;s a distinct function from get_pinson or get_Phi</span>
+<span class="c1"># In many EKF contexts, f(x) is the state propagation, and F is its Jacobian.</span>
+<span class="c1"># If get_f is needed, its signature and implementation depend on what it represents.</span>
+<span class="c1"># For example, if it&#39;s the non-linear state update: x_k+1 = f(x_k, u_k)</span>
+<span class="c1"># This is not explicitly used by the EKF equations if Phi is directly computed.</span>
+<span class="c1"># It might be used in other filter types or for simulation.</span>
 <div class="viewcode-block" id="get_f">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.model_functions.get_f">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_f</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Placeholder for the get_f function.</span>
-<span class="sd">    This function is not yet fully implemented.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;get_f is not fully implemented yet.&quot;</span><span class="p">)</span></div>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for a potential state propagation function f(x).&quot;&quot;&quot;</span>
+    <span class="c1"># print(&quot;Warning: get_f is a placeholder and not fully implemented.&quot;)</span>
+    <span class="c1"># This would depend on the specific state model if it&#39;s different from</span>
+    <span class="c1"># what&#39;s implied by get_Phi (linearized propagation).</span>
+    <span class="c1"># If it&#39;s just identity (x_k+1 = Phi @ x_k for error states), then it might not be needed.</span>
+    <span class="k">pass</span></div>
 
 </pre></div>
 
@@ -810,62 +1025,10 @@
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="Main">
-        <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="../../index.html">MagNavPy</a></h1>
-
-
-
-
-
-
-
-
-
-<search id="searchbox" style="display: none" role="search">
-    <div class="searchformwrapper">
-    <form class="search" action="../../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</search>
-<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../data.html">Flight Path &amp; INS Data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../maps.html">Magnetic Anomaly Maps</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../comp.html">Aeromagnetic Compensation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../nncomp.html">Neural Network-Based Model Diagrams</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../nav.html">Navigation Algorithms</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api_functions.html">API: Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api_structs.html">API: Structs</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api_reference.html">API Reference</a></li>
-</ul>
-
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../../index.html">Documentation overview</a><ul>
-  <li><a href="../index.html">Module code</a><ul>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
-
-
-
-
-
-
-
-
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
+    <div class="clearer"></div>
+  </div>
     <div class="footer">
-      &#169;2024, MagNav.jl Authors & AI Porting Team.
+      &#169;2020-2023, Original MagNav.jl Authors; 2024-2025, Manas Pandey.
       
       |
       Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>

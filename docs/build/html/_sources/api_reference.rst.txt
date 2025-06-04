@@ -65,14 +65,6 @@ get_map Module
    :undoc-members:
    :show-inheritance:
 
-get_xyz Module
---------------
-
-.. automodule:: magnavpy.create_xyz
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 google_earth Module
 -------------------
 

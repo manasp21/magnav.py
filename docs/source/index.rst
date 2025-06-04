@@ -26,6 +26,7 @@ The package is tested with Python.
    comp
    nncomp
    nav
+   status
    api_functions
    api_structs
    api_reference
