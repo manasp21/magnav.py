@@ -820,7 +820,7 @@ def create_ins(
     # Or if err_ins are Euler angle errors, Cnb_ins = Cnb_true @ delta_Cnb(deuler)
     # For simplicity, assuming direct correction or that correct_cnb_matrix handles it.
     # The Julia code uses: Cnb_ins[k,:,:] = correct_cnb_matrix(traj.Cnb[k,:,:], err_ins[k,6:9])
-    Cnb_ins_array = np.array([correct_cnb_matrix(traj.Cnb[k,:,:], err_ins[k,6:9]) for k in range(N)])
+    Cnb_ins_array = np.array([correct_cnb_matrix(traj.Cnb[:,:], err_ins[k,6:9]) for k in range(N)])
 
     # Specific forces from INS (derived from noisy accels, transformed by noisy Cnb)
     # This part is complex as it depends on how acc_bias (err_ins[:,11:14]) and gyro_bias (err_ins[:,14:17])

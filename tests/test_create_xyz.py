@@ -121,19 +121,19 @@ g_traj_py = Traj(N_traj, dt_p, tt_traj, lat_traj, lon_traj, alt_traj,
 
 # Create initial INS object
 g_ins_py = create_ins_py(g_traj_py,
-                       init_pos_sigma = init_pos_sigma_p,
-                       init_alt_sigma = init_alt_sigma_p,
-                       init_vel_sigma = init_vel_sigma_p,
-                       init_att_sigma = init_att_sigma_p,
-                       VRW_sigma      = VRW_sigma_p,
-                       ARW_sigma      = ARW_sigma_p,
-                       baro_sigma     = baro_sigma_p,
-                       ha_sigma       = ha_sigma_p,
-                       acc_sigma      = acc_sigma_p,
-                       gyro_sigma     = gyro_sigma_p,
-                       baro_tau       = baro_tau_p,
-                       acc_tau        = acc_tau_p,
-                       gyro_tau       = gyro_tau_p)
+                       init_pos_sigma = init_pos_sigma_p[0][0],
+                       init_alt_sigma = init_alt_sigma_p[0][0],
+                       init_vel_sigma = init_vel_sigma_p[0][0],
+                       init_att_sigma = init_att_sigma_p[0][0],
+                       VRW_sigma      = VRW_sigma_p[0][0],
+                       ARW_sigma      = ARW_sigma_p[0][0],
+                       baro_sigma     = baro_sigma_p[0][0],
+                       ha_sigma       = ha_sigma_p[0][0],
+                       acc_sigma      = acc_sigma_p[0][0],
+                       gyro_sigma     = gyro_sigma_p[0][0],
+                       baro_tau       = baro_tau_p[0][0],
+                       acc_tau        = acc_tau_p[0][0],
+                       gyro_tau       = gyro_tau_p[0][0])
 
 # Corrupt mag data
 g_mag_1_uc_py, _, _ = corrupt_mag_py(mag_1_c_traj, flux_a_x_traj, flux_a_y_traj, flux_a_z_traj,
