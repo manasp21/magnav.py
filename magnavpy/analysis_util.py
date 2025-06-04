@@ -12,6 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import List, Tuple, Callable, Dict, Any, Union, Optional
 
+from .core_utils import dn2dlat, de2dlon, dlat2dn, dlon2de, get_years # Added coordinate and years functions
 from .signal_util import linreg_matrix, get_bpf_sos, bpf_data, bpf_data_inplace
 from .tolles_lawson import create_TL_A
 from .map_utils import get_map_val, get_map # Import get_map_val and get_map from map_utils
@@ -28,8 +29,8 @@ from .magnav import (
 from .common_types import MagV # Import MagV from common_types
 from .dcm_util import dcm2euler, euler2dcm # Import dcm functions from dcm_util
 from .fdm_util import fdm # Import fdm function from fdm_util
-from .common_types import MagV # Import MagV from common_types
-from .dcm_util import dcm2euler, euler2dcm # Import dcm functions from dcm_util
+# from .common_types import MagV # Redundant import
+# from .dcm_util import dcm2euler, euler2dcm # Redundant import
 
 # Placeholder for IGRF functionality, replace with a proper IGRF library
 def pyigrf_calc(date_decimal_year: float, alt_km: float, lat_deg: float, lon_deg: float) -> Tuple[float, float, float, float, float, float, float]:
@@ -78,61 +79,7 @@ def field_check(obj: Any, type_to_check: type) -> List[str]:
 # r_earth = R_EARTH (already imported)
 # e_earth = E_EARTH (already imported)
 
-def dn2dlat(dn: Union[float, np.ndarray], lat: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
-    """
-    Convert north-south position (northing) difference to latitude difference.
-
-    Args:
-        dn: north-south position (northing) difference [m]
-        lat: nominal latitude [rad]
-
-    Returns:
-        dlat: latitude difference [rad]
-    """
-    dlat = dn * np.sqrt(1 - (E_EARTH * np.sin(lat))**2) / R_EARTH
-    return dlat
-
-def de2dlon(de: Union[float, np.ndarray], lat: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
-    """
-    Convert east-west position (easting) difference to longitude difference.
-
-    Args:
-        de: east-west position (easting) difference [m]
-        lat: nominal latitude [rad]
-
-    Returns:
-        dlon: longitude difference [rad]
-    """
-    dlon = de * np.sqrt(1 - (E_EARTH * np.sin(lat))**2) / R_EARTH / np.cos(lat)
-    return dlon
-
-def dlat2dn(dlat: Union[float, np.ndarray], lat: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
-    """
-    Convert latitude difference to north-south position (northing) difference.
-
-    Args:
-        dlat: latitude difference [rad]
-        lat: nominal latitude [rad]
-
-    Returns:
-        dn: north-south position (northing) difference [m]
-    """
-    dn = dlat / np.sqrt(1 - (E_EARTH * np.sin(lat))**2) * R_EARTH
-    return dn
-
-def dlon2de(dlon: Union[float, np.ndarray], lat: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
-    """
-    Convert longitude difference to east-west position (easting) difference.
-
-    Args:
-        dlon: longitude difference [rad]
-        lat: nominal latitude [rad]
-
-    Returns:
-        de: east-west position (easting) difference [m]
-    """
-    de = dlon / np.sqrt(1 - (E_EARTH * np.sin(lat))**2) * R_EARTH * np.cos(lat)
-    return de
+# dn2dlat, de2dlon, dlat2dn, dlon2de moved to core_utils.py
 
 
 def get_ind_segs(line_all: np.ndarray, lines: Union[int, List[int], str] = "all") -> List[np.ndarray]:

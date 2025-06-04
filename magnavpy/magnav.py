@@ -70,6 +70,7 @@ from .tolles_lawson import create_TL_A, create_TL_coef # create_TL_coef might be
 from .dcm_util import dcm2euler, euler2dcm
 from .fdm_util import fdm
 from .signal_util import linreg_matrix # Assuming this is equivalent to Julia's linreg(y,x)
+from .core_utils import dn2dlat, de2dlon, dlat2dn, dlon2de, get_years # Import core utilities
 
 try:
     from .model_functions import get_f, create_P0 as model_create_P0, create_Qd as model_create_Qd
@@ -457,21 +458,7 @@ class EKF_RT:
         self.r = np.zeros(self.ny, dtype=float)
 
 # --- Utility Functions (ported from analysis_util.jl) ---
-def dn2dlat(dn: float, lat: float) -> float:
-    """Convert north-south position (northing) difference to latitude difference."""
-    return dn * np.sqrt(1 - (E_EARTH * np.sin(lat))**2) / R_EARTH
-
-def de2dlon(de: float, lat: float) -> float:
-    """Convert east-west position (easting) difference to longitude difference."""
-    return de * np.sqrt(1 - (E_EARTH * np.sin(lat))**2) / R_EARTH / np.cos(lat)
-
-def dlat2dn(dlat: float, lat: float) -> float:
-    """Convert latitude difference to north-south position (northing) difference."""
-    return dlat / np.sqrt(1 - (E_EARTH * np.sin(lat))**2) * R_EARTH
-
-def dlon2de(dlon: float, lat: float) -> float:
-    """Convert longitude difference to east-west position (easting) difference."""
-    return dlon / np.sqrt(1 - (E_EARTH * np.sin(lat))**2) * R_EARTH * np.cos(lat)
+# dn2dlat, de2dlon, dlat2dn, dlon2de moved to core_utils.py
 
 def linreg_vector(y: np.ndarray, lambda_val: float = 0) -> np.ndarray:
     """Linear regression to determine best fit line for x = eachindex(y)."""

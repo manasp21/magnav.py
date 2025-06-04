@@ -7,7 +7,7 @@ from scipy.linalg import cholesky as scipy_cholesky
 # These imports assume specific functions and constants exist in these files.
 # If they don't, these would need to be defined or adjusted.
 try:
-    from .magnav import r_earth, omega_earth # ω_earth as omega_earth
+    from .constants import R_EARTH, OMEGA_EARTH # Import from constants.py
     # Placeholder for IGRF calculation functions, assuming they might be in magnav or a dedicated util
     # These would need to be properly implemented or imported from a library like pyIGRF,
     # ensuring correct unit handling (e.g., IGRF typically uses degrees for lat/lon, km for alt).
@@ -33,19 +33,10 @@ except ImportError:
 
 
 try:
-    from .core_utils import get_years
+    from .core_utils import get_years, dn2dlat, de2dlon, dlat2dn, dlon2de
 except ImportError:
     print("Warning: Could not import get_years from .core_utils. Defining placeholder.")
     def get_years(year, day_of_year): return year + (day_of_year -1) / 365.25 # Simplified
-
-try:
-    from .analysis_util import dlat2dn, dn2dlat, de2dlon
-except ImportError:
-    print("Warning: Could not import dlat2dn, dn2dlat, de2dlon from .analysis_util. Defining placeholders.")
-    def dlat2dn(dlat_rad, lat_rad): return dlat_rad * r_earth # Simplified
-    def dn2dlat(dn_m, lat_rad): return dn_m / r_earth # Simplified
-    def de2dlon(de_m, lat_rad): return de_m / (r_earth * math.cos(lat_rad)) # Simplified
-
 
 def deg2rad(degrees):
     return math.radians(degrees)

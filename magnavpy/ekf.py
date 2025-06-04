@@ -6,8 +6,9 @@ from .common_types import MapS, MapS3D, MapCache # Import MapS, MapS3D, and MapC
 # If get_cached_map is elsewhere, adjust import.
 from .magnav import FILTres, EKF_RT, INS
 from .common_types import get_cached_map
-from .common_types import MapCache
+# MapCache is already imported from .common_types on line 3
 from .model_functions import get_Phi, get_H, create_P0, create_Qd
+from .map_utils import map_interpolate # Moved from local import
 from .core_utils import get_years
 from .model_functions import get_h # Explicitly import get_h from model_functions
 
@@ -115,7 +116,7 @@ def ekf(
                     # Attempt to create interpolator from fallback_map if not pre-cached
                     # This requires map_interpolate from map_utils
                     try:
-                        from .map_utils import map_interpolate # Local import
+                        # from .map_utils import map_interpolate # Moved to top
                         current_itp_mapS_for_step = map_interpolate(itp_mapS_arg.fallback_map)
                         if current_itp_mapS_for_step is None:
                             raise ValueError("Fallback interpolator creation failed.")
@@ -459,7 +460,7 @@ def crlb(
                     current_itp_mapS_for_step = itp_mapS_arg.fallback_map_interpolator
                 elif hasattr(itp_mapS_arg, 'fallback_map') and itp_mapS_arg.fallback_map is not None:
                     try:
-                        from .map_utils import map_interpolate # Local import
+                        # from .map_utils import map_interpolate # Moved to top
                         current_itp_mapS_for_step = map_interpolate(itp_mapS_arg.fallback_map)
                         if current_itp_mapS_for_step is None:
                             raise ValueError("Fallback interpolator creation failed for CRLB.")

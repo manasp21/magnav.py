@@ -14,7 +14,7 @@ import dataclasses # Used for dataclasses.replace
 
 # Attempt to import MapS, MapV, MAP_S_NULL from .common_types
 try:
-    from .common_types import MapS, MapV, MapS3D, MapSd, MAP_S_NULL, MapCacheBase
+    from .common_types import MapS, MapV, MapS3D, MapSd, MAP_S_NULL, MapCache
 except ImportError:
     print("Warning: Could not import types from .common_types in map_utils.py. Using placeholder types.")
     from dataclasses import dataclass, field
@@ -303,7 +303,7 @@ def map_interpolate(map_obj: Union[MapS, MapS3D],
 
 
 def get_map_val(
-    map_data: Union[MapS, MapS3D, MapCacheBase], # Extended to MapS3D
+    map_data: Union[MapS, MapS3D, MapCache], # Extended to MapS3D
     lat_query: Union[float, np.ndarray],
     lon_query: Union[float, np.ndarray],
     alt_query: Optional[Union[float, np.ndarray]] = None,
@@ -321,7 +321,7 @@ def get_map_val(
     """
     interpolator_object = None
 
-    if isinstance(map_data, MapCacheBase):
+    if isinstance(map_data, MapCache):
         # Determine query altitude for cache selection
         alt_q_scalar = 0.0 # Default
         if alt_query is not None:
@@ -470,13 +470,13 @@ def get_map_val(
         else:
             return final_tuple_result
     else:
-        raise TypeError("map_data must be a MapS, MapS3D, MapV, or MapCacheBase object.")
+        raise TypeError("map_data must be a MapS, MapS3D, MapV, or MapCache object.")
 
     # Prepare query points
     lat_q_arr = np.atleast_1d(lat_query)
     lon_q_arr = np.atleast_1d(lon_query)
 
-    if isinstance(map_data, MapS3D) or (isinstance(map_data, MapCacheBase) and alt_query is not None):
+    if isinstance(map_data, MapS3D) or (isinstance(map_data, MapCache) and alt_query is not None):
         if alt_query is None:
             raise ValueError("alt_query must be provided for 3D interpolation with MapS3D or relevant MapCache.")
         alt_q_arr = np.atleast_1d(alt_query)
@@ -964,7 +964,7 @@ def load_map_from_cache(filename: str) -> Optional[Union[MapS, MapS3D, MapSd, Ma
             return None
     return None
 
-def get_cached_map(map_cache_obj: MapCacheBase, lat_query: float, lon_query: float, alt_query: float) -> Optional[Callable]:
+def get_cached_map(map_cache_obj: MapCache, lat_query: float, lon_query: float, alt_query: float) -> Optional[Callable]:
     """
     Gets an interpolator from the map cache, prioritizing maps whose altitude is closest to alt_query
     and whose bounds contain (lat_query, lon_query).
