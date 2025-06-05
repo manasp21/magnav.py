@@ -1187,6 +1187,88 @@ def create_mag_c(
     return map_val
 
 # this has extra arg and needs to be modified.
+
+# DeepSeek r1 recommendation:
+# ```
+# import numpy as np
+# from scipy.stats import multivariate_normal
+#
+# def fogm(sigma, tau, dt, N):
+#     """First-order Gauss-Markov process."""
+#     alpha = np.exp(-dt / tau)
+#     fogm = np.zeros(N)
+#     fogm[0] = sigma * np.random.randn()
+#     for i in range(1, N):
+#         fogm[i] = alpha * fogm[i-1] + sigma * np.sqrt(1 - alpha**2) * np.random.randn()
+#     return fogm
+#
+# def create_TL_A(Bx, By, Bz):
+#     """Create Tolles-Lawson A matrix (simplified placeholder)."""
+#     n = len(Bx)
+#     # This is a simplified version - replace with actual TL matrix construction
+#     A = np.column_stack([Bx, By, Bz, 
+#                          Bx**2, By**2, Bz**2, 
+#                          Bx*By, Bx*Bz, By*Bz,
+#                          np.gradient(Bx), np.gradient(By), np.gradient(Bz)])
+#     return A
+#
+# def corrupt_mag(mag_c, Bx=None, By=None, Bz=None, flux=None, 
+#                 dt=0.1, cor_sigma=1.0, cor_tau=600.0, cor_var=1.0**2,
+#                 cor_drift=0.001, cor_perm_mag=5.0, cor_ind_mag=5.0, cor_eddy_mag=0.5):
+#     """
+#     Corrupt compensated magnetometer measurements with various noise sources.
+#
+#     Parameters:
+#         mag_c: Compensated scalar magnetometer measurements [nT]
+#         Bx, By, Bz: Vector magnetometer measurements [nT] (or provide flux object)
+#         flux: Alternative to Bx,By,Bz - object with x,y,z attributes
+#         dt: Measurement time step [s]
+#         cor_sigma: FOGM catch-all bias [nT]
+#         cor_tau: FOGM time constant [s]
+#         cor_var: Measurement noise variance [nT^2]
+#         cor_drift: Linear drift [nT/s]
+#         cor_perm_mag: Permanent field TL coefficient std dev
+#         cor_ind_mag: Induced field TL coefficient std dev
+#         cor_eddy_mag: Eddy current TL coefficient std dev
+#
+#     Returns:
+#         mag_uc: Uncompensated measurements [nT]
+#         TL_coef: Tolles-Lawson coefficients used
+#         cor_fogm: FOGM noise portion [nT]
+#     """
+#     # Handle flux object if provided
+#     if flux is not None:
+#         Bx, By, Bz = flux.x, flux.y, flux.z
+#
+#     N = len(mag_c)
+#
+#     # Create diagonal covariance matrix for TL coefficients
+#     P_diag = np.concatenate([
+#         np.repeat(cor_perm_mag, 3),
+#         np.repeat(cor_ind_mag, 6),
+#         np.repeat(cor_eddy_mag, 9)
+#     ]) ** 2
+#
+#     # Sample TL coefficients
+#     TL_coef = multivariate_normal.rvs(mean=np.zeros_like(P_diag), cov=np.diag(P_diag))
+#
+#     # Generate FOGM process
+#     cor_fogm = fogm(cor_sigma, cor_tau, dt, N)
+#
+#     # Create corrupted measurements
+#     mag_uc = (mag_c + 
+#               np.sqrt(cor_var) * np.random.randn(N) + 
+#               cor_fogm + 
+#               cor_drift * np.random.rand() * np.arange(0, N*dt, dt))
+#
+#     # Add TL corruption if vector measurements are provided and non-zero
+#     if Bx is not None and not np.allclose(Bx, 0):
+#         A = create_TL_A(Bx, By, Bz)
+#         mag_uc += A @ TL_coef
+#
+#     return mag_uc, TL_coef, cor_fogm
+# ```
+
 def corrupt_mag(
     mag_c: np.ndarray,
     flux_a: MagV, # True vector field in aircraft body frame
