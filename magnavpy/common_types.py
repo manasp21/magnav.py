@@ -70,7 +70,9 @@ class MapS3D(Map):
     yy: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))      # ny latitude coordinates [rad] (1D)
     zz: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))      # nz altitude levels [m] (1D). Corresponds to Julia MapS3D.alt.
     mask: np.ndarray = field(default_factory=lambda: np.empty((0,0,0), dtype=bool)) # ny x nx x nz 3D mask
-    # lat, lon are inherited from Map ABC. 'alt' from Map ABC is not directly used by zz.
+    lat: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))     # latitude coordinates [rad] (1D)
+    lon: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))     # longitude coordinates [rad] (1D)
+    # 'alt' from Map ABC is not directly used by zz.
 
 @dataclass
 class MapV(Map):
@@ -84,8 +86,10 @@ class MapV(Map):
     xx: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))  # nx longitude coordinates [rad] (1D)
     yy: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))  # ny latitude coordinates [rad] (1D)
     mask: np.ndarray = field(default_factory=lambda: np.empty((0,0), dtype=bool)) # ny x nx mask (2D boolean)
+    lat: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))  # latitude coordinates [rad] (1D)
+    lon: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))  # longitude coordinates [rad] (1D)
     # 'map' field from Map ABC is not directly used by components x,y,z.
-    # lat, lon are inherited. 'alt' from Map ABC is shadowed by float alt here.
+    # 'alt' from Map ABC is shadowed by float alt here.
 
 # Null map constant, updated for the new MapS definition.
 # Assumes MapS constructor will handle inherited lat, lon from Map ABC if they are required.

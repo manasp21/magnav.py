@@ -155,15 +155,17 @@ def ekf(
             else: raise ValueError("Cnb for get_Phi should be a 2D matrix for a single time step.")
 
         # Direct indexing, assuming lat, vn etc. are 1D arrays of scalars
-        lat_t = lat[t]
-        lon_t = lon[t]
-        alt_t = alt[t]
-        vn_t  = vn[t]
-        ve_t  = ve[t]
-        vd_t  = vd[t]
-        fn_t  = fn[t]
-        fe_t  = fe[t]
-        fd_t  = fd[t]
+        # Extract scalar values for the current time step
+        # Use .flat[0] to safely get first element from any array size
+        lat_t = lat[t].flat[0]
+        lon_t = lon[t].flat[0]
+        alt_t = alt[t].flat[0]
+        vn_t = vn[t].flat[0]
+        ve_t = ve[t].flat[0]
+        vd_t = vd[t].flat[0]
+        fn_t = fn[t].flat[0]
+        fe_t = fe[t].flat[0]
+        fd_t = fd[t].flat[0]
 
         Phi = get_Phi(nx, lat_t, vn_t, ve_t, vd_t, fn_t, fe_t, fd_t, _Cnb_t_for_phi,
                       baro_tau, acc_tau, gyro_tau, fogm_tau, dt)
@@ -488,9 +490,17 @@ def crlb(
             # else: raise ValueError("Cnb for get_Phi should be a 2D matrix for a single time step.")
             # This case is handled by Cnb[:,:,t] above for (3,3,N)
 
-        lat_t, lon_t, alt_t = lat[t], lon[t], alt[t]
-        vn_t, ve_t, vd_t = vn[t], ve[t], vd[t]
-        fn_t, fe_t, fd_t = fn[t], fe[t], fd[t]
+        # Extract scalar values for the current time step
+        # Handle both scalar and array inputs by using .item() for arrays
+        lat_t = lat[t].item() if hasattr(lat[t], 'item') else lat[t]
+        lon_t = lon[t].item() if hasattr(lon[t], 'item') else lon[t]
+        alt_t = alt[t].item() if hasattr(alt[t], 'item') else alt[t]
+        vn_t = vn[t].item() if hasattr(vn[t], 'item') else vn[t]
+        ve_t = ve[t].item() if hasattr(ve[t], 'item') else ve[t]
+        vd_t = vd[t].item() if hasattr(vd[t], 'item') else vd[t]
+        fn_t = fn[t].item() if hasattr(fn[t], 'item') else fn[t]
+        fe_t = fe[t].item() if hasattr(fe[t], 'item') else fe[t]
+        fd_t = fd[t].item() if hasattr(fd[t], 'item') else fd[t]
 
         Phi = get_Phi(nx, lat_t, vn_t, ve_t, vd_t, fn_t, fe_t, fd_t, _Cnb_t_for_phi,
                       baro_tau, acc_tau, gyro_tau, fogm_tau, dt)

@@ -124,6 +124,22 @@
 
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Traj</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Trajectory data class.</span>
+
+<span class="sd">    :param N: Number of points</span>
+<span class="sd">    :param dt: Time step (s)</span>
+<span class="sd">    :param tt: Time vector (s)</span>
+<span class="sd">    :param lat: Latitude (rad)</span>
+<span class="sd">    :param lon: Longitude (rad)</span>
+<span class="sd">    :param alt: Altitude (m)</span>
+<span class="sd">    :param vn: North velocity (m/s)</span>
+<span class="sd">    :param ve: East velocity (m/s)</span>
+<span class="sd">    :param vd: Down velocity (m/s)</span>
+<span class="sd">    :param fn: North specific force (m/s^2)</span>
+<span class="sd">    :param fe: East specific force (m/s^2)</span>
+<span class="sd">    :param fd: Down specific force (m/s^2)</span>
+<span class="sd">    :param Cnb: Direction cosine matrix (body to navigation) as 3x3xN array</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">N</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span>
     <span class="n">tt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
@@ -140,6 +156,13 @@
 
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">MagV</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Vector magnetometer data.</span>
+
+<span class="sd">    :param x: X-component of magnetic field (nT)</span>
+<span class="sd">    :param y: Y-component of magnetic field (nT)</span>
+<span class="sd">    :param z: Z-component of magnetic field (nT)</span>
+<span class="sd">    :param t: Time vector (s)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
     <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
     <span class="n">z</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
@@ -538,6 +561,95 @@
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">XYZ0</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Create basic flight data (XYZ0 struct). Assumes constant altitude (2D flight).</span>
+
+<span class="sd">    :param mapS: Scalar map (MapS, MapSd, or MapS3D) or None to load default</span>
+<span class="sd">    :type mapS: Optional[Union[MapS, MapSd, MapS3D]]</span>
+<span class="sd">    :param alt: Altitude (m) for trajectory, defaults to 1000.0</span>
+<span class="sd">    :type alt: float, optional</span>
+<span class="sd">    :param dt: Time step (s), defaults to 0.1</span>
+<span class="sd">    :type dt: float, optional</span>
+<span class="sd">    :param t: Total time (s), defaults to 300.0</span>
+<span class="sd">    :type t: float, optional</span>
+<span class="sd">    :param v: Velocity (m/s), defaults to 68.0</span>
+<span class="sd">    :type v: float, optional</span>
+<span class="sd">    :param ll1: Starting (lat, lon) in radians, defaults to ()</span>
+<span class="sd">    :type ll1: Tuple[float, float], optional</span>
+<span class="sd">    :param ll2: Ending (lat, lon) in radians, defaults to ()</span>
+<span class="sd">    :type ll2: Tuple[float, float], optional</span>
+<span class="sd">    :param N_waves: Number of sine waves in trajectory, defaults to 1</span>
+<span class="sd">    :type N_waves: int, optional</span>
+<span class="sd">    :param attempts: Number of attempts to generate valid trajectory, defaults to 10</span>
+<span class="sd">    :type attempts: int, optional</span>
+<span class="sd">    :param info: Information string, defaults to &quot;Simulated data&quot;</span>
+<span class="sd">    :type info: str, optional</span>
+<span class="sd">    :param flight: Flight number, defaults to 1</span>
+<span class="sd">    :type flight: int, optional</span>
+<span class="sd">    :param line: Line number, defaults to 1</span>
+<span class="sd">    :type line: int, optional</span>
+<span class="sd">    :param year: Year, defaults to 2023</span>
+<span class="sd">    :type year: int, optional</span>
+<span class="sd">    :param doy: Day of year, defaults to 154</span>
+<span class="sd">    :type doy: int, optional</span>
+<span class="sd">    :param mapV: Vector map (MapV) or None to load default, defaults to None</span>
+<span class="sd">    :type mapV: Optional[MapV], optional</span>
+<span class="sd">    :param cor_sigma: Standard deviation of correlated noise for magnetometer, defaults to 1.0</span>
+<span class="sd">    :type cor_sigma: float, optional</span>
+<span class="sd">    :param cor_tau: Time constant of correlated noise for magnetometer (s), defaults to 600.0</span>
+<span class="sd">    :type cor_tau: float, optional</span>
+<span class="sd">    :param cor_var: Variance of white noise for magnetometer, defaults to 1.0**2</span>
+<span class="sd">    :type cor_var: float, optional</span>
+<span class="sd">    :param cor_drift: Drift rate for magnetometer (nT/s), defaults to 0.001</span>
+<span class="sd">    :type cor_drift: float, optional</span>
+<span class="sd">    :param cor_perm_mag: Permanent magnetism coefficient (nT), defaults to 5.0</span>
+<span class="sd">    :type cor_perm_mag: float, optional</span>
+<span class="sd">    :param cor_ind_mag: Induced magnetism coefficient (nT), defaults to 5.0</span>
+<span class="sd">    :type cor_ind_mag: float, optional</span>
+<span class="sd">    :param cor_eddy_mag: Eddy current magnetism coefficient (nT), defaults to 0.5</span>
+<span class="sd">    :type cor_eddy_mag: float, optional</span>
+<span class="sd">    :param init_pos_sigma: Initial position uncertainty (m), defaults to 3.0</span>
+<span class="sd">    :type init_pos_sigma: float, optional</span>
+<span class="sd">    :param init_alt_sigma: Initial altitude uncertainty (m), defaults to 0.001</span>
+<span class="sd">    :type init_alt_sigma: float, optional</span>
+<span class="sd">    :param init_vel_sigma: Initial velocity uncertainty (m/s), defaults to 0.01</span>
+<span class="sd">    :type init_vel_sigma: float, optional</span>
+<span class="sd">    :param init_att_sigma: Initial attitude uncertainty (rad), defaults to np.deg2rad(0.01)</span>
+<span class="sd">    :type init_att_sigma: float, optional</span>
+<span class="sd">    :param VRW_sigma: Velocity random walk (m/s/rtHz), defaults to 0.000238</span>
+<span class="sd">    :type VRW_sigma: float, optional</span>
+<span class="sd">    :param ARW_sigma: Angular random walk (rad/rtHz), defaults to 0.000000581</span>
+<span class="sd">    :type ARW_sigma: float, optional</span>
+<span class="sd">    :param baro_sigma: Barometer noise standard deviation (m), defaults to 1.0</span>
+<span class="sd">    :type baro_sigma: float, optional</span>
+<span class="sd">    :param ha_sigma: Horizontal accelerometer noise (m/s^2), defaults to 0.001</span>
+<span class="sd">    :type ha_sigma: float, optional</span>
+<span class="sd">    :param a_hat_sigma: Accelerometer bias noise (m/s^2), defaults to 0.01</span>
+<span class="sd">    :type a_hat_sigma: float, optional</span>
+<span class="sd">    :param acc_sigma: Accelerometer noise (m/s^2), defaults to 0.000245</span>
+<span class="sd">    :type acc_sigma: float, optional</span>
+<span class="sd">    :param gyro_sigma: Gyroscope noise (rad/s), defaults to 0.00000000727</span>
+<span class="sd">    :type gyro_sigma: float, optional</span>
+<span class="sd">    :param fogm_sigma: First-order Gauss-Markov process sigma for magnetometer, defaults to 1.0</span>
+<span class="sd">    :type fogm_sigma: float, optional</span>
+<span class="sd">    :param baro_tau: Barometer time constant (s), defaults to 3600.0</span>
+<span class="sd">    :type baro_tau: float, optional</span>
+<span class="sd">    :param acc_tau: Accelerometer time constant (s), defaults to 3600.0</span>
+<span class="sd">    :type acc_tau: float, optional</span>
+<span class="sd">    :param gyro_tau: Gyroscope time constant (s), defaults to 3600.0</span>
+<span class="sd">    :type gyro_tau: float, optional</span>
+<span class="sd">    :param fogm_tau: FOGM time constant for magnetometer (s), defaults to 600.0</span>
+<span class="sd">    :type fogm_tau: float, optional</span>
+<span class="sd">    :param save_h5: Save to HDF5 file, defaults to False</span>
+<span class="sd">    :type save_h5: bool, optional</span>
+<span class="sd">    :param xyz_h5: HDF5 filename, defaults to &quot;xyz_data.h5&quot;</span>
+<span class="sd">    :type xyz_h5: str, optional</span>
+<span class="sd">    :param silent: Suppress output, defaults to False</span>
+<span class="sd">    :type silent: bool, optional</span>
+<span class="sd">    :param default_scalar_map_id_override: Override for default scalar map ID, defaults to None</span>
+<span class="sd">    :type default_scalar_map_id_override: Optional[str], optional</span>
+<span class="sd">    :param default_vector_map_id_override: Override for default vector map ID, defaults to None</span>
+<span class="sd">    :type default_vector_map_id_override: Optional[str], optional</span>
+<span class="sd">    :return: XYZ0 data structure</span>
+<span class="sd">    :rtype: XYZ0</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Fetch constants module from sys.modules to access patched values</span>
     <span class="n">constants_module</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;magnavpy.constants&#39;</span><span class="p">,</span> <span class="n">constants</span><span class="p">)</span> <span class="c1"># Fallback to imported if not in sys.modules</span>

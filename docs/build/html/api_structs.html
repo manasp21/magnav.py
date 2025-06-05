@@ -237,17 +237,77 @@ Based on Julia’s MapSd.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="magnavpy.compensation.CompParams">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">magnavpy.compensation.</span></span><span class="sig-name descname"><span class="pre">CompParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/magnavpy/compensation.html#CompParams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#magnavpy.compensation.CompParams" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Base class for compensation parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>version</strong> – Parameter version</p></li>
+<li><p><strong>features_setup</strong> – List of feature names</p></li>
+<li><p><strong>features_no_norm</strong> – Flags for features to skip normalization</p></li>
+<li><p><strong>model_type</strong> – Model type identifier (e.g., ‘m1’, ‘m2’)</p></li>
+<li><p><strong>y_type</strong> – Target variable type</p></li>
+<li><p><strong>use_mag</strong> – Magnetometer data field to use</p></li>
+<li><p><strong>use_vec</strong> – Vector data field to use</p></li>
+<li><p><strong>data_norms</strong> – Tuple of normalization parameters</p></li>
+<li><p><strong>model</strong> – Neural network model</p></li>
+<li><p><strong>terms</strong> – List of Tolles-Lawson terms</p></li>
+<li><p><strong>terms_A</strong> – List of aircraft terms</p></li>
+<li><p><strong>sub_diurnal</strong> – Subtract diurnal effect flag</p></li>
+<li><p><strong>sub_igrf</strong> – Subtract IGRF flag</p></li>
+<li><p><strong>bpf_mag</strong> – Bandpass filter magnetometer data flag</p></li>
+<li><p><strong>reorient_vec</strong> – Reorient vector data flag</p></li>
+<li><p><strong>norm_type_A</strong> – Normalization type for aircraft terms</p></li>
+<li><p><strong>norm_type_x</strong> – Normalization type for features</p></li>
+<li><p><strong>norm_type_y</strong> – Normalization type for targets</p></li>
+<li><p><strong>TL_coef</strong> – Tolles-Lawson coefficients</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="magnavpy.compensation.LinCompParams">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">magnavpy.compensation.</span></span><span class="sig-name descname"><span class="pre">LinCompParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/magnavpy/compensation.html#LinCompParams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#magnavpy.compensation.LinCompParams" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Parameters for linear compensation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>k_plsr</strong> – PLS components</p></li>
+<li><p><strong>λ_TL</strong> – Tolles-Lawson ridge lambda</p></li>
+<li><p><strong>lambda_elastic</strong> – ElasticNet lambda</p></li>
+<li><p><strong>l1_ratio_elastic</strong> – ElasticNet L1 ratio</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="magnavpy.compensation.NNCompParams">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">magnavpy.compensation.</span></span><span class="sig-name descname"><span class="pre">NNCompParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/magnavpy/compensation.html#NNCompParams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#magnavpy.compensation.NNCompParams" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Parameters for neural network compensation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>η_adam</strong> – Adam learning rate</p></li>
+<li><p><strong>epoch_adam</strong> – Adam training epochs</p></li>
+<li><p><strong>epoch_lbfgs</strong> – LBFGS training epochs</p></li>
+<li><p><strong>hidden</strong> – List of hidden layer sizes</p></li>
+<li><p><strong>activation</strong> – Activation function</p></li>
+<li><p><strong>loss</strong> – Loss function</p></li>
+<li><p><strong>batchsize</strong> – Batch size</p></li>
+<li><p><strong>frac_train</strong> – Fraction of data for training</p></li>
+<li><p><strong>α_sgl</strong> – Sparse group lasso alpha</p></li>
+<li><p><strong>λ_sgl</strong> – Sparse group lasso lambda</p></li>
+<li><p><strong>k_pca</strong> – PCA components</p></li>
+<li><p><strong>drop_fi</strong> – Feature importance drop flag</p></li>
+<li><p><strong>drop_fi_bson</strong> – BSON file for drop feature importance</p></li>
+<li><p><strong>drop_fi_csv</strong> – CSV file for drop feature importance</p></li>
+<li><p><strong>perm_fi</strong> – Permutation feature importance flag</p></li>
+<li><p><strong>perm_fi_csv</strong> – CSV file for permutation feature importance</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 </section>
 </section>

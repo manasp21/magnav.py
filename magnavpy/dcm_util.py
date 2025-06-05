@@ -6,11 +6,11 @@ def skew(v: np.ndarray) -> np.ndarray:
     """
     Create a skew-symmetric matrix from a 3-element vector.
 
-    Args:
-        v: 3-element numpy array.
+    :param v: 3-element numpy array
+    :type v: np.ndarray
 
-    Returns:
-        3x3 skew-symmetric matrix.
+    :return: 3x3 skew-symmetric matrix
+    :rtype: np.ndarray
     """
     if not isinstance(v, np.ndarray) or v.shape != (3,):
         raise ValueError("Input must be a 3-element numpy array.")
@@ -24,37 +24,46 @@ def dcm2euler(Cnb: np.ndarray, order: str = 'zyx') -> np.ndarray:
     """
     Convert Direction Cosine Matrix (DCM) to Euler angles.
 
-    Args:
-        Cnb: 3x3xN (or 3x3) Direction Cosine Matrix.
-             If 3x3xN, returns N Euler angle sets.
-        order: (optional) Euler angle rotation order and interpretation.
-               Default is 'zyx'.
-               Supported orders:
-               - 'zyx': Assumes Cnb = Rz(yaw)Ry(pitch)Rx(roll).
-                        Returns (yaw, pitch, roll).
-               - 'xyz': Assumes Cnb is a DCM from which roll, pitch, yaw are to be extracted
-                        using formulas typically applied to Cbn = (Rz(yaw)Ry(pitch)Rx(roll))^T.
-                        Effectively, if Cnb is Cbn_julia, this returns (roll, pitch, yaw).
-                        Returns (roll, pitch, yaw).
-               (Other sequences like 'xzy', 'yxz', 'yzx', 'zxy' can be added if needed).
+    :param Cnb: 3x3xN (or 3x3) Direction Cosine Matrix.
+                If 3x3xN, returns N Euler angle sets.
+    :type Cnb: np.ndarray
+    :param order: Euler angle rotation order and interpretation.
+                  Default is 'zyx'.
+                  Supported orders:
+                  - 'zyx': Assumes Cnb = Rz(yaw)Ry(pitch)Rx(roll). Returns (yaw, pitch, roll)
+                  - 'xyz': Assumes Cnb is a DCM from which roll, pitch, yaw are to be extracted
+                           using formulas typically applied to Cbn = (Rz(yaw)Ry(pitch)Rx(roll))^T.
+                           Effectively, if Cnb is Cbn_julia, this returns (roll, pitch, yaw)
+                  - 'body2nav': Returns (roll, pitch, yaw)
+    :type order: str, optional
 
-    Returns:
-        np.ndarray:
-        If Cnb is 3x3, returns a 1D NumPy array of 3 elements: [angle1, angle2, angle3].
-        If Cnb is 3x3xN, returns a 2D NumPy array of shape (N, 3): [[a1,a2,a3], ...].
+    :return: Euler angles in radians
+             If Cnb is 3x3, returns a 1D array of 3 elements: [angle1, angle2, angle3]
+             If Cnb is 3x3xN, returns a 2D array of shape (N, 3): [[a1,a2,a3], ...]
+    :rtype: np.ndarray
+
+    .. note::
         The interpretation of angles depends on 'order':
         - For 'zyx': (yaw, pitch, roll)
         - For 'xyz': (roll, pitch, yaw)
         - For 'body2nav': (roll, pitch, yaw)
 
-    Julia MagNav.jl Mapping:
-        - To match Julia `dcm2euler(Cnb, order=:body2nav)` which returns `(roll, pitch, yaw)`:
-          `yaw_py, pitch_py, roll_py = dcm2euler(Cnb, order='zyx')`
-          Result: `(roll_py, pitch_py, yaw_py)`
-        - To match Julia `dcm2euler(Cbn, order=:nav2body)` which returns `(roll, pitch, yaw)`
-          (where Cbn is the DCM from navigation to body frame, i.e., Cnb_julia.T):
-          `roll_py, pitch_py, yaw_py = dcm2euler(Cbn, order='xyz')`
-          Result: `(roll_py, pitch_py, yaw_py)`
+    **Julia MagNav.jl Mapping**:
+
+    To match Julia ``dcm2euler(Cnb, order=:body2nav)`` which returns ``(roll, pitch, yaw)``:
+
+    .. code-block:: python
+
+        yaw_py, pitch_py, roll_py = dcm2euler(Cnb, order='zyx')
+        # Result: (roll_py, pitch_py, yaw_py)
+
+    To match Julia ``dcm2euler(Cbn, order=:nav2body)`` which returns ``(roll, pitch, yaw)``
+    (where Cbn is the DCM from navigation to body frame, i.e., Cnb_julia.T):
+
+    .. code-block:: python
+
+        roll_py, pitch_py, yaw_py = dcm2euler(Cbn, order='xyz')
+        # Result: (roll_py, pitch_py, yaw_py)
     """
     if Cnb.ndim == 2:
         Cnb_proc = Cnb[:, :, np.newaxis] # Make it 3x3x1 for consistent processing
@@ -88,8 +97,11 @@ def dcm2euler(Cnb: np.ndarray, order: str = 'zyx') -> np.ndarray:
 
             angle1_out[i] = yaw
             angle2_out[i] = pitch
-            angle3_out[i] = roll
-        elif order == 'xyz': # Extracts (roll, pitch, yaw) assuming C is effectively Cbn_julia
+        # Map 'nav2body' to 'xyz' since they're equivalent
+        if order == 'nav2body':
+            order = 'xyz'
+            
+        if order == 'xyz': # Extracts (roll, pitch, yaw) assuming C is effectively Cbn_julia
                              # Cbn_julia[1,3] (0-indexed C[0,2]) = -sin(pitch)
                              # Cbn_julia[2,3] (0-indexed C[1,2]) = sin(roll)cos(pitch)
                              # Cbn_julia[3,3] (0-indexed C[2,2]) = cos(roll)cos(pitch)
@@ -166,26 +178,40 @@ def euler2dcm(angle1: Union[float, np.ndarray],
     """
     Convert Euler angles to Direction Cosine Matrix (DCM).
 
-    Args:
-        angle1, angle2, angle3: Euler angles in radians. Can be scalars or 1D arrays.
-                                 The interpretation depends on 'order'.
-        order: (optional) Euler angle rotation order. Default is 'zyx'.
-               Supported orders:
-               - 'zyx': angle1=yaw, angle2=pitch, angle3=roll. DCM = Rz(yaw)Ry(pitch)Rx(roll).
-               - 'xyz': angle1=roll, angle2=pitch, angle3=yaw. DCM = Rx(roll)Ry(pitch)Rz(yaw).
-               - 'body2nav': angle1=roll, angle2=pitch, angle3=yaw. Produces Cnb. Equivalent to Rz(yaw)Ry(pitch)Rx(roll).
-               (Other sequences like 'xzy', 'yxz', 'yzx', 'zxy' can be added if needed).
+    :param angle1: First Euler angle in radians (interpretation depends on 'order')
+    :type angle1: Union[float, np.ndarray]
+    :param angle2: Second Euler angle in radians (interpretation depends on 'order')
+    :type angle2: Union[float, np.ndarray]
+    :param angle3: Third Euler angle in radians (interpretation depends on 'order')
+    :type angle3: Union[float, np.ndarray]
+    :param order: Euler angle rotation order. Default is 'zyx'.
+                  Supported orders:
+                  - 'zyx': angle1=yaw, angle2=pitch, angle3=roll. DCM = Rz(yaw)Ry(pitch)Rx(roll)
+                  - 'xyz': angle1=roll, angle2=pitch, angle3=yaw. DCM = Rx(roll)Ry(pitch)Rz(yaw)
+                  - 'body2nav': angle1=roll, angle2=pitch, angle3=yaw. Produces Cnb (equivalent to Rz(yaw)Ry(pitch)Rx(roll))
+    :type order: str, optional
 
-    Returns:
-        np.ndarray: 3x3xN (if inputs are arrays) or 3x3 (if inputs are scalars) DCM.
+    :return: Direction Cosine Matrix
+             3x3xN (if inputs are arrays) or 3x3 (if inputs are scalars)
+    :rtype: np.ndarray
 
-    Julia MagNav.jl Mapping:
-        - To match Julia `euler2dcm(roll, pitch, yaw, order=:body2nav)` which produces Cnb:
-          `Cnb_py = euler2dcm(yaw, pitch, roll, order='zyx')`
-        - To match Julia `euler2dcm(roll, pitch, yaw, order=:nav2body)` which produces Cbn (Cnb_julia.T):
-          `Cnb_temp = euler2dcm(yaw, pitch, roll, order='zyx')`
-          If Cnb_temp is 3x3: `Cbn_py = Cnb_temp.T`
-          If Cnb_temp is 3x3xN: `Cbn_py = np.transpose(Cnb_temp, axes=(1,0,2))`
+    **Julia MagNav.jl Mapping**:
+
+    To match Julia ``euler2dcm(roll, pitch, yaw, order=:body2nav)`` which produces Cnb:
+
+    .. code-block:: python
+
+        Cnb_py = euler2dcm(yaw, pitch, roll, order='zyx')
+
+    To match Julia ``euler2dcm(roll, pitch, yaw, order=:nav2body)`` which produces Cbn (Cnb_julia.T):
+
+    .. code-block:: python
+
+        Cnb_temp = euler2dcm(yaw, pitch, roll, order='zyx')
+        if Cnb_temp.ndim == 2:
+            Cbn_py = Cnb_temp.T
+        else:  # 3x3xN
+            Cbn_py = np.transpose(Cnb_temp, axes=(1,0,2))
     """
     is_scalar = not (isinstance(angle1, np.ndarray) and angle1.ndim > 0) and \
                   not (isinstance(angle2, np.ndarray) and angle2.ndim > 0) and \
@@ -212,58 +238,96 @@ def euler2dcm(angle1: Union[float, np.ndarray],
         a1_val, a2_val, a3_val = a1_arr[i], a2_arr[i], a3_arr[i]
 
         if order == 'zyx': # angle1=yaw (Z), angle2=pitch (Y'), angle3=roll (X'')
-            Rz = np.array([
-                [math.cos(a1_val), -math.sin(a1_val), 0],
-                [math.sin(a1_val),  math.cos(a1_val), 0],
-                [0,                 0,                1]
-            ])
-            Ry = np.array([
-                [math.cos(a2_val),  0, math.sin(a2_val)],
-                [0,                 1, 0               ],
-                [-math.sin(a2_val), 0, math.cos(a2_val)]
-            ])
-            Rx = np.array([
-                [1, 0,                 0               ],
-                [0, math.cos(a3_val), -math.sin(a3_val)],
-                [0, math.sin(a3_val),  math.cos(a3_val)]
-            ])
-            C_out[:, :, i] = Rz @ Ry @ Rx
+            # For 'zyx' order: Cnb = Rz(yaw) * Ry(pitch) * Rx(roll)
+            # a1_val = yaw, a2_val = pitch, a3_val = roll
+            # Handle both scalar and array inputs
+            def to_scalar(x):
+                if isinstance(x, np.ndarray):
+                    if x.size == 1:
+                        return x.item()
+                    else:
+                        return x[0]  # Take first element if array has multiple values
+                return x
+            
+            a1_scalar = to_scalar(a1_val)
+            a2_scalar = to_scalar(a2_val)
+            a3_scalar = to_scalar(a3_val)
+            
+            cy = np.cos(a1_scalar)
+            sy = np.sin(a1_scalar)
+            cp = np.cos(a2_scalar)
+            sp = np.sin(a2_scalar)
+            cr = np.cos(a3_scalar)
+            sr = np.sin(a3_scalar)
+            
+            # Compute DCM elements directly
+            C_out[0, 0, i] = cy * cp
+            C_out[0, 1, i] = cy * sp * sr - sy * cr
+            C_out[0, 2, i] = cy * sp * cr + sy * sr
+            C_out[1, 0, i] = sy * cp
+            C_out[1, 1, i] = sy * sp * sr + cy * cr
+            C_out[1, 2, i] = sy * sp * cr - cy * sr
+            C_out[2, 0, i] = -sp
+            C_out[2, 1, i] = cp * sr
+            C_out[2, 2, i] = cp * cr
         elif order == 'xyz': # angle1=roll (X), angle2=pitch (Y'), angle3=yaw (Z'')
+            # Handle both scalar and array inputs
+            def to_scalar(x):
+                if isinstance(x, np.ndarray):
+                    if x.size == 1:
+                        return x.item()
+                    else:
+                        return x[0]  # Take first element if array has multiple values
+                return x
+            
+            a1_scalar = to_scalar(a1_val)
+            a2_scalar = to_scalar(a2_val)
+            a3_scalar = to_scalar(a3_val)
+            
             Rx = np.array([
                 [1, 0,                 0               ],
-                [0, math.cos(a1_val), -math.sin(a1_val)],
-                [0, math.sin(a1_val),  math.cos(a1_val)]
+                [0, np.cos(a1_scalar), -np.sin(a1_scalar)],
+                [0, np.sin(a1_scalar),  np.cos(a1_scalar)]
             ])
             Ry = np.array([
-                [math.cos(a2_val),  0, math.sin(a2_val)],
+                [np.cos(a2_scalar),  0, np.sin(a2_scalar)],
                 [0,                 1, 0               ],
-                [-math.sin(a2_val), 0, math.cos(a2_val)]
+                [-np.sin(a2_scalar), 0, np.cos(a2_scalar)]
             ])
             Rz = np.array([
-                [math.cos(a3_val), -math.sin(a3_val), 0],
-                [math.sin(a3_val),  math.cos(a3_val), 0],
+                [np.cos(a3_scalar), -np.sin(a3_scalar), 0],
+                [np.sin(a3_scalar),  np.cos(a3_scalar), 0],
                 [0,                 0,                1]
             ])
             C_out[:, :, i] = Rx @ Ry @ Rz
         elif order == 'body2nav': # angle1=roll, angle2=pitch, angle3=yaw. Cnb = Rz(yaw)Ry(pitch)Rx(roll)
-            # This means: yaw_val = a3_val, pitch_val = a2_val, roll_val = a1_val
-            # Rz uses yaw_val (a3_val)
-            # Ry uses pitch_val (a2_val)
-            # Rx uses roll_val (a1_val)
+            # Handle both scalar and array inputs
+            def to_scalar(x):
+                if isinstance(x, np.ndarray):
+                    if x.size == 1:
+                        return x.item()
+                    else:
+                        return x[0]  # Take first element if array has multiple values
+                return x
+            
+            a1_scalar = to_scalar(a1_val)
+            a2_scalar = to_scalar(a2_val)
+            a3_scalar = to_scalar(a3_val)
+            
             Rz = np.array([
-                [math.cos(a3_val), -math.sin(a3_val), 0], # yaw is angle3
-                [math.sin(a3_val),  math.cos(a3_val), 0],
+                [np.cos(a3_scalar), -np.sin(a3_scalar), 0], # yaw is angle3
+                [np.sin(a3_scalar),  np.cos(a3_scalar), 0],
                 [0,                 0,                1]
             ])
             Ry = np.array([
-                [math.cos(a2_val),  0, math.sin(a2_val)], # pitch is angle2
+                [np.cos(a2_scalar),  0, np.sin(a2_scalar)], # pitch is angle2
                 [0,                 1, 0               ],
-                [-math.sin(a2_val), 0, math.cos(a2_val)]
+                [-np.sin(a2_scalar), 0, np.cos(a2_scalar)]
             ])
             Rx = np.array([
                 [1, 0,                 0               ], # roll is angle1
-                [0, math.cos(a1_val), -math.sin(a1_val)],
-                [0, math.sin(a1_val),  math.cos(a1_val)]
+                [0, np.cos(a1_scalar), -np.sin(a1_scalar)],
+                [0, np.sin(a1_scalar),  np.cos(a1_scalar)]
             ])
             C_out[:, :, i] = Rz @ Ry @ Rx
         else:
@@ -276,23 +340,28 @@ def euler2dcm(angle1: Union[float, np.ndarray],
 def correct_Cnb(Cnb: np.ndarray, tilt_err: np.ndarray) -> np.ndarray:
     """
     Corrects a body-to-navigation DCM (Cnb) with tilt angle errors.
-    The resulting DCM is the "estimated" or "in error" Cnb.
-    Cnb_estimate = R_error * Cnb_true
+
+    The resulting DCM is the "estimated" or "in error" Cnb:
+        Cnb_estimate = R_error * Cnb_true
     where R_error = expm(skew(-tilt_err)) is the rotation matrix from the tilt_err vector.
 
     This function ports the logic from MagNav.jl/src/dcm.jl correct_Cnb.
     The formula for B (R_error) used in Julia:
-    B = I - (sin(m)/m)*S_psi - ((1-cos(m))/m^2)*(S_psi @ S_psi)
+        B = I - (sin(m)/m)*S_psi - ((1-cos(m))/m^2)*(S_psi @ S_psi)
     where m = ||tilt_err|| and S_psi = skew(tilt_err).
     This B corresponds to expm(skew(-tilt_err)).
 
-    Args:
-        Cnb: 3x3xN (or 3x3) true Direction Cosine Matrix (body to navigation).
-        tilt_err: 3xN (or 3x1 or 1D array of 3) tilt angle error vector [rad].
-                  Each column is an [X, Y, Z] tilt error.
+    :param Cnb: 3x3xN (or 3x3) true Direction Cosine Matrix (body to navigation)
+    :type Cnb: np.ndarray
+    :param tilt_err: 3xN (or 3x1 or 1D array of 3) tilt angle error vector [rad].
+                     Each column is an [X, Y, Z] tilt error.
+    :type tilt_err: np.ndarray
 
-    Returns:
-        np.ndarray: 3x3xN (or 3x3) "in error" Direction Cosine Matrix.
+    :return: 3x3xN (or 3x3) "in error" Direction Cosine Matrix
+    :rtype: np.ndarray
+
+    .. note::
+        The function includes debug print statements that should be removed in production.
     """
     # Debugging for Error 2
     print(f"DEBUG_ERROR_2: type(tilt_err): {type(tilt_err)}")
@@ -329,7 +398,12 @@ def correct_Cnb(Cnb: np.ndarray, tilt_err: np.ndarray) -> np.ndarray:
             raise ValueError(f"tilt_err sequence converted to array has unsupported ndim {tilt_err_np.ndim} from {tilt_err}")
 
     elif isinstance(tilt_err, np.ndarray):
-        tilt_err_proc = tilt_err.astype(float) # Ensure float
+        # Handle case where tilt_err is wrapped in a 1-element array
+        if isinstance(tilt_err, np.ndarray) and tilt_err.shape == (1,) and isinstance(tilt_err[0], np.ndarray):
+            tilt_err = tilt_err[0]
+        
+        # Ensure we have a float array
+        tilt_err_proc = tilt_err.astype(float)
         if tilt_err_proc.ndim == 1:
             if tilt_err_proc.shape != (3,):
                 raise ValueError(f"1D tilt_err numpy array must have 3 elements, got shape {tilt_err_proc.shape}")

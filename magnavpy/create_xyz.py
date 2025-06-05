@@ -29,6 +29,22 @@ def map_check(m, la, lo) -> bool:
 
 @dataclass
 class Traj:
+    """Trajectory data class.
+
+    :param N: Number of points
+    :param dt: Time step (s)
+    :param tt: Time vector (s)
+    :param lat: Latitude (rad)
+    :param lon: Longitude (rad)
+    :param alt: Altitude (m)
+    :param vn: North velocity (m/s)
+    :param ve: East velocity (m/s)
+    :param vd: Down velocity (m/s)
+    :param fn: North specific force (m/s^2)
+    :param fe: East specific force (m/s^2)
+    :param fd: Down specific force (m/s^2)
+    :param Cnb: Direction cosine matrix (body to navigation) as 3x3xN array
+    """
     N: int
     dt: float
     tt: np.ndarray
@@ -45,6 +61,13 @@ class Traj:
 
 @dataclass
 class MagV:
+    """Vector magnetometer data.
+
+    :param x: X-component of magnetic field (nT)
+    :param y: Y-component of magnetic field (nT)
+    :param z: Z-component of magnetic field (nT)
+    :param t: Time vector (s)
+    """
     x: np.ndarray
     y: np.ndarray
     z: np.ndarray
@@ -75,17 +98,14 @@ def get_tolles_lawson_aircraft_field_vector(coeffs, terms, Bt_scale,
                                             **kwargs): # Added missing args and kwargs
     """Local placeholder for get_tolles_lawson_aircraft_field_vector."""
     print(f"DEBUG_CREATE_XYZ: Using placeholder get_tolles_lawson_aircraft_field_vector")
-    # Original placeholder logic:
-    # return (np.zeros((3,3)), np.zeros((3,3)), np.zeros((3,3)))
-    # The function in Julia returns a 3xN array, so let's return something like that.
-    # Determine N from one of the inputs if possible, e.g., flux_c.shape[1] or dcm_data.shape[0]
-    # For now, a generic placeholder:
-    if hasattr(dcm_data, 'shape') and len(dcm_data.shape) > 0 and dcm_data.shape[0] > 1: # dcm_data might be N x 3 x 3, ensure N is not 1 from a scalar-like input
-         N = dcm_data.shape[0]
-    elif hasattr(flux_c, 'shape') and len(flux_c.shape) > 1:
-        N = flux_c.shape[1]
+    # Determine N from dcm_data which should be (N, 3, 3)
+    if dcm_data is not None and hasattr(dcm_data, 'shape') and len(dcm_data.shape) == 3:
+        N = dcm_data.shape[0]
+    # Otherwise try to get from flux_c
+    elif flux_c is not None and hasattr(flux_c, 'shape') and len(flux_c.shape) == 1:
+        N = flux_c.shape[0]
     else:
-        N = 1 # Default if N cannot be determined
+        N = 1
     return np.zeros((3, N))
 def create_ins_model_matrices(dt: float, std_acc: np.ndarray, std_gyro: np.ndarray,
                                 tau_acc: np.ndarray, tau_gyro: np.ndarray,
@@ -387,6 +407,95 @@ def create_xyz0(
 ) -> XYZ0:
     """
     Create basic flight data (XYZ0 struct). Assumes constant altitude (2D flight).
+
+    :param mapS: Scalar map (MapS, MapSd, or MapS3D) or None to load default
+    :type mapS: Optional[Union[MapS, MapSd, MapS3D]]
+    :param alt: Altitude (m) for trajectory, defaults to 1000.0
+    :type alt: float, optional
+    :param dt: Time step (s), defaults to 0.1
+    :type dt: float, optional
+    :param t: Total time (s), defaults to 300.0
+    :type t: float, optional
+    :param v: Velocity (m/s), defaults to 68.0
+    :type v: float, optional
+    :param ll1: Starting (lat, lon) in radians, defaults to ()
+    :type ll1: Tuple[float, float], optional
+    :param ll2: Ending (lat, lon) in radians, defaults to ()
+    :type ll2: Tuple[float, float], optional
+    :param N_waves: Number of sine waves in trajectory, defaults to 1
+    :type N_waves: int, optional
+    :param attempts: Number of attempts to generate valid trajectory, defaults to 10
+    :type attempts: int, optional
+    :param info: Information string, defaults to "Simulated data"
+    :type info: str, optional
+    :param flight: Flight number, defaults to 1
+    :type flight: int, optional
+    :param line: Line number, defaults to 1
+    :type line: int, optional
+    :param year: Year, defaults to 2023
+    :type year: int, optional
+    :param doy: Day of year, defaults to 154
+    :type doy: int, optional
+    :param mapV: Vector map (MapV) or None to load default, defaults to None
+    :type mapV: Optional[MapV], optional
+    :param cor_sigma: Standard deviation of correlated noise for magnetometer, defaults to 1.0
+    :type cor_sigma: float, optional
+    :param cor_tau: Time constant of correlated noise for magnetometer (s), defaults to 600.0
+    :type cor_tau: float, optional
+    :param cor_var: Variance of white noise for magnetometer, defaults to 1.0**2
+    :type cor_var: float, optional
+    :param cor_drift: Drift rate for magnetometer (nT/s), defaults to 0.001
+    :type cor_drift: float, optional
+    :param cor_perm_mag: Permanent magnetism coefficient (nT), defaults to 5.0
+    :type cor_perm_mag: float, optional
+    :param cor_ind_mag: Induced magnetism coefficient (nT), defaults to 5.0
+    :type cor_ind_mag: float, optional
+    :param cor_eddy_mag: Eddy current magnetism coefficient (nT), defaults to 0.5
+    :type cor_eddy_mag: float, optional
+    :param init_pos_sigma: Initial position uncertainty (m), defaults to 3.0
+    :type init_pos_sigma: float, optional
+    :param init_alt_sigma: Initial altitude uncertainty (m), defaults to 0.001
+    :type init_alt_sigma: float, optional
+    :param init_vel_sigma: Initial velocity uncertainty (m/s), defaults to 0.01
+    :type init_vel_sigma: float, optional
+    :param init_att_sigma: Initial attitude uncertainty (rad), defaults to np.deg2rad(0.01)
+    :type init_att_sigma: float, optional
+    :param VRW_sigma: Velocity random walk (m/s/rtHz), defaults to 0.000238
+    :type VRW_sigma: float, optional
+    :param ARW_sigma: Angular random walk (rad/rtHz), defaults to 0.000000581
+    :type ARW_sigma: float, optional
+    :param baro_sigma: Barometer noise standard deviation (m), defaults to 1.0
+    :type baro_sigma: float, optional
+    :param ha_sigma: Horizontal accelerometer noise (m/s^2), defaults to 0.001
+    :type ha_sigma: float, optional
+    :param a_hat_sigma: Accelerometer bias noise (m/s^2), defaults to 0.01
+    :type a_hat_sigma: float, optional
+    :param acc_sigma: Accelerometer noise (m/s^2), defaults to 0.000245
+    :type acc_sigma: float, optional
+    :param gyro_sigma: Gyroscope noise (rad/s), defaults to 0.00000000727
+    :type gyro_sigma: float, optional
+    :param fogm_sigma: First-order Gauss-Markov process sigma for magnetometer, defaults to 1.0
+    :type fogm_sigma: float, optional
+    :param baro_tau: Barometer time constant (s), defaults to 3600.0
+    :type baro_tau: float, optional
+    :param acc_tau: Accelerometer time constant (s), defaults to 3600.0
+    :type acc_tau: float, optional
+    :param gyro_tau: Gyroscope time constant (s), defaults to 3600.0
+    :type gyro_tau: float, optional
+    :param fogm_tau: FOGM time constant for magnetometer (s), defaults to 600.0
+    :type fogm_tau: float, optional
+    :param save_h5: Save to HDF5 file, defaults to False
+    :type save_h5: bool, optional
+    :param xyz_h5: HDF5 filename, defaults to "xyz_data.h5"
+    :type xyz_h5: str, optional
+    :param silent: Suppress output, defaults to False
+    :type silent: bool, optional
+    :param default_scalar_map_id_override: Override for default scalar map ID, defaults to None
+    :type default_scalar_map_id_override: Optional[str], optional
+    :param default_vector_map_id_override: Override for default vector map ID, defaults to None
+    :type default_vector_map_id_override: Optional[str], optional
+    :return: XYZ0 data structure
+    :rtype: XYZ0
     """
     # Fetch constants module from sys.modules to access patched values
     constants_module = sys.modules.get('magnavpy.constants', constants) # Fallback to imported if not in sys.modules
@@ -819,7 +928,9 @@ def create_ins(
         fn_k = traj.fn[0] if len(traj.fn) == 1 else traj.fn[k]
         fe_k = traj.fe[0] if len(traj.fe) == 1 else traj.fe[k]
         fd_k = traj.fd[0] if len(traj.fd) == 1 else traj.fd[k]
-        Cnb_k = traj.Cnb[0] if traj.Cnb.shape[0] == 1 else traj.Cnb[k]
+        # Use modulo indexing to safely access DCM array
+        dcm_index = k % len(traj.Cnb)
+        Cnb_k = traj.Cnb[dcm_index]
         Phi_k = get_phi_matrix(
             nx, lat_k, vn_k, ve_k, vd_k,
             fn_k, fe_k, fd_k, Cnb_k, # Pass Cnb for current step
@@ -845,7 +956,21 @@ def create_ins(
     # Or if err_ins are Euler angle errors, Cnb_ins = Cnb_true @ delta_Cnb(deuler)
     # For simplicity, assuming direct correction or that correct_cnb_matrix handles it.
     # The Julia code uses: Cnb_ins[k,:,:] = correct_cnb_matrix(traj.Cnb[k,:,:], err_ins[k,6:9])
-    Cnb_ins_array = np.array([correct_cnb_matrix(traj.Cnb[:,:], err_ins[k,6:9]) for k in range(N)])
+    # Use modulo indexing to safely access DCM array
+    # Handle different Cnb array shapes
+    if traj.Cnb.size == 1:
+        # For scalar or 1-element array, create a 3x3 identity matrix
+        Cnb_3d = np.eye(3).reshape(1, 3, 3)
+    elif traj.Cnb.size == 9:
+        # For 1D array with 9 elements, reshape to 3x3
+        Cnb_3d = traj.Cnb.reshape(1, 3, 3)
+    elif traj.Cnb.ndim == 2:
+        # For 2D array, add time dimension
+        Cnb_3d = traj.Cnb.reshape((1, 3, 3))
+    else:
+        Cnb_3d = traj.Cnb
+        
+    Cnb_ins_array = np.array([correct_cnb_matrix(Cnb_3d[k % len(Cnb_3d)], err_ins[k,6:9]) for k in range(N)])
 
     # Specific forces from INS (derived from noisy accels, transformed by noisy Cnb)
     # This part is complex as it depends on how acc_bias (err_ins[:,11:14]) and gyro_bias (err_ins[:,14:17])

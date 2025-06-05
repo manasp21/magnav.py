@@ -33,8 +33,8 @@ create_xyz Module
    :undoc-members:
    :show-inheritance:
 
-dcm Module
-----------
+dcm_util Module
+---------------
 
 .. automodule:: magnavpy.dcm_util
    :members:
@@ -52,13 +52,13 @@ ekf Module
 eval_filt Module
 ----------------
 
-.. .. automodule:: magnavpy.eval_filt
+.. automodule:: magnavpy.eval_filt
    :members:
    :undoc-members:
    :show-inheritance:
 
-get_map Module
---------------
+map_utils Module
+----------------
 
 .. automodule:: magnavpy.map_utils
    :members:
@@ -68,23 +68,7 @@ get_map Module
 google_earth Module
 -------------------
 
-.. .. automodule:: magnavpy.google_earth
-..    :members:
-   :undoc-members:
-   :show-inheritance:
-
-map_fft Module
---------------
-
-.. automodule:: magnavpy.map_utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-map_functions Module
---------------------
-
-.. automodule:: magnavpy.map_utils
+.. automodule:: magnavpy.google_earth
    :members:
    :undoc-members:
    :show-inheritance:
@@ -100,18 +84,18 @@ model_functions Module
 mpf Module
 ----------
 
-# .. automodule:: magnavpy.mpf
-#    :members:
+.. automodule:: magnavpy.mpf
+   :members:
    :undoc-members:
    :show-inheritance:
 
-.. nekf Module
-.. -----------
+nekf Module
+-----------
 
-.. .. automodule:: magnavpy.nekf
-..    :members:
-..    :undoc-members:
-..    :show-inheritance:
+.. automodule:: magnavpy.nekf
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 rt_comp_main Module
 -------------------
@@ -132,8 +116,8 @@ tolles_lawson Module
 xyz2h5 Module
 -------------
 
-# .. automodule:: magnavpy.xyz2h5
-#    :members:
+.. automodule:: magnavpy.xyz2h5
+   :members:
    :undoc-members:
    :show-inheritance:
 

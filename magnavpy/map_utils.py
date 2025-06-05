@@ -621,7 +621,13 @@ def map_trim(map_obj: Union[MapS, MapSd, MapS3D, MapV],
         map_obj = dataclasses.replace(map_obj) # Shallow copy of dataclass structure
         for attr_name in ['map', 'xx', 'yy', 'alt', 'mask', 'mapX', 'mapY', 'mapZ', 'lat', 'lon']:
             if hasattr(map_obj, attr_name) and getattr(map_obj, attr_name) is not None:
-                setattr(map_obj, attr_name, getattr(map_obj, attr_name).copy())
+                # Only call .copy() on array objects, not floats
+                attr_val = getattr(map_obj, attr_name)
+                if isinstance(attr_val, np.ndarray):
+                    setattr(map_obj, attr_name, attr_val.copy())
+                else:
+                    # For non-array values, use the original value
+                    setattr(map_obj, attr_name, attr_val)
     
     current_map_data = map_obj.map if hasattr(map_obj, 'map') else map_obj.mapX # Use mapX for MapV
 
@@ -891,7 +897,7 @@ def upward_fft(map_in: Union[MapS, MapS3D, MapV],
                       map=new_3d_map_data,
                       xx=map_in.xx.copy(),
                       yy=map_in.yy.copy(),
-                      alt=alt_out.copy(),
+                      zz=alt_out.copy(),
                       mask=new_3d_mask_data,
                       lat=map_in.lat.copy() if map_in.lat is not None else None,
                       lon=map_in.lon.copy() if map_in.lon is not None else None)
@@ -1167,9 +1173,9 @@ def get_map(map_name: str, variable_name: str = "map_data", *args, map_type: Opt
             dummy_data_shape = (dummy_yy.size, dummy_xx.size)
             return MapV(info="Dummy EMM720 Vector Map",
                         alt=0.0,
-                        mapX=np.zeros(dummy_data_shape),
-                        mapY=np.zeros(dummy_data_shape),
-                        mapZ=np.zeros(dummy_data_shape),
+                        x=np.zeros(dummy_data_shape),
+                        y=np.zeros(dummy_data_shape),
+                        z=np.zeros(dummy_data_shape),
                         xx=dummy_xx,
                         yy=dummy_yy,
                         mask=np.ones(dummy_data_shape, dtype=bool),

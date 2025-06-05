@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>magnavpy.xyz2h5 &#8212; MagNavPy 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=73454398" />
+    <script src="../../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">MagNavPy</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=manasp21&repo=magnav.py&type=star&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../data.html">Flight Path &amp; INS Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maps.html">Magnetic Anomaly Maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../comp.html">Aeromagnetic Compensation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../nncomp.html">Neural Network-Based Model Diagrams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../nav.html">Navigation Algorithms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../status.html">Current Status and Known Issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_functions.html">API: Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_structs.html">API: Structs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_reference.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for magnavpy.xyz2h5</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">argparse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_ensure_extension</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">extension</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Ensures the filepath has the given extension.&quot;&quot;&quot;</span>
+    <span class="n">name</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ext</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">!=</span> <span class="n">extension</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">name</span> <span class="o">+</span> <span class="n">extension</span>
+    <span class="k">return</span> <span class="n">filepath</span>
+
+<div class="viewcode-block" id="xyz2h5">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.xyz2h5.xyz2h5">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">xyz2h5</span><span class="p">(</span><span class="n">xyz_filepath</span><span class="p">,</span> <span class="n">h5_filepath</span><span class="p">,</span>
+           <span class="n">lines_filter</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lines_type</span><span class="o">=</span><span class="s1">&#39;exclude&#39;</span><span class="p">,</span>
+           <span class="n">tt_sort</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">downsample_160</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert XYZ data file to HDF5 format.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        xyz_filepath (str): Path to the input XYZ file.</span>
+<span class="sd">        h5_filepath (str): Path to the output HDF5 file.</span>
+<span class="sd">        lines_filter (list, optional): List of tuples for line filtering.</span>
+<span class="sd">            Each tuple: (line_number, start_time, end_time). Defaults to None.</span>
+<span class="sd">        lines_type (str, optional): Type of line filtering: &#39;include&#39; or &#39;exclude&#39;.</span>
+<span class="sd">            Defaults to &#39;exclude&#39;.</span>
+<span class="sd">        tt_sort (bool, optional): If True, sort data by &#39;tt&#39; column. Defaults to True.</span>
+<span class="sd">        downsample_160 (bool, optional): If True, attempt to downsample 160Hz-like</span>
+<span class="sd">            data to 10Hz based on &#39;tt&#39; column. Defaults to False.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">xyz_filepath</span> <span class="o">=</span> <span class="n">_ensure_extension</span><span class="p">(</span><span class="n">xyz_filepath</span><span class="p">,</span> <span class="s2">&quot;.xyz&quot;</span><span class="p">)</span>
+    <span class="n">h5_filepath</span> <span class="o">=</span> <span class="n">_ensure_extension</span><span class="p">(</span><span class="n">h5_filepath</span><span class="p">,</span> <span class="s2">&quot;.h5&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">xyz_filepath</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error: Input XYZ file not found: </span><span class="si">{</span><span class="n">xyz_filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Reading XYZ file: </span><span class="si">{</span><span class="n">xyz_filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># Assuming space/tab delimited, first line is header, &#39;*&#39; is NaN</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">xyz_filepath</span><span class="p">,</span> <span class="n">delim_whitespace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">na_values</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;*&#39;</span><span class="p">])</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error reading XYZ file: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;XYZ file is empty or could not be parsed.&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="c1"># Convert columns to numeric where possible, coercing errors to NaN</span>
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s1">&#39;coerce&#39;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Initial data shape: </span><span class="si">{</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Downsample 160Hz data to 10Hz (if applicable and &#39;tt&#39; column exists)</span>
+    <span class="k">if</span> <span class="n">downsample_160</span> <span class="ow">and</span> <span class="s1">&#39;tt&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Applying 160Hz to 10Hz downsampling...&quot;</span><span class="p">)</span>
+        <span class="c1"># Ensure &#39;tt&#39; is numeric and not all NaN</span>
+        <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;tt&#39;</span><span class="p">])</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;tt&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="c1"># Approximate Julia logic: (par(split(line)[ind_tt])+1e-6) % 0.1 &lt; 1e-3</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[((</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;tt&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-6</span><span class="p">)</span> <span class="o">%</span> <span class="mf">0.1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-3</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Data shape after downsampling: </span><span class="si">{</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: &#39;tt&#39; column not suitable for downsampling or not found.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Filter lines based on line number and time ranges</span>
+    <span class="k">if</span> <span class="n">lines_filter</span> <span class="ow">and</span> <span class="s1">&#39;line&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="ow">and</span> <span class="s1">&#39;tt&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Applying line filtering (type: </span><span class="si">{</span><span class="n">lines_type</span><span class="si">}</span><span class="s2">)...&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;line&#39;</span><span class="p">])</span> <span class="ow">and</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;tt&#39;</span><span class="p">])):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: &#39;line&#39; or &#39;tt&#39; columns are not numeric. Skipping line filtering.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">combined_condition</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="kc">False</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">line_num</span><span class="p">,</span> <span class="n">start_time</span><span class="p">,</span> <span class="n">end_time</span> <span class="ow">in</span> <span class="n">lines_filter</span><span class="p">:</span>
+                <span class="n">condition</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;line&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">line_num</span><span class="p">)</span> <span class="o">&amp;</span> \
+                            <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;tt&#39;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">start_time</span><span class="p">)</span> <span class="o">&amp;</span> \
+                            <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;tt&#39;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">end_time</span><span class="p">)</span>
+                <span class="n">combined_condition</span> <span class="o">|=</span> <span class="n">condition</span>
+
+            <span class="k">if</span> <span class="n">lines_type</span> <span class="o">==</span> <span class="s1">&#39;exclude&#39;</span><span class="p">:</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="o">~</span><span class="n">combined_condition</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">lines_type</span> <span class="o">==</span> <span class="s1">&#39;include&#39;</span><span class="p">:</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">combined_condition</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Unknown lines_type &#39;</span><span class="si">{</span><span class="n">lines_type</span><span class="si">}</span><span class="s2">&#39;. Skipping line filtering.&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Data shape after line filtering: </span><span class="si">{</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Sort data by time (&#39;tt&#39; column)</span>
+    <span class="k">if</span> <span class="n">tt_sort</span> <span class="ow">and</span> <span class="s1">&#39;tt&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Sorting data by &#39;tt&#39; column...&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;tt&#39;</span><span class="p">])</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;tt&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s1">&#39;tt&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: &#39;tt&#39; column not suitable for sorting or not found.&quot;</span><span class="p">)</span>
+
+
+    <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No data remaining after processing. HDF5 file will not be created.&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Writing to HDF5 file: </span><span class="si">{</span><span class="n">h5_filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">h5_filepath</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">hf</span><span class="p">:</span>
+            <span class="c1"># Write N (number of data rows)</span>
+            <span class="n">hf</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;N&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))</span>
+
+            <span class="c1"># Write dt (time step) if &#39;tt&#39; is available</span>
+            <span class="k">if</span> <span class="s1">&#39;tt&#39;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;tt&#39;</span><span class="p">])</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;tt&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="c1"># Calculate dt similar to Julia: round(data[ind,ind_tt][2]-data[ind,ind_tt][1],digits=9)</span>
+                <span class="c1"># Using median of differences for robustness</span>
+                <span class="n">dt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;tt&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">diff</span><span class="p">()</span><span class="o">.</span><span class="n">median</span><span class="p">(),</span> <span class="mi">9</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">dt</span><span class="p">):</span> <span class="c1"># if only one point after diff or other issues</span>
+                    <span class="n">dt</span> <span class="o">=</span> <span class="mf">0.1</span> <span class="c1"># default from Julia for N &gt; 1 case with no second point</span>
+                <span class="n">hf</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;dt&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">dt</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">hf</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;dt&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span> <span class="c1"># Default dt if &#39;tt&#39; not usable</span>
+
+            <span class="c1"># Write other data fields (each column as a dataset)</span>
+            <span class="k">for</span> <span class="n">col_name</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">col_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;N&#39;</span><span class="p">,</span> <span class="s1">&#39;dt&#39;</span><span class="p">]:</span> <span class="c1"># Avoid overwriting N, dt if they were column names</span>
+                    <span class="c1"># Ensure data is in a C-contiguous array and handle NaNs appropriately for h5py</span>
+                    <span class="n">col_data</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+                    <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_numeric_dtype</span><span class="p">(</span><span class="n">col_data</span><span class="p">):</span>
+                         <span class="c1"># h5py handles np.nan for float types. For int, NaNs might be an issue if not handled by pandas.</span>
+                        <span class="k">pass</span> <span class="c1"># Data is already numeric</span>
+                    <span class="k">else</span><span class="p">:</span> <span class="c1"># For object dtypes that might contain strings after failed numeric conversion</span>
+                        <span class="c1"># Try to convert to string if not numeric, h5py handles string arrays</span>
+                        <span class="n">col_data</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col_name</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+                    <span class="n">hf</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="n">col_name</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">col_data</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;HDF5 file created successfully.&quot;</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error writing HDF5 file: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="main">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.xyz2h5.main">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Convert XYZ data file to HDF5 format.&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;xyz_file&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path to the input XYZ file (e.g., data.xyz)&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;h5_file&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Path for the output HDF5 file (e.g., data.h5)&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--lines&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Line filtering criteria: &#39;line,start_t,end_t;line,start_t,end_t;...&#39;. &quot;</span>
+                             <span class="s2">&quot;Example: &#39;1001.0,0,100;1002.0,50,200&#39;&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--lines_type&quot;</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;include&#39;</span><span class="p">,</span> <span class="s1">&#39;exclude&#39;</span><span class="p">],</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;exclude&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Type of line filtering: &#39;include&#39; or &#39;exclude&#39;. Default: exclude.&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--no_sort&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Disable sorting by &#39;tt&#39; column.&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--downsample_160&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Enable 160Hz to 10Hz downsampling based on &#39;tt&#39; column.&quot;</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="n">lines_filter_parsed</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">lines</span><span class="p">:</span>
+        <span class="n">lines_filter_parsed</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">segments</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">lines</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">seg</span> <span class="ow">in</span> <span class="n">segments</span><span class="p">:</span>
+                <span class="n">parts</span> <span class="o">=</span> <span class="n">seg</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="n">lines_filter_parsed</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">float</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">2</span><span class="p">])))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Each line segment must have 3 parts: line,start_time,end_time&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">parser</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid format for --lines: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. Use &#39;line,start,end;...&#39;&quot;</span><span class="p">)</span>
+
+    <span class="n">xyz2h5</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">xyz_file</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">h5_file</span><span class="p">,</span>
+           <span class="n">lines_filter</span><span class="o">=</span><span class="n">lines_filter_parsed</span><span class="p">,</span>
+           <span class="n">lines_type</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">lines_type</span><span class="p">,</span>
+           <span class="n">tt_sort</span><span class="o">=</span><span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">no_sort</span><span class="p">,</span>
+           <span class="n">downsample_160</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">downsample_160</span><span class="p">)</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;2020-2023, Original MagNav.jl Authors; 2024-2025, Manas Pandey.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

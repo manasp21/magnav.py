@@ -128,7 +128,29 @@
 
 <div class="viewcode-block" id="CompParams">
 <a class="viewcode-back" href="../../api_structs.html#magnavpy.compensation.CompParams">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">CompParams</span><span class="p">:</span> <span class="c1"># Base placeholder</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CompParams</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for compensation parameters.</span>
+<span class="sd">    </span>
+<span class="sd">    :param version: Parameter version</span>
+<span class="sd">    :param features_setup: List of feature names</span>
+<span class="sd">    :param features_no_norm: Flags for features to skip normalization</span>
+<span class="sd">    :param model_type: Model type identifier (e.g., &#39;m1&#39;, &#39;m2&#39;)</span>
+<span class="sd">    :param y_type: Target variable type</span>
+<span class="sd">    :param use_mag: Magnetometer data field to use</span>
+<span class="sd">    :param use_vec: Vector data field to use</span>
+<span class="sd">    :param data_norms: Tuple of normalization parameters</span>
+<span class="sd">    :param model: Neural network model</span>
+<span class="sd">    :param terms: List of Tolles-Lawson terms</span>
+<span class="sd">    :param terms_A: List of aircraft terms</span>
+<span class="sd">    :param sub_diurnal: Subtract diurnal effect flag</span>
+<span class="sd">    :param sub_igrf: Subtract IGRF flag</span>
+<span class="sd">    :param bpf_mag: Bandpass filter magnetometer data flag</span>
+<span class="sd">    :param reorient_vec: Reorient vector data flag</span>
+<span class="sd">    :param norm_type_A: Normalization type for aircraft terms</span>
+<span class="sd">    :param norm_type_x: Normalization type for features</span>
+<span class="sd">    :param norm_type_y: Normalization type for targets</span>
+<span class="sd">    :param TL_coef: Tolles-Lawson coefficients</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">version</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">features_setup</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;features_setup&quot;</span><span class="p">,</span> <span class="p">[])</span>
@@ -153,7 +175,26 @@
 
 <div class="viewcode-block" id="NNCompParams">
 <a class="viewcode-back" href="../../api_structs.html#magnavpy.compensation.NNCompParams">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">NNCompParams</span><span class="p">(</span><span class="n">CompParams</span><span class="p">):</span> <span class="c1"># Placeholder</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">NNCompParams</span><span class="p">(</span><span class="n">CompParams</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parameters for neural network compensation.</span>
+<span class="sd">    </span>
+<span class="sd">    :param η_adam: Adam learning rate</span>
+<span class="sd">    :param epoch_adam: Adam training epochs</span>
+<span class="sd">    :param epoch_lbfgs: LBFGS training epochs</span>
+<span class="sd">    :param hidden: List of hidden layer sizes</span>
+<span class="sd">    :param activation: Activation function</span>
+<span class="sd">    :param loss: Loss function</span>
+<span class="sd">    :param batchsize: Batch size</span>
+<span class="sd">    :param frac_train: Fraction of data for training</span>
+<span class="sd">    :param α_sgl: Sparse group lasso alpha</span>
+<span class="sd">    :param λ_sgl: Sparse group lasso lambda</span>
+<span class="sd">    :param k_pca: PCA components</span>
+<span class="sd">    :param drop_fi: Feature importance drop flag</span>
+<span class="sd">    :param drop_fi_bson: BSON file for drop feature importance</span>
+<span class="sd">    :param drop_fi_csv: CSV file for drop feature importance</span>
+<span class="sd">    :param perm_fi: Permutation feature importance flag</span>
+<span class="sd">    :param perm_fi_csv: CSV file for permutation feature importance</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">η_adam</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;η_adam&quot;</span><span class="p">,</span> <span class="mf">0.001</span><span class="p">)</span>
@@ -176,7 +217,14 @@
 
 <div class="viewcode-block" id="LinCompParams">
 <a class="viewcode-back" href="../../api_structs.html#magnavpy.compensation.LinCompParams">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">LinCompParams</span><span class="p">(</span><span class="n">CompParams</span><span class="p">):</span> <span class="c1"># Placeholder</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">LinCompParams</span><span class="p">(</span><span class="n">CompParams</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Parameters for linear compensation.</span>
+<span class="sd">    </span>
+<span class="sd">    :param k_plsr: PLS components</span>
+<span class="sd">    :param λ_TL: Tolles-Lawson ridge lambda</span>
+<span class="sd">    :param lambda_elastic: ElasticNet lambda</span>
+<span class="sd">    :param l1_ratio_elastic: ElasticNet L1 ratio</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">k_plsr</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;k_plsr&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="c1"># Assuming 0 means use all features if not specified</span>
@@ -188,7 +236,15 @@
 
 <div class="viewcode-block" id="XYZ">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.compensation.XYZ">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">XYZ</span><span class="p">:</span> <span class="c1"># Placeholder</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">XYZ</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Data structure for flight trajectory and magnetometer readings.</span>
+<span class="sd">    </span>
+<span class="sd">    :param traj: Trajectory data</span>
+<span class="sd">    :param mag_1_c: Compensated scalar magnetometer data</span>
+<span class="sd">    :param flux_a: Vector magnetometer data</span>
+<span class="sd">    :param dt: Time step</span>
+<span class="sd">    :param kwargs: Additional fields as keyword arguments</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">traj</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mag_1_c</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">flux_a</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">traj</span> <span class="o">=</span> <span class="n">traj</span> <span class="k">if</span> <span class="n">traj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span> <span class="c1"># Example: N x 3 (lat,lon,alt)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mag_1_c</span> <span class="o">=</span> <span class="n">mag_1_c</span> <span class="c1"># Placeholder for scalar magnetometer data</span>
@@ -232,7 +288,14 @@
 <div class="viewcode-block" id="norm_sets">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.compensation.norm_sets">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">norm_sets</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">norm_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;standardize&quot;</span><span class="p">,</span> <span class="n">no_norm</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalizes data using specified method (standardize, normalize, or none).&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Normalizes data using specified method (standardize, normalize, or none).</span>
+<span class="sd">    </span>
+<span class="sd">    :param data: Input data array</span>
+<span class="sd">    :param norm_type: Normalization type (&#39;standardize&#39;, &#39;normalize&#39;, &#39;none&#39;)</span>
+<span class="sd">    :param no_norm: Flags for features to skip normalization</span>
+<span class="sd">    :return: Tuple of (bias, scale, normalized_data)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># This is a simplified example. The actual function might be more complex.</span>
     <span class="n">original_ndim</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">ndim</span> <span class="c1"># Store original ndim</span>
     <span class="n">data_for_norm</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> <span class="c1"># Work on a copy</span>
@@ -282,7 +345,14 @@
 <div class="viewcode-block" id="denorm_sets">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.compensation.denorm_sets">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">denorm_sets</span><span class="p">(</span><span class="n">bias</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">],</span> <span class="n">scale</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">number</span><span class="p">],</span> <span class="n">data_norm</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Denormalizes data given bias and scale.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Denormalizes data given bias and scale.</span>
+<span class="sd">    </span>
+<span class="sd">    :param bias: Bias values from normalization</span>
+<span class="sd">    :param scale: Scale values from normalization</span>
+<span class="sd">    :param data_norm: Normalized data</span>
+<span class="sd">    :return: Denormalized data</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Ensure bias and scale are broadcastable with data_norm</span>
     <span class="n">_bias</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">bias</span><span class="p">)</span>
     <span class="n">_scale</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span>
@@ -299,7 +369,12 @@
 <div class="viewcode-block" id="unpack_data_norms">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.compensation.unpack_data_norms">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">unpack_data_norms</span><span class="p">(</span><span class="n">data_norms_tuple</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Unpacks data normalization parameters from a tuple.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Unpacks data normalization parameters from a tuple.</span>
+<span class="sd">    </span>
+<span class="sd">    :param data_norms_tuple: Tuple of normalization parameters</span>
+<span class="sd">    :return: Unpacked normalization parameters</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Example: (A_bias,A_scale,v_scale,x_bias,x_scale,y_bias,y_scale)</span>
     <span class="c1"># or (_,_,v_scale,x_bias,x_scale,y_bias,y_scale)</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_norms_tuple</span><span class="p">)</span> <span class="o">==</span> <span class="mi">7</span><span class="p">:</span> <span class="c1"># Common case</span>
@@ -317,7 +392,16 @@
 <div class="viewcode-block" id="get_nn_m">
 <a class="viewcode-back" href="../../api_reference.html#magnavpy.compensation.get_nn_m">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_nn_m</span><span class="p">(</span><span class="n">Nf</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">Ny</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">hidden</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">activation</span><span class="p">:</span> <span class="n">Callable</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a neural network model (nn.Sequential) based on specified layers and activation.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates a neural network model (nn.Sequential) based on specified layers and activation.</span>
+<span class="sd">    </span>
+<span class="sd">    :param Nf: Number of input features</span>
+<span class="sd">    :param Ny: Number of output features</span>
+<span class="sd">    :param hidden: List of hidden layer sizes</span>
+<span class="sd">    :param activation: Activation function</span>
+<span class="sd">    :param kwargs: Additional keyword arguments</span>
+<span class="sd">    :return: Neural network model</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">layers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">input_size</span> <span class="o">=</span> <span class="n">Nf</span>
     <span class="n">model_type_nn</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;model_type&quot;</span><span class="p">)</span> <span class="c1"># Store for clarity</span>

@@ -31,7 +31,29 @@ SILENT_DEBUG = False # Global debug flag, similar to silent_debug in Julia
 class Chain(nn.Sequential): # Alias for torch.nn.Sequential for closer naming
     pass
 
-class CompParams: # Base placeholder
+class CompParams:
+    """Base class for compensation parameters.
+    
+    :param version: Parameter version
+    :param features_setup: List of feature names
+    :param features_no_norm: Flags for features to skip normalization
+    :param model_type: Model type identifier (e.g., 'm1', 'm2')
+    :param y_type: Target variable type
+    :param use_mag: Magnetometer data field to use
+    :param use_vec: Vector data field to use
+    :param data_norms: Tuple of normalization parameters
+    :param model: Neural network model
+    :param terms: List of Tolles-Lawson terms
+    :param terms_A: List of aircraft terms
+    :param sub_diurnal: Subtract diurnal effect flag
+    :param sub_igrf: Subtract IGRF flag
+    :param bpf_mag: Bandpass filter magnetometer data flag
+    :param reorient_vec: Reorient vector data flag
+    :param norm_type_A: Normalization type for aircraft terms
+    :param norm_type_x: Normalization type for features
+    :param norm_type_y: Normalization type for targets
+    :param TL_coef: Tolles-Lawson coefficients
+    """
     def __init__(self, **kwargs):
         self.version: int = kwargs.get("version", 1)
         self.features_setup: List[str] = kwargs.get("features_setup", [])
@@ -53,7 +75,26 @@ class CompParams: # Base placeholder
         self.norm_type_y: str = kwargs.get("norm_type_y", "standardize")
         self.TL_coef: np.ndarray = kwargs.get("TL_coef", np.zeros(18, dtype=np.float32))
 
-class NNCompParams(CompParams): # Placeholder
+class NNCompParams(CompParams):
+    """Parameters for neural network compensation.
+    
+    :param η_adam: Adam learning rate
+    :param epoch_adam: Adam training epochs
+    :param epoch_lbfgs: LBFGS training epochs
+    :param hidden: List of hidden layer sizes
+    :param activation: Activation function
+    :param loss: Loss function
+    :param batchsize: Batch size
+    :param frac_train: Fraction of data for training
+    :param α_sgl: Sparse group lasso alpha
+    :param λ_sgl: Sparse group lasso lambda
+    :param k_pca: PCA components
+    :param drop_fi: Feature importance drop flag
+    :param drop_fi_bson: BSON file for drop feature importance
+    :param drop_fi_csv: CSV file for drop feature importance
+    :param perm_fi: Permutation feature importance flag
+    :param perm_fi_csv: CSV file for permutation feature importance
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.η_adam: float = kwargs.get("η_adam", 0.001)
@@ -73,7 +114,14 @@ class NNCompParams(CompParams): # Placeholder
         self.perm_fi: bool = kwargs.get("perm_fi", False)
         self.perm_fi_csv: str = kwargs.get("perm_fi_csv", "")
 
-class LinCompParams(CompParams): # Placeholder
+class LinCompParams(CompParams):
+    """Parameters for linear compensation.
+    
+    :param k_plsr: PLS components
+    :param λ_TL: Tolles-Lawson ridge lambda
+    :param lambda_elastic: ElasticNet lambda
+    :param l1_ratio_elastic: ElasticNet L1 ratio
+    """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.k_plsr: int = kwargs.get("k_plsr", 0) # Assuming 0 means use all features if not specified
@@ -82,7 +130,15 @@ class LinCompParams(CompParams): # Placeholder
         self.l1_ratio_elastic: float = kwargs.get("l1_ratio_elastic", 0.5) # Mixin_g for ElasticNet (0=Ridge, 1=Lasso)
 
 
-class XYZ: # Placeholder
+class XYZ:
+    """Data structure for flight trajectory and magnetometer readings.
+    
+    :param traj: Trajectory data
+    :param mag_1_c: Compensated scalar magnetometer data
+    :param flux_a: Vector magnetometer data
+    :param dt: Time step
+    :param kwargs: Additional fields as keyword arguments
+    """
     def __init__(self, traj=None, mag_1_c=None, flux_a=None, dt=0.1, **kwargs):
         self.traj = traj if traj is not None else np.empty((0,3)) # Example: N x 3 (lat,lon,alt)
         self.mag_1_c = mag_1_c # Placeholder for scalar magnetometer data
@@ -111,7 +167,14 @@ class TempParams: # Placeholder
 
 # --- Stub functions (to be implemented or imported) ---
 def norm_sets(data: np.ndarray, norm_type: str = "standardize", no_norm: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Normalizes data using specified method (standardize, normalize, or none)."""
+    """
+    Normalizes data using specified method (standardize, normalize, or none).
+    
+    :param data: Input data array
+    :param norm_type: Normalization type ('standardize', 'normalize', 'none')
+    :param no_norm: Flags for features to skip normalization
+    :return: Tuple of (bias, scale, normalized_data)
+    """
     # This is a simplified example. The actual function might be more complex.
     original_ndim = data.ndim # Store original ndim
     data_for_norm = data.copy() # Work on a copy
@@ -158,7 +221,14 @@ def norm_sets(data: np.ndarray, norm_type: str = "standardize", no_norm: Optiona
     return bias, scale, data_norm
 
 def denorm_sets(bias: Union[np.ndarray, float, np.number], scale: Union[np.ndarray, float, np.number], data_norm: np.ndarray) -> np.ndarray:
-    """Denormalizes data given bias and scale."""
+    """
+    Denormalizes data given bias and scale.
+    
+    :param bias: Bias values from normalization
+    :param scale: Scale values from normalization
+    :param data_norm: Normalized data
+    :return: Denormalized data
+    """
     # Ensure bias and scale are broadcastable with data_norm
     _bias = np.asarray(bias)
     _scale = np.asarray(scale)
@@ -172,7 +242,12 @@ def denorm_sets(bias: Union[np.ndarray, float, np.number], scale: Union[np.ndarr
     return data_norm * _scale + _bias
 
 def unpack_data_norms(data_norms_tuple: Tuple) -> Tuple:
-    """Unpacks data normalization parameters from a tuple."""
+    """
+    Unpacks data normalization parameters from a tuple.
+    
+    :param data_norms_tuple: Tuple of normalization parameters
+    :return: Unpacked normalization parameters
+    """
     # Example: (A_bias,A_scale,v_scale,x_bias,x_scale,y_bias,y_scale)
     # or (_,_,v_scale,x_bias,x_scale,y_bias,y_scale)
     if len(data_norms_tuple) == 7: # Common case
@@ -187,7 +262,16 @@ def unpack_data_norms(data_norms_tuple: Tuple) -> Tuple:
 
 
 def get_nn_m(Nf: int, Ny: int, hidden: List[int], activation: Callable, **kwargs) -> nn.Sequential:
-    """Creates a neural network model (nn.Sequential) based on specified layers and activation."""
+    """
+    Creates a neural network model (nn.Sequential) based on specified layers and activation.
+    
+    :param Nf: Number of input features
+    :param Ny: Number of output features
+    :param hidden: List of hidden layer sizes
+    :param activation: Activation function
+    :param kwargs: Additional keyword arguments
+    :return: Neural network model
+    """
     layers: List[nn.Module] = []
     input_size = Nf
     model_type_nn = kwargs.get("model_type") # Store for clarity

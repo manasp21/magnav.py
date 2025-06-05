@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>magnavpy.mpf &#8212; MagNavPy 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=73454398" />
+    <script src="../../_static/documentation_options.js?v=01f34227"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">MagNavPy</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=manasp21&repo=magnav.py&type=star&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../data.html">Flight Path &amp; INS Data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../maps.html">Magnetic Anomaly Maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../comp.html">Aeromagnetic Compensation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../nncomp.html">Neural Network-Based Model Diagrams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../nav.html">Navigation Algorithms</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../status.html">Current Status and Known Issues</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_functions.html">API: Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_structs.html">API: Structs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api_reference.html">API Reference</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for magnavpy.mpf</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.linalg</span><span class="w"> </span><span class="kn">import</span> <span class="n">cholesky</span><span class="p">,</span> <span class="n">solve</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Any</span>
+
+<span class="c1"># Attempt to import from existing modules within the magnavpy package</span>
+<span class="c1"># These imports are based on common patterns in the MagNav project.</span>
+<span class="c1"># If these exact functions/classes don&#39;t exist with these names,</span>
+<span class="c1"># they would need to be adjusted to match the actual available utilities.</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.common_types</span><span class="w"> </span><span class="kn">import</span> <span class="n">INS</span><span class="p">,</span> <span class="n">FILTres</span><span class="p">,</span> <span class="n">get_years</span>
+    <span class="c1"># Assuming create_P0 and create_Qd might be general or EKF-specific</span>
+    <span class="c1"># If specific versions for MPF are needed and named differently, adjust here.</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.ekf</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_P0</span><span class="p">,</span> <span class="n">create_Qd</span><span class="p">,</span> <span class="n">get_Phi</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.model_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_h</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">.map_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">Map_Cache</span> <span class="c1"># Assuming Map_Cache is a class</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="c1"># This block is for placeholder purposes if the above imports fail.</span>
+    <span class="c1"># In a real scenario, these dependencies must be correctly resolved.</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Warning: Could not import all MagNavPy dependencies for mpf.py. Using placeholders.&quot;</span><span class="p">)</span>
+    <span class="c1"># Define dummy placeholders if imports fail, to allow syntax checking of mpf.py itself.</span>
+<div class="viewcode-block" id="INS">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.INS">[docs]</a>
+    <span class="k">class</span><span class="w"> </span><span class="nc">INS</span><span class="p">:</span> <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="FILTres">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.FILTres">[docs]</a>
+    <span class="k">class</span><span class="w"> </span><span class="nc">FILTres</span><span class="p">:</span>
+        <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x_out</span><span class="p">,</span> <span class="n">P_out</span><span class="p">,</span> <span class="n">resid</span><span class="p">,</span> <span class="n">converge</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x_out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">P_out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">resid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">converge</span> <span class="o">=</span> <span class="n">x_out</span><span class="p">,</span> <span class="n">P_out</span><span class="p">,</span> <span class="n">resid</span><span class="p">,</span> <span class="n">converge</span></div>
+
+<div class="viewcode-block" id="Map_Cache">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.Map_Cache">[docs]</a>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Map_Cache</span><span class="p">:</span>
+<div class="viewcode-block" id="Map_Cache.get_cached_map">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.Map_Cache.get_cached_map">[docs]</a>
+        <span class="k">def</span><span class="w"> </span><span class="nf">get_cached_map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">alt</span><span class="p">,</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span> <span class="k">return</span> <span class="kc">None</span> <span class="c1"># Placeholder</span></div>
+</div>
+
+<div class="viewcode-block" id="get_years">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.get_years">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_years</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="n">d</span><span class="p">):</span> <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="c1"># Placeholder</span></div>
+
+<div class="viewcode-block" id="create_P0">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.create_P0">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_P0</span><span class="p">():</span> <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">18</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.1</span> <span class="c1"># Placeholder</span></div>
+
+<div class="viewcode-block" id="create_Qd">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.create_Qd">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_Qd</span><span class="p">():</span> <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">18</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.01</span> <span class="c1"># Placeholder</span></div>
+
+<div class="viewcode-block" id="get_Phi">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.get_Phi">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_Phi</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span><span class="n">lat</span><span class="p">,</span><span class="n">vn</span><span class="p">,</span><span class="n">ve</span><span class="p">,</span><span class="n">vd</span><span class="p">,</span><span class="n">fn</span><span class="p">,</span><span class="n">fe</span><span class="p">,</span><span class="n">fd</span><span class="p">,</span><span class="n">Cnb</span><span class="p">,</span><span class="n">baro_tau</span><span class="p">,</span><span class="n">acc_tau</span><span class="p">,</span><span class="n">gyro_tau</span><span class="p">,</span><span class="n">fogm_tau</span><span class="p">,</span><span class="n">dt</span><span class="p">):</span> <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">nx</span><span class="p">)</span> <span class="c1"># Placeholder</span></div>
+
+<div class="viewcode-block" id="get_h">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.get_h">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_h</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">,</span> <span class="n">states</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">alt</span><span class="p">,</span> <span class="n">date</span><span class="p">,</span> <span class="n">core</span><span class="p">):</span> <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">])</span> <span class="c1"># Placeholder</span></div>
+
+
+<span class="c1"># Configure basic logging for divergence messages</span>
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">%(levelname)s</span><span class="s1">: </span><span class="si">%(message)s</span><span class="s1">&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="sys_resample">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.sys_resample">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sys_resample</span><span class="p">(</span><span class="n">weights</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Systematic resampling.</span>
+<span class="sd">    Assumes weights sum to 1.</span>
+<span class="sd">    Returns 0-indexed particle indices.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_particles</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_particles</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        
+    <span class="n">cumulative_sum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+    <span class="c1"># Ensure the last element is exactly 1.0 to avoid issues with searchsorted</span>
+    <span class="k">if</span> <span class="n">n_particles</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">cumulative_sum</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+    <span class="c1"># Generate stratified random numbers</span>
+    <span class="c1"># Julia: u  = ((1:np) .- rand(eltype(q),1)) ./ np</span>
+    <span class="c1"># This means a single random draw is subtracted from the sequence 1..np</span>
+    <span class="n">rand_offset</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">()</span>
+    <span class="n">u_values</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_particles</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">rand_offset</span><span class="p">)</span> <span class="o">/</span> <span class="n">n_particles</span>
+
+    <span class="c1"># Find corresponding indices</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">searchsorted</span><span class="p">(</span><span class="n">cumulative_sum</span><span class="p">,</span> <span class="n">u_values</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">n_particles</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="part_cov">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.part_cov">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">part_cov</span><span class="p">(</span><span class="n">q</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">x_mean</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">P_add</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate weighted particle covariance.</span>
+<span class="sd">    P_out = sum_k q_k * (x_k - x_mean) @ (x_k - x_mean).T + P_add</span>
+<span class="sd">    q: particle weights (np,)</span>
+<span class="sd">    x: particle states (nx, np)</span>
+<span class="sd">    x_mean: mean of particle states (nx,)</span>
+<span class="sd">    P_add: additive covariance term (nx, nx), optional</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">nx</span><span class="p">,</span> <span class="n">np</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">if</span> <span class="n">np</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># Handle empty particles case</span>
+        <span class="n">P_out_particles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nx</span><span class="p">,</span><span class="n">nx</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">P_temp</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-</span> <span class="n">x_mean</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># dx = x_k - x_mean, shape (nx, np)</span>
+        <span class="n">P_out_particles</span> <span class="o">=</span> <span class="p">(</span><span class="n">P_temp</span> <span class="o">*</span> <span class="n">q</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span> <span class="o">@</span> <span class="n">P_temp</span><span class="o">.</span><span class="n">T</span>
+    
+    <span class="k">if</span> <span class="n">P_add</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">P_out</span> <span class="o">=</span> <span class="n">P_out_particles</span> <span class="o">+</span> <span class="n">P_add</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">P_out</span> <span class="o">=</span> <span class="n">P_out_particles</span>
+        
+    <span class="k">return</span> <span class="n">P_out</span></div>
+
+
+<div class="viewcode-block" id="filter_exit">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.filter_exit">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">filter_exit</span><span class="p">(</span><span class="n">Pl_out</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">Pn_out</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">t</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">N_total_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">converge</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Combine linear and non-linear covariances and log divergence if any.</span>
+<span class="sd">    Pl_out: linear part of covariance (nxl, nxl, N)</span>
+<span class="sd">    Pn_out: non-linear part of covariance (nxn, nxn, N)</span>
+<span class="sd">    t: current time step (relevant for divergence message, 0-indexed)</span>
+<span class="sd">    N_total_steps: total number of steps the filter ran or was supposed to run.</span>
+<span class="sd">    converge: boolean indicating filter convergence</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">nxl</span> <span class="o">=</span> <span class="n">Pl_out</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">nxn</span> <span class="o">=</span> <span class="n">Pn_out</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">nx</span> <span class="o">=</span> <span class="n">nxl</span> <span class="o">+</span> <span class="n">nxn</span>
+    
+    <span class="n">P_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nx</span><span class="p">,</span> <span class="n">nx</span><span class="p">,</span> <span class="n">N_total_steps</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">Pl_out</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="c1"># Ensure slicing does not go out of bounds if N_total_steps is smaller than Pn_out/Pl_out last dim</span>
+    <span class="c1"># This should not happen if Pn_out/Pl_out are correctly sized up to N_samples</span>
+    <span class="n">min_steps_dim</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">N_total_steps</span><span class="p">,</span> <span class="n">Pn_out</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">Pl_out</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+    <span class="n">P_out</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">nxn</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="n">nxn</span><span class="p">,</span> <span class="p">:</span><span class="n">min_steps_dim</span><span class="p">]</span> <span class="o">=</span> <span class="n">Pn_out</span><span class="p">[:,:,:</span><span class="n">min_steps_dim</span><span class="p">]</span>
+    <span class="n">P_out</span><span class="p">[</span><span class="n">nxn</span><span class="p">:</span><span class="n">nx</span><span class="p">,</span> <span class="n">nxn</span><span class="p">:</span><span class="n">nx</span><span class="p">,</span> <span class="p">:</span><span class="n">min_steps_dim</span><span class="p">]</span> <span class="o">=</span> <span class="n">Pl_out</span><span class="p">[:,:,:</span><span class="n">min_steps_dim</span><span class="p">]</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">converge</span><span class="p">:</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Filter diverged, particle weights ~0 at time step </span><span class="si">{</span><span class="n">t</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="c1"># t is 0-indexed</span>
+        
+    <span class="k">return</span> <span class="n">P_out</span></div>
+
+
+<div class="viewcode-block" id="mpf">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.mpf">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">mpf</span><span class="p">(</span><span class="n">lat</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">lon</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">alt</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">vn</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">ve</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">vd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">fn</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fe</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">fd</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">Cnb</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">meas</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">itp_mapS</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Callable</span><span class="p">,</span> <span class="n">Map_Cache</span><span class="p">],</span> 
+        <span class="n">P0_func</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="n">create_P0</span><span class="p">,</span> 
+        <span class="n">Qd_func</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="n">create_Qd</span><span class="p">,</span> 
+        <span class="n">R_val</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">num_part</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span>
+        <span class="n">thresh_frac</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.8</span><span class="p">,</span> 
+        <span class="n">baro_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span>
+        <span class="n">acc_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span>
+        <span class="n">gyro_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3600.0</span><span class="p">,</span>
+        <span class="n">fogm_tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">600.0</span><span class="p">,</span>
+        <span class="n">date_func</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="n">get_years</span><span class="p">,</span> 
+        <span class="n">default_year</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2020</span><span class="p">,</span> 
+        <span class="n">default_day</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">185</span><span class="p">,</span>   
+        <span class="n">core</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+       <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FILTres</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Rao-Blackwellized (marginalized) particle filter (MPF) for airborne magnetic</span>
+<span class="sd">    anomaly navigation. Assumes linear dynamics and non-correlated scalar measurements.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">P0</span> <span class="o">=</span> <span class="n">P0_func</span><span class="p">()</span>
+    <span class="n">Qd</span> <span class="o">=</span> <span class="n">Qd_func</span><span class="p">()</span>
+    <span class="n">R_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">R_val</span><span class="p">]])</span> 
+
+    <span class="n">N_samples</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span>
+    <span class="n">np_particles</span> <span class="o">=</span> <span class="n">num_part</span>
+    <span class="n">nx_total_states</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">nxn_nonlinear_states</span> <span class="o">=</span> <span class="mi">2</span>  
+    <span class="n">nxl_linear_states</span> <span class="o">=</span> <span class="n">nx_total_states</span> <span class="o">-</span> <span class="n">nxn_nonlinear_states</span>
+    
+    <span class="k">if</span> <span class="n">meas</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">meas</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> 
+    <span class="n">ny_meas_dim</span> <span class="o">=</span> <span class="n">meas</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> 
+    <span class="k">if</span> <span class="n">ny_meas_dim</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;MPF currently supports only scalar measurements (ny_meas_dim=1)&quot;</span><span class="p">)</span>
+
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">P0</span><span class="o">.</span><span class="n">dtype</span>
+
+    <span class="n">H_jac</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">ny_meas_dim</span><span class="p">,</span> <span class="n">nxl_linear_states</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">nxl_linear_states</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="p">:</span> <span class="n">H_jac</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> 
+
+    <span class="n">x_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nx_total_states</span><span class="p">,</span> <span class="n">N_samples</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">Pn_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nxn_nonlinear_states</span><span class="p">,</span> <span class="n">nxn_nonlinear_states</span><span class="p">,</span> <span class="n">N_samples</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">Pl_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nxl_linear_states</span><span class="p">,</span> <span class="n">nxl_linear_states</span><span class="p">,</span> <span class="n">N_samples</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">resid_out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">ny_meas_dim</span><span class="p">,</span> <span class="n">N_samples</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="n">P0_nl</span> <span class="o">=</span> <span class="n">P0</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">nxn_nonlinear_states</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="n">nxn_nonlinear_states</span><span class="p">]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">L_P0_nl</span> <span class="o">=</span> <span class="n">cholesky</span><span class="p">(</span><span class="n">P0_nl</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">xn_particles</span> <span class="o">=</span> <span class="n">L_P0_nl</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">nxn_nonlinear_states</span><span class="p">,</span> <span class="n">np_particles</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span> 
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Initial non-linear covariance P0_nl is not positive definite. Initializing xn_particles with small random noise based on diagonal.&quot;</span><span class="p">)</span>
+        <span class="n">diag_P0_nl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">P0_nl</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">diag_P0_nl</span><span class="p">[</span><span class="n">diag_P0_nl</span> <span class="o">&lt;=</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span> <span class="c1"># ensure positive for sqrt</span>
+        <span class="n">xn_particles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">diag_P0_nl</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">nxn_nonlinear_states</span><span class="p">,</span> <span class="n">np_particles</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+
+    <span class="n">xl_particles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nxl_linear_states</span><span class="p">,</span> <span class="n">np_particles</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="n">Pl_covariance</span> <span class="o">=</span> <span class="n">P0</span><span class="p">[</span><span class="n">nxn_nonlinear_states</span><span class="p">:,</span> <span class="n">nxn_nonlinear_states</span><span class="p">:]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">q_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">np_particles</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">/</span> <span class="n">np_particles</span>
+    <span class="n">current_date</span> <span class="o">=</span> <span class="n">date_func</span><span class="p">(</span><span class="n">default_year</span><span class="p">,</span> <span class="n">default_day</span><span class="p">)</span>
+
+    <span class="n">map_cache_obj</span> <span class="o">=</span> <span class="n">itp_mapS</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">,</span> <span class="n">Map_Cache</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">itp_mapS_callable</span> <span class="o">=</span> <span class="n">itp_mapS</span> <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">itp_mapS</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_samples</span><span class="p">):</span>
+        <span class="n">itp_mapS_current_step</span> <span class="o">=</span> <span class="n">itp_mapS_callable</span>
+        <span class="k">if</span> <span class="n">map_cache_obj</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">itp_mapS_current_step</span> <span class="o">=</span> <span class="n">map_cache_obj</span><span class="o">.</span><span class="n">get_cached_map</span><span class="p">(</span><span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">silent</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">itp_mapS_current_step</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;itp_mapS is not a valid callable or Map_Cache object at step </span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+
+        <span class="n">Phi</span> <span class="o">=</span> <span class="n">get_Phi</span><span class="p">(</span><span class="n">nx_total_states</span><span class="p">,</span> <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">vn</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">ve</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">vd</span><span class="p">[</span><span class="n">t</span><span class="p">],</span>
+                      <span class="n">fn</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fe</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">fd</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">Cnb</span><span class="p">[:,:,</span><span class="n">t</span><span class="p">],</span>
+                      <span class="n">baro_tau</span><span class="p">,</span> <span class="n">acc_tau</span><span class="p">,</span> <span class="n">gyro_tau</span><span class="p">,</span> <span class="n">fogm_tau</span><span class="p">,</span> <span class="n">dt</span><span class="p">)</span>
+
+        <span class="n">An_l</span> <span class="o">=</span> <span class="n">Phi</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">nxn_nonlinear_states</span><span class="p">,</span> <span class="n">nxn_nonlinear_states</span><span class="p">:]</span>      
+        <span class="n">An_n</span> <span class="o">=</span> <span class="n">Phi</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">nxn_nonlinear_states</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="n">nxn_nonlinear_states</span><span class="p">]</span>     
+        <span class="n">Al_l</span> <span class="o">=</span> <span class="n">Phi</span><span class="p">[</span><span class="n">nxn_nonlinear_states</span><span class="p">:,</span> <span class="n">nxn_nonlinear_states</span><span class="p">:]</span>      
+        <span class="n">Al_n</span> <span class="o">=</span> <span class="n">Phi</span><span class="p">[</span><span class="n">nxn_nonlinear_states</span><span class="p">:,</span> <span class="mi">0</span><span class="p">:</span><span class="n">nxn_nonlinear_states</span><span class="p">]</span>     
+
+        <span class="n">full_particle_states</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">xn_particles</span><span class="p">,</span> <span class="n">xl_particles</span><span class="p">))</span>
+        
+        <span class="n">y_hat_particles</span> <span class="o">=</span> <span class="n">get_h</span><span class="p">(</span><span class="n">itp_mapS_current_step</span><span class="p">,</span> <span class="n">full_particle_states</span><span class="p">,</span>
+                                <span class="n">lat</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">lon</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">alt</span><span class="p">[</span><span class="n">t</span><span class="p">],</span> <span class="n">date</span><span class="o">=</span><span class="n">current_date</span><span class="p">,</span> <span class="n">core</span><span class="o">=</span><span class="n">core</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">y_hat_particles</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+             <span class="n">y_hat_particles</span> <span class="o">=</span> <span class="n">y_hat_particles</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">ny_meas_dim</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="c1"># Ensure (ny, np)</span>
+
+        <span class="n">e_residuals</span> <span class="o">=</span> <span class="n">meas</span><span class="p">[</span><span class="n">t</span><span class="p">,:]</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">y_hat_particles</span> 
+        <span class="n">resid_out</span><span class="p">[:,</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">e_residuals</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> 
+
+        <span class="n">V_measurement_cov</span> <span class="o">=</span> <span class="n">H_jac</span> <span class="o">@</span> <span class="n">Pl_covariance</span> <span class="o">@</span> <span class="n">H_jac</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">R_matrix</span>
+        
+        <span class="n">inv_V_scalar</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">V_measurement_cov</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">log_likelihood_per_particle</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">e_residuals</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">inv_V_scalar</span>
+        <span class="n">max_log_likelihood</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">log_likelihood_per_particle</span><span class="p">)</span> <span class="k">if</span> <span class="n">np_particles</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="n">q_weights</span> <span class="o">=</span> <span class="n">q_weights</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">log_likelihood_per_particle</span> <span class="o">-</span> <span class="n">max_log_likelihood</span><span class="p">)</span>
+
+        <span class="n">sum_q_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">q_weights</span><span class="p">)</span>
+        <span class="c1"># Check for NaN or effectively zero sum of weights</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">sum_q_weights</span><span class="p">)</span> <span class="ow">or</span> <span class="n">sum_q_weights</span> <span class="o">&lt;=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span><span class="p">:</span>
+            <span class="n">converge_status</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="c1"># Fill remaining x_out with NaN</span>
+            <span class="k">if</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="n">N_samples</span><span class="p">:</span>
+                <span class="n">x_out</span><span class="p">[:,</span> <span class="n">t</span><span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="c1"># P_out will be handled by filter_exit, ensure it&#39;s filled appropriately for diverged steps</span>
+            <span class="c1"># For now, filter_exit will use what&#39;s in Pl_out, Pn_out up to min_steps_dim</span>
+            <span class="n">P_out_final</span> <span class="o">=</span> <span class="n">filter_exit</span><span class="p">(</span><span class="n">Pl_out</span><span class="p">,</span> <span class="n">Pn_out</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">N_samples</span><span class="p">,</span> <span class="n">converge_status</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">FILTres</span><span class="p">(</span><span class="n">x_out</span><span class="p">,</span> <span class="n">P_out_final</span><span class="p">,</span> <span class="n">resid_out</span><span class="p">,</span> <span class="n">converge_status</span><span class="p">)</span>
+
+        <span class="n">q_weights</span> <span class="o">=</span> <span class="n">q_weights</span> <span class="o">/</span> <span class="n">sum_q_weights</span>
+
+        <span class="n">x_out</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">nxn_nonlinear_states</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">q_weights</span> <span class="o">*</span> <span class="n">xn_particles</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">Pn_out</span><span class="p">[:,:,</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">part_cov</span><span class="p">(</span><span class="n">q_weights</span><span class="p">,</span> <span class="n">xn_particles</span><span class="p">,</span> <span class="n">x_out</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">nxn_nonlinear_states</span><span class="p">,</span> <span class="n">t</span><span class="p">])</span>
+
+        <span class="n">N_eff</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">q_weights</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="k">if</span> <span class="n">sum_q_weights</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">N_eff</span> <span class="o">&lt;</span> <span class="n">np_particles</span> <span class="o">*</span> <span class="n">thresh_frac</span> <span class="ow">and</span> <span class="n">np_particles</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">indices</span> <span class="o">=</span> <span class="n">sys_resample</span><span class="p">(</span><span class="n">q_weights</span><span class="p">)</span>
+            <span class="n">xn_particles</span> <span class="o">=</span> <span class="n">xn_particles</span><span class="p">[:,</span> <span class="n">indices</span><span class="p">]</span>
+            <span class="n">xl_particles</span> <span class="o">=</span> <span class="n">xl_particles</span><span class="p">[:,</span> <span class="n">indices</span><span class="p">]</span>
+            <span class="n">q_weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">np_particles</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="o">/</span> <span class="n">np_particles</span>
+        
+        <span class="n">xl_particles_temp_for_prop</span> <span class="o">=</span> <span class="n">xl_particles</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span> 
+
+        <span class="k">if</span> <span class="n">nxl_linear_states</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="c1"># Proceed with KF update only if linear states exist</span>
+            <span class="n">K_gain</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">V_measurement_cov</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="p">(</span><span class="n">Pl_covariance</span> <span class="o">@</span> <span class="n">H_jac</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span> 
+            <span class="n">Pl_covariance</span> <span class="o">=</span> <span class="n">Pl_covariance</span> <span class="o">-</span> <span class="n">K_gain</span> <span class="o">@</span> <span class="n">V_measurement_cov</span> <span class="o">@</span> <span class="n">K_gain</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">xl_particles</span> <span class="o">=</span> <span class="n">xl_particles</span> <span class="o">+</span> <span class="n">K_gain</span> <span class="o">@</span> <span class="n">e_residuals</span> 
+            <span class="n">x_out</span><span class="p">[</span><span class="n">nxn_nonlinear_states</span><span class="p">:,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">q_weights</span> <span class="o">*</span> <span class="n">xl_particles</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">Pl_out</span><span class="p">[:,:,</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">part_cov</span><span class="p">(</span><span class="n">q_weights</span><span class="p">,</span> <span class="n">xl_particles</span><span class="p">,</span> <span class="n">x_out</span><span class="p">[</span><span class="n">nxn_nonlinear_states</span><span class="p">:,</span> <span class="n">t</span><span class="p">],</span> <span class="n">P_add</span><span class="o">=</span><span class="n">Pl_covariance</span><span class="p">)</span>
+
+            <span class="n">Qd_nl_part</span> <span class="o">=</span> <span class="n">Qd</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">nxn_nonlinear_states</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="n">nxn_nonlinear_states</span><span class="p">]</span>
+            <span class="n">Qd_l_part</span>  <span class="o">=</span> <span class="n">Qd</span><span class="p">[</span><span class="n">nxn_nonlinear_states</span><span class="p">:,</span> <span class="n">nxn_nonlinear_states</span><span class="p">:]</span>
+
+            <span class="n">M_prop_cov</span> <span class="o">=</span> <span class="n">An_l</span> <span class="o">@</span> <span class="n">Pl_covariance</span> <span class="o">@</span> <span class="n">An_l</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">Qd_nl_part</span> 
+            <span class="n">L_prop_gain</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">M_prop_cov</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="p">(</span><span class="n">Al_l</span> <span class="o">@</span> <span class="n">Pl_covariance</span> <span class="o">@</span> <span class="n">An_l</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">Pl_covariance_propagated</span> <span class="o">=</span> <span class="n">Al_l</span> <span class="o">@</span> <span class="n">Pl_covariance</span> <span class="o">@</span> <span class="n">Al_l</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">Qd_l_part</span> <span class="o">-</span> <span class="n">L_prop_gain</span> <span class="o">@</span> <span class="n">M_prop_cov</span> <span class="o">@</span> <span class="n">L_prop_gain</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">Pl_covariance</span> <span class="o">=</span> <span class="p">(</span><span class="n">Pl_covariance_propagated</span> <span class="o">+</span> <span class="n">Pl_covariance_propagated</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># No linear states, Pl_covariance remains empty or zero, no KF update for it</span>
+            <span class="n">Pl_out</span><span class="p">[:,:,</span><span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nxl_linear_states</span><span class="p">,</span><span class="n">nxl_linear_states</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span> <span class="c1"># Should be empty if nxl=0</span>
+            <span class="n">M_prop_cov</span> <span class="o">=</span> <span class="n">Qd</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">nxn_nonlinear_states</span><span class="p">,</span> <span class="mi">0</span><span class="p">:</span><span class="n">nxn_nonlinear_states</span><span class="p">]</span> <span class="c1"># Simplified if An_l is irrelevant</span>
+            <span class="c1"># L_prop_gain would be zero or irrelevant</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">L_M_prop</span> <span class="o">=</span> <span class="n">cholesky</span><span class="p">(</span><span class="n">M_prop_cov</span><span class="p">,</span> <span class="n">lower</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">noise_nl_prop</span> <span class="o">=</span> <span class="n">L_M_prop</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">nxn_nonlinear_states</span><span class="p">,</span> <span class="n">np_particles</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;M_prop_cov not positive definite at step </span><span class="si">{</span><span class="n">t</span><span class="o">+</span><span class="mi">1</span><span class="si">}</span><span class="s2">. Using diagonal approx for noise.&quot;</span><span class="p">)</span>
+            <span class="n">diag_M</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">M_prop_cov</span><span class="p">)</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">diag_M</span><span class="p">[</span><span class="n">diag_M</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+            <span class="n">noise_nl_prop</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">diag_M</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">nxn_nonlinear_states</span><span class="p">,</span> <span class="n">np_particles</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+        
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DEBUG_ERROR_7: t=</span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">, An_n.shape=</span><span class="si">{</span><span class="n">An_n</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, xn_particles.shape=</span><span class="si">{</span><span class="n">xn_particles</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, An_l.shape=</span><span class="si">{</span><span class="n">An_l</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, xl_particles_temp_for_prop.shape=</span><span class="si">{</span><span class="n">xl_particles_temp_for_prop</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, noise_nl_prop.shape=</span><span class="si">{</span><span class="n">noise_nl_prop</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">term1</span> <span class="o">=</span> <span class="n">An_n</span> <span class="o">@</span> <span class="n">xn_particles</span>
+        <span class="n">term2</span> <span class="o">=</span> <span class="n">An_l</span> <span class="o">@</span> <span class="n">xl_particles_temp_for_prop</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DEBUG_ERROR_7: t=</span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">, term1.shape=</span><span class="si">{</span><span class="n">term1</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, term2.shape=</span><span class="si">{</span><span class="n">term2</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">xn_particles_propagated</span> <span class="o">=</span> <span class="n">term1</span> <span class="o">+</span> <span class="n">term2</span> <span class="o">+</span> <span class="n">noise_nl_prop</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DEBUG_ERROR_7: t=</span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">, xn_particles_propagated.shape=</span><span class="si">{</span><span class="n">xn_particles_propagated</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, xn_particles_propagated.dtype=</span><span class="si">{</span><span class="n">xn_particles_propagated</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">nxl_linear_states</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">z_nl_diff</span> <span class="o">=</span> <span class="n">noise_nl_prop</span> <span class="c1"># As per Julia: z = xn_propagated - (An_n @ xn_particles_current + An_l @ xl_particles_temp_for_prop)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DEBUG_ERROR_7: t=</span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">, Al_n.shape=</span><span class="si">{</span><span class="n">Al_n</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, Al_l.shape=</span><span class="si">{</span><span class="n">Al_l</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, L_prop_gain.shape=</span><span class="si">{</span><span class="n">L_prop_gain</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, z_nl_diff.shape=</span><span class="si">{</span><span class="n">z_nl_diff</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">term_xl1</span> <span class="o">=</span> <span class="n">Al_n</span> <span class="o">@</span> <span class="n">xn_particles</span>
+            <span class="n">term_xl2</span> <span class="o">=</span> <span class="n">Al_l</span> <span class="o">@</span> <span class="n">xl_particles_temp_for_prop</span>
+            <span class="n">term_xl3</span> <span class="o">=</span> <span class="n">L_prop_gain</span> <span class="o">@</span> <span class="p">(</span><span class="n">z_nl_diff</span> <span class="o">-</span> <span class="p">(</span><span class="n">An_l</span> <span class="o">@</span> <span class="n">xl_particles_temp_for_prop</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DEBUG_ERROR_7: t=</span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">, term_xl1.shape=</span><span class="si">{</span><span class="n">term_xl1</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, term_xl2.shape=</span><span class="si">{</span><span class="n">term_xl2</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, term_xl3.shape=</span><span class="si">{</span><span class="n">term_xl3</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">xl_particles</span> <span class="o">=</span> <span class="n">term_xl1</span> <span class="o">+</span> <span class="n">term_xl2</span> <span class="o">+</span> <span class="n">term_xl3</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DEBUG_ERROR_7: t=</span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">, xl_particles.shape=</span><span class="si">{</span><span class="n">xl_particles</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">, xl_particles.dtype=</span><span class="si">{</span><span class="n">xl_particles</span><span class="o">.</span><span class="n">dtype</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># No linear states to propagate via KF mechanism</span>
+            <span class="k">pass</span> <span class="c1"># xl_particles remains empty or zero</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;DEBUG_ERROR_7: t=</span><span class="si">{</span><span class="n">t</span><span class="si">}</span><span class="s2">, Assigning xn_particles_propagated (shape </span><span class="si">{</span><span class="n">xn_particles_propagated</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">) to xn_particles (shape </span><span class="si">{</span><span class="n">xn_particles</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="n">xn_particles</span> <span class="o">=</span> <span class="n">xn_particles_propagated</span>
+
+    <span class="n">converge_status</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">P_out_final</span> <span class="o">=</span> <span class="n">filter_exit</span><span class="p">(</span><span class="n">Pl_out</span><span class="p">,</span> <span class="n">Pn_out</span><span class="p">,</span> <span class="n">N_samples</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">N_samples</span><span class="p">,</span> <span class="n">converge_status</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">FILTres</span><span class="p">(</span><span class="n">x_out</span><span class="p">,</span> <span class="n">P_out_final</span><span class="p">,</span> <span class="n">resid_out</span><span class="p">,</span> <span class="n">converge_status</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="mpf_ins">
+<a class="viewcode-back" href="../../api_reference.html#magnavpy.mpf.mpf_ins">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">mpf_ins</span><span class="p">(</span><span class="n">ins_data</span><span class="p">:</span> <span class="n">INS</span><span class="p">,</span> <span class="n">meas</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">itp_mapS</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Callable</span><span class="p">,</span> <span class="n">Map_Cache</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FILTres</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper for mpf function that takes an INS object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Extract P0_func and Qd_func from kwargs if provided, else they default in mpf</span>
+    <span class="n">P0_func</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;P0_func&#39;</span><span class="p">,</span> <span class="n">create_P0</span><span class="p">)</span>
+    <span class="n">Qd_func</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;Qd_func&#39;</span><span class="p">,</span> <span class="n">create_Qd</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">mpf</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="n">ins_data</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="n">ins_data</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">alt</span><span class="o">=</span><span class="n">ins_data</span><span class="o">.</span><span class="n">alt</span><span class="p">,</span>
+               <span class="n">vn</span><span class="o">=</span><span class="n">ins_data</span><span class="o">.</span><span class="n">vn</span><span class="p">,</span> <span class="n">ve</span><span class="o">=</span><span class="n">ins_data</span><span class="o">.</span><span class="n">ve</span><span class="p">,</span> <span class="n">vd</span><span class="o">=</span><span class="n">ins_data</span><span class="o">.</span><span class="n">vd</span><span class="p">,</span>
+               <span class="n">fn</span><span class="o">=</span><span class="n">ins_data</span><span class="o">.</span><span class="n">fn</span><span class="p">,</span> <span class="n">fe</span><span class="o">=</span><span class="n">ins_data</span><span class="o">.</span><span class="n">fe</span><span class="p">,</span> <span class="n">fd</span><span class="o">=</span><span class="n">ins_data</span><span class="o">.</span><span class="n">fd</span><span class="p">,</span>
+               <span class="n">Cnb</span><span class="o">=</span><span class="n">ins_data</span><span class="o">.</span><span class="n">Cnb</span><span class="p">,</span> <span class="n">meas</span><span class="o">=</span><span class="n">meas</span><span class="p">,</span> <span class="n">dt</span><span class="o">=</span><span class="n">ins_data</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span>
+               <span class="n">itp_mapS</span><span class="o">=</span><span class="n">itp_mapS</span><span class="p">,</span>
+               <span class="n">P0_func</span><span class="o">=</span><span class="n">P0_func</span><span class="p">,</span> <span class="n">Qd_func</span><span class="o">=</span><span class="n">Qd_func</span><span class="p">,</span>
+               <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;2020-2023, Original MagNav.jl Authors; 2024-2025, Manas Pandey.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
