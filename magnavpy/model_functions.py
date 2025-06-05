@@ -23,9 +23,9 @@ try:
         return np.array([0.5, 0.5, np.sqrt(0.5)]) # Placeholder vector (norm = 1)
 
 except ImportError:
-    print("Warning: Could not import r_earth, omega_earth from .magnav. Using default values.")
-    r_earth = 6371000.0  # Mean Earth radius in meters
-    omega_earth = 7.292115e-5  # Earth rotation rate in rad/s
+    print("Warning: Could not import R_EARTH, OMEGA_EARTH from .magnav. Using default values.")
+    R_EARTH = 6371000.0  # Mean Earth radius in meters
+    OMEGA_EARTH = 7.292115e-5  # Earth rotation rate in rad/s
     def _calculate_igrf_intensity_at_point(date, alt_m, lat_rad, lon_rad, geodetic_val=None):
         return 1.0 
     def _calculate_igrf_vector_at_point(date, alt_m, lat_rad, lon_rad, geodetic_val=None):
@@ -321,13 +321,13 @@ def get_pinson(nx: int, lat_rad, vn, ve, vd, fn, fe, fd, Cnb,
 
     # Pinson matrix population (0-indexed)
     # Row 0 (d(lat_err)/dt)
-    F[0, 2] = -vn / r_earth**2
-    F[0, 3] = 1 / r_earth
+    F[0, 2] = -vn / R_EARTH**2
+    F[0, 3] = 1 / R_EARTH
 
     # Row 1 (d(lon_err)/dt)
-    F[1, 0] = ve * tan_l / (r_earth * cos_l)
-    F[1, 2] = -ve / (cos_l * r_earth**2)
-    F[1, 4] = 1 / (r_earth * cos_l)
+    F[1, 0] = ve * tan_l / (R_EARTH * cos_l)
+    F[1, 2] = -ve / (cos_l * R_EARTH**2)
+    F[1, 4] = 1 / (R_EARTH * cos_l)
 
     # Row 2 (d(alt_err)/dt)
     F[2, 2] = -k1
@@ -335,52 +335,52 @@ def get_pinson(nx: int, lat_rad, vn, ve, vd, fn, fe, fd, Cnb,
     F[2, 9] = k1 # ha_bias_err (state 10 in Julia, 9 here)
 
     # Row 3 (d(vn_err)/dt)
-    F[3, 0] = -ve * (2 * omega_earth * cos_l + ve / (r_earth * cos_l**2))
-    F[3, 2] = (ve**2 * tan_l - vn * vd) / r_earth**2
-    F[3, 3] = vd / r_earth
-    F[3, 4] = -2 * (omega_earth * math.sin(lat_rad) + ve * tan_l / r_earth)
-    F[3, 5] = vn / r_earth
+    F[3, 0] = -ve * (2 * OMEGA_EARTH * cos_l + ve / (R_EARTH * cos_l**2))
+    F[3, 2] = (ve**2 * tan_l - vn * vd) / R_EARTH**2
+    F[3, 3] = vd / R_EARTH
+    F[3, 4] = -2 * (OMEGA_EARTH * math.sin(lat_rad) + ve * tan_l / R_EARTH)
+    F[3, 5] = vn / R_EARTH
     F[3, 7] = -fd # te_err (state 8 in Julia, 7 here)
     F[3, 8] = fe  # td_err (state 9 in Julia, 8 here)
 
     # Row 4 (d(ve_err)/dt)
-    F[4, 0] = 2 * omega_earth * (vn * cos_l - vd * math.sin(lat_rad)) + vn * ve / (r_earth * cos_l**2)
-    F[4, 2] = -ve * ((vn * tan_l + vd) / r_earth**2)
-    F[4, 3] = 2 * omega_earth * math.sin(lat_rad) + ve * tan_l / r_earth
-    F[4, 4] = (vn * tan_l + vd) / r_earth
-    F[4, 5] = 2 * omega_earth * cos_l + ve / r_earth
+    F[4, 0] = 2 * OMEGA_EARTH * (vn * cos_l - vd * math.sin(lat_rad)) + vn * ve / (R_EARTH * cos_l**2)
+    F[4, 2] = -ve * ((vn * tan_l + vd) / R_EARTH**2)
+    F[4, 3] = 2 * OMEGA_EARTH * math.sin(lat_rad) + ve * tan_l / R_EARTH
+    F[4, 4] = (vn * tan_l + vd) / R_EARTH
+    F[4, 5] = 2 * OMEGA_EARTH * cos_l + ve / R_EARTH
     F[4, 6] = fd  # tn_err (state 7 in Julia, 6 here)
     F[4, 8] = -fn # td_err
 
     # Row 5 (d(vd_err)/dt)
-    F[5, 0] = 2 * omega_earth * ve * math.sin(lat_rad)
-    F[5, 2] = (vn**2 + ve**2) / r_earth**2 + k2
-    F[5, 3] = -2 * vn / r_earth
-    F[5, 4] = -2 * (omega_earth * cos_l + ve / r_earth)
+    F[5, 0] = 2 * OMEGA_EARTH * ve * math.sin(lat_rad)
+    F[5, 2] = (vn**2 + ve**2) / R_EARTH**2 + k2
+    F[5, 3] = -2 * vn / R_EARTH
+    F[5, 4] = -2 * (OMEGA_EARTH * cos_l + ve / R_EARTH)
     F[5, 6] = -fe # tn_err
     F[5, 7] = fn  # te_err
     F[5, 9] = -k2 # ha_bias_err
     F[5, 10] = 1   # a_hat_bias_err (state 11 in Julia, 10 here)
 
     # Row 6 (d(tn_err)/dt)
-    F[6, 0] = -omega_earth * math.sin(lat_rad)
-    F[6, 2] = -ve / r_earth**2 # Original had ve^2, seems like a typo based on typical Pinson forms, using ve
-    F[6, 4] = 1 / r_earth
-    F[6, 7] = -omega_earth * math.sin(lat_rad) - ve * tan_l / r_earth # te_err
-    F[6, 8] = vn / r_earth # td_err
+    F[6, 0] = -OMEGA_EARTH * math.sin(lat_rad)
+    F[6, 2] = -ve / R_EARTH**2 # Original had ve^2, seems like a typo based on typical Pinson forms, using ve
+    F[6, 4] = 1 / R_EARTH
+    F[6, 7] = -OMEGA_EARTH * math.sin(lat_rad) - ve * tan_l / R_EARTH # te_err
+    F[6, 8] = vn / R_EARTH # td_err
 
     # Row 7 (d(te_err)/dt)
-    F[7, 2] = vn / r_earth**2
-    F[7, 3] = -1 / r_earth
-    F[7, 6] = omega_earth * math.sin(lat_rad) + ve * tan_l / r_earth # tn_err
-    F[7, 8] = omega_earth * cos_l + ve / r_earth # td_err
+    F[7, 2] = vn / R_EARTH**2
+    F[7, 3] = -1 / R_EARTH
+    F[7, 6] = OMEGA_EARTH * math.sin(lat_rad) + ve * tan_l / R_EARTH # tn_err
+    F[7, 8] = OMEGA_EARTH * cos_l + ve / R_EARTH # td_err
 
     # Row 8 (d(td_err)/dt)
-    F[8, 0] = -omega_earth * cos_l - ve / (r_earth * cos_l**2)
-    F[8, 2] = ve * tan_l / r_earth**2
-    F[8, 4] = -tan_l / r_earth
-    F[8, 6] = -vn / r_earth # tn_err
-    F[8, 7] = -omega_earth * cos_l - ve / r_earth # te_err
+    F[8, 0] = -OMEGA_EARTH * cos_l - ve / (R_EARTH * cos_l**2)
+    F[8, 2] = ve * tan_l / R_EARTH**2
+    F[8, 4] = -tan_l / R_EARTH
+    F[8, 6] = -vn / R_EARTH # tn_err
+    F[8, 7] = -OMEGA_EARTH * cos_l - ve / R_EARTH # te_err
 
     # Sensor biases
     F[9, 9]   = -1 / baro_tau # ha_bias_err
@@ -397,9 +397,32 @@ def get_pinson(nx: int, lat_rad, vn, ve, vd, fn, fe, fd, Cnb,
 
     # Coupling Cnb to accel/gyro biases
     # d(vel_err)/dt depends on accel_bias_err (states 12,13,14 in Julia -> 11,12,13 Python)
-    F[3:6, 11:14] = Cnb
+    # Use the same scalar conversion logic as in ekf.py
+    def to_scalar(value):
+        """Convert any array-like value to a Python scalar."""
+        # Handle numpy arrays
+        if hasattr(value, 'flat'):
+            return next(value.flat)  # Get first element of flattened array
+        # Handle sequences (lists, tuples, etc)
+        if hasattr(value, '__len__') and len(value) > 0:
+            return value[0]
+        # Handle single-value numpy types
+        if hasattr(value, 'item'):
+            return value.item()
+        # Return as-is for scalars
+        return value
+
+    # Assign Cnb matrix elements individually with bounds checking
+    for i in range(3):
+        for j in range(3):
+            if i < Cnb.shape[0] and j < Cnb.shape[1]:
+                F[3+i, 11+j] = to_scalar(Cnb[i, j])
     # d(tilt_err)/dt depends on gyro_bias_err (states 15,16,17 in Julia -> 14,15,16 Python)
-    F[6:9, 14:17] = -Cnb
+    # Assign Cnb matrix elements individually with bounds checking
+    for i in range(3):
+        for j in range(3):
+            if i < Cnb.shape[0] and j < Cnb.shape[1]:
+                F[6+i, 14+j] = -to_scalar(Cnb[i, j])
     
     # Optional states at the end
     current_max_std_idx = 16 # Max index for standard 17 states (0-16)
@@ -471,19 +494,8 @@ def get_Phi(nx: int, lat_rad, vn, ve, vd, fn, fe, fd, Cnb,
     :returns: state transition matrix Phi (NumPy array)
     :rtype: numpy.ndarray
     """
-    # Ensure scalar values are passed to get_pinson
-    # If the input is a numpy array, try to extract its scalar value.
-    # This assumes that at this stage of the EKF (processing a single time step),
-    # these navigation parameters should be scalars.
-    _lat_rad = lat_rad.item() if isinstance(lat_rad, (np.ndarray, np.generic)) and lat_rad.size == 1 else (lat_rad if not isinstance(lat_rad, (np.ndarray, np.generic)) else float(lat_rad))
-    _vn = vn.item() if isinstance(vn, (np.ndarray, np.generic)) and vn.size == 1 else (vn if not isinstance(vn, (np.ndarray, np.generic)) else float(vn))
-    _ve = ve.item() if isinstance(ve, (np.ndarray, np.generic)) and ve.size == 1 else (ve if not isinstance(ve, (np.ndarray, np.generic)) else float(ve))
-    _vd = vd.item() if isinstance(vd, (np.ndarray, np.generic)) and vd.size == 1 else (vd if not isinstance(vd, (np.ndarray, np.generic)) else float(vd))
-    _fn = fn.item() if isinstance(fn, (np.ndarray, np.generic)) and fn.size == 1 else (fn if not isinstance(fn, (np.ndarray, np.generic)) else float(fn))
-    _fe = fe.item() if isinstance(fe, (np.ndarray, np.generic)) and fe.size == 1 else (fe if not isinstance(fe, (np.ndarray, np.generic)) else float(fe))
-    _fd = fd.item() if isinstance(fd, (np.ndarray, np.generic)) and fd.size == 1 else (fd if not isinstance(fd, (np.ndarray, np.generic)) else float(fd))
-
-    F_matrix = get_pinson(nx, _lat_rad, _vn, _ve, _vd, _fn, _fe, _fd, Cnb,
+    # Inputs are expected to be scalars at this point
+    F_matrix = get_pinson(nx, lat_rad, vn, ve, vd, fn, fe, fd, Cnb,
                    baro_tau=baro_tau, acc_tau=acc_tau, gyro_tau=gyro_tau,
                    fogm_tau=fogm_tau, vec_states=vec_states, fogm_state=fogm_state,
                    **pinson_kwargs)
@@ -501,12 +513,13 @@ def map_grad(itp_mapS, lat_rad, lon_rad, alt_m, delta_rad=1.0e-8):
     # Convert delta_rad used for lat/lon to an equivalent meter step for altitude
     dalt_m = dlat2dn(delta_rad, lat_rad) # Using dlat2dn for consistency with Julia
 
-    grad_lat = (itp_mapS(lat_rad + dlat_rad, lon_rad, alt_m) -
-                itp_mapS(lat_rad - dlat_rad, lon_rad, alt_m)) / (2 * dlat_rad)
-    grad_lon = (itp_mapS(lat_rad, lon_rad + dlon_rad, alt_m) -
-                itp_mapS(lat_rad, lon_rad - dlon_rad, alt_m)) / (2 * dlon_rad)
-    grad_alt = (itp_mapS(lat_rad, lon_rad, alt_m + dalt_m) -
-                itp_mapS(lat_rad, lon_rad, alt_m - dalt_m)) / (2 * dalt_m)
+    # Call the interpolator with a tuple of (lat, lon, alt)
+    grad_lat = (itp_mapS((lat_rad + dlat_rad, lon_rad, alt_m)) -
+                itp_mapS((lat_rad - dlat_rad, lon_rad, alt_m))) / (2 * dlat_rad)
+    grad_lon = (itp_mapS((lat_rad, lon_rad + dlon_rad, alt_m)) -
+                itp_mapS((lat_rad, lon_rad - dlon_rad, alt_m))) / (2 * dlon_rad)
+    grad_alt = (itp_mapS((lat_rad, lon_rad, alt_m + dalt_m)) -
+                itp_mapS((lat_rad, lon_rad, alt_m - dalt_m))) / (2 * dalt_m)
     
     return np.array([grad_lat, grad_lon, grad_alt])
 
@@ -557,7 +570,10 @@ def get_H(itp_mapS, x_state_error: np.ndarray, lat_true_rad, lon_true_rad, alt_t
     H = np.zeros(nx, dtype=np.float64)
 
     # Calculate map gradient at true location
-    map_grad_vals = map_grad(itp_mapS, lat_true_rad, lon_true_rad, alt_true_m, delta_rad)
+    # Create interpolator function from map object
+    from .map_utils import map_interpolate
+    interpolator = map_interpolate(itp_mapS)
+    map_grad_vals = map_grad(interpolator, lat_true_rad, lon_true_rad, alt_true_m, delta_rad)
     
     # d(map)/d(lat_err) = d(map)/d(lat) * d(lat)/d(lat_err)
     # Assuming lat_err is in radians, d(lat)/d(lat_err) = 1

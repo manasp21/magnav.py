@@ -492,15 +492,30 @@ def crlb(
 
         # Extract scalar values for the current time step
         # Handle both scalar and array inputs by using .item() for arrays
-        lat_t = lat[t].item() if hasattr(lat[t], 'item') else lat[t]
-        lon_t = lon[t].item() if hasattr(lon[t], 'item') else lon[t]
-        alt_t = alt[t].item() if hasattr(alt[t], 'item') else alt[t]
-        vn_t = vn[t].item() if hasattr(vn[t], 'item') else vn[t]
-        ve_t = ve[t].item() if hasattr(ve[t], 'item') else ve[t]
-        vd_t = vd[t].item() if hasattr(vd[t], 'item') else vd[t]
-        fn_t = fn[t].item() if hasattr(fn[t], 'item') else fn[t]
-        fe_t = fe[t].item() if hasattr(fe[t], 'item') else fe[t]
-        fd_t = fd[t].item() if hasattr(fd[t], 'item') else fd[t]
+        # Robust conversion to scalar that handles all array types
+        def to_scalar(value):
+            """Convert any array-like value to a Python scalar."""
+            # Handle numpy arrays
+            if hasattr(value, 'flat'):
+                return next(value.flat)  # Get first element of flattened array
+            # Handle sequences (lists, tuples, etc)
+            if hasattr(value, '__len__') and len(value) > 0:
+                return value[0]
+            # Handle single-value numpy types
+            if hasattr(value, 'item'):
+                return value.item()
+            # Return as-is for scalars
+            return value
+        
+        lat_t = to_scalar(lat[t])
+        lon_t = to_scalar(lon[t])
+        alt_t = to_scalar(alt[t])
+        vn_t = to_scalar(vn[t])
+        ve_t = to_scalar(ve[t])
+        vd_t = to_scalar(vd[t])
+        fn_t = to_scalar(fn[t])
+        fe_t = to_scalar(fe[t])
+        fd_t = to_scalar(fd[t])
 
         Phi = get_Phi(nx, lat_t, vn_t, ve_t, vd_t, fn_t, fe_t, fd_t, _Cnb_t_for_phi,
                       baro_tau, acc_tau, gyro_tau, fogm_tau, dt)
