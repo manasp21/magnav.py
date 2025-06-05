@@ -1186,7 +1186,7 @@ def create_mag_c(
         
     return map_val
 
-
+# this has extra arg and needs to be modified.
 def corrupt_mag(
     mag_c: np.ndarray,
     flux_a: MagV, # True vector field in aircraft body frame
