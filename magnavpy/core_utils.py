@@ -29,6 +29,12 @@ def dn2dlat(dn: Union[float, np.ndarray], lat: Union[float, np.ndarray]) -> Unio
     Returns:
         dlat: latitude difference [rad]
     """
+    # Convert inputs to floats if they're single-element arrays
+    if isinstance(dn, np.ndarray) and dn.size == 1:
+        dn = float(dn)
+    if isinstance(lat, np.ndarray) and lat.size == 1:
+        lat = float(lat)
+        
     dlat = dn * np.sqrt(1 - (E_EARTH * np.sin(lat))**2) / R_EARTH
     return dlat
 
@@ -43,6 +49,12 @@ def de2dlon(de: Union[float, np.ndarray], lat: Union[float, np.ndarray]) -> Unio
     Returns:
         dlon: longitude difference [rad]
     """
+    # Convert inputs to floats if they're single-element arrays
+    if isinstance(de, np.ndarray) and de.size == 1:
+        de = float(de)
+    if isinstance(lat, np.ndarray) and lat.size == 1:
+        lat = float(lat)
+        
     dlon = de * np.sqrt(1 - (E_EARTH * np.sin(lat))**2) / R_EARTH / np.cos(lat)
     return dlon
 

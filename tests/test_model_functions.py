@@ -141,9 +141,19 @@ RTOL = 1e-6
 ATOL = 1e-6
 
 def test_create_model():
-    np.testing.assert_allclose(P0_py, ekf_data_dict["P0"], rtol=RTOL, atol=ATOL)
-    np.testing.assert_allclose(Qd_py, ekf_data_dict["Qd"], rtol=RTOL, atol=ATOL)
-    expected_R = ekf_data_dict["R"]
-    assert R_py == pytest.approx(expected_R, rel=RTOL, abs=ATOL)
+    # Extract MATLAB arrays from object arrays
+    def extract_matlab_array(data):
+        if isinstance(data, np.ndarray) and data.dtype == object:
+            return data.item()
+        return data
+        
+    P0_mat = extract_matlab_array(ekf_data_dict["P0"])
+    Qd_mat = extract_matlab_array(ekf_data_dict["Qd"])
+    R_mat = extract_matlab_array(ekf_data_dict["R"])
+    
+    # Compare results
+    np.testing.assert_allclose(P0_py, P0_mat, rtol=RTOL, atol=ATOL)
+    np.testing.assert_allclose(Qd_py, Qd_mat, rtol=RTOL, atol=ATOL)
+    np.testing.assert_allclose(R_py, R_mat, rtol=RTOL, atol=ATOL)
 
 # ... rest of test functions ...

@@ -77,6 +77,24 @@ def create_P0(lat1_rad=deg2rad(45),
     Returns:
         numpy.ndarray: initial covariance matrix (NumPy array)
     """
+    # Ensure all parameters are scalars including lat1_rad
+    def to_scalar(value):
+        if isinstance(value, np.ndarray):
+            return value.item() if value.size == 1 else value[0]
+        return value
+        
+    lat1_rad = float(to_scalar(lat1_rad))
+    init_pos_sigma = float(to_scalar(init_pos_sigma))
+    init_alt_sigma = float(to_scalar(init_alt_sigma))
+    init_vel_sigma = float(to_scalar(init_vel_sigma))
+    init_att_sigma_rad = float(to_scalar(init_att_sigma_rad))
+    ha_sigma = float(to_scalar(ha_sigma))
+    a_hat_sigma = float(to_scalar(a_hat_sigma))
+    acc_sigma = float(to_scalar(acc_sigma))
+    gyro_sigma = float(to_scalar(gyro_sigma))
+    fogm_sigma = float(to_scalar(fogm_sigma))
+    vec_sigma = float(to_scalar(vec_sigma))
+    
     if P0_TL is None:
         P0_TL = np.array([])
 
