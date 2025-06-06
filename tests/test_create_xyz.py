@@ -16,6 +16,8 @@ import copy # For deepcopy
 # # And Path(__file__).parent.parent.parent is the workspace root
 # workspace_root = current_script_path.parent.parent.parent
 # sys.path.append(str(workspace_root / "MagNavPy/src"))
+import sys
+sys.path.append(r'C:\Users\Admin\eclipse-workspace\magnav.py')
 
 from magnavpy.magnav import XYZ0, Traj, INS, MagV, MapS
 from magnavpy.map_utils import get_map
