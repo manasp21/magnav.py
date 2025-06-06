@@ -837,9 +837,10 @@ def upward_fft(map_in: Union[MapS, MapS3D, MapV],
                alpha: float = 0.0, # Regularization for downward continuation
                expand: bool = True) -> Union[MapS, MapS3D, MapV]:
     """
-    Placeholder for upward/downward continuation using FFT.
-    This is a complex function requiring FFT, wavenumber grid creation, filtering, and iFFT.
-    The actual implementation from MagNav.jl/src/map_fft.jl is non-trivial.
+    Upward/downward continuation of a potential field (i.e., magnetic anomaly field) map.
+    Uses the Fast Fourier Transform (FFT) to convert the map to the frequency
+    domain, applies an upward continuation filter, and uses the inverse FFT to
+    convert the map back to the spatial domain.
 
     Args:
         map_in: Input MapS, MapS3D, or MapV object.
@@ -849,87 +850,88 @@ def upward_fft(map_in: Union[MapS, MapS3D, MapV],
 
     Returns:
         A new map object of the same type as map_in, at alt_out.
-        Currently returns a modified copy of map_in with updated altitude(s)
-        and does NOT perform actual upward/downward continuation.
     """
-    print(f"INFO: Placeholder upward_fft called for map '{map_in.info}' to target altitude(s) {alt_out}.")
-    print("      Full FFT-based upward/downward continuation is NOT YET IMPLEMENTED in this Python port.")
-    print("      This function will return a copy of the input map with updated altitude(s) only.")
-
-    map_out = dataclasses.replace(map_in) # Shallow copy for structure
-    
-    # Deep copy mutable fields
-    if hasattr(map_out, 'map') and map_out.map is not None: map_out.map = map_out.map.copy()
-    if hasattr(map_out, 'xx') and map_out.xx is not None: map_out.xx = map_out.xx.copy()
-    if hasattr(map_out, 'yy') and map_out.yy is not None: map_out.yy = map_out.yy.copy()
-    if hasattr(map_out, 'mask') and map_out.mask is not None: map_out.mask = map_out.mask.copy()
-    if hasattr(map_out, 'lat') and map_out.lat is not None: map_out.lat = map_out.lat.copy()
-    if hasattr(map_out, 'lon') and map_out.lon is not None: map_out.lon = map_out.lon.copy()
-
-    if isinstance(map_in, MapV):
-        if map_out.mapX is not None: map_out.mapX = map_out.mapX.copy()
-        if map_out.mapY is not None: map_out.mapY = map_out.mapY.copy()
-        if map_out.mapZ is not None: map_out.mapZ = map_out.mapZ.copy()
-    
-    current_alt_scalar = 0.0
-    if isinstance(map_in.alt, np.ndarray):
-        current_alt_scalar = np.mean(map_in.alt) if map_in.alt.size > 0 else 0.0
-    elif isinstance(map_in.alt, (float, int)):
-        current_alt_scalar = float(map_in.alt)
-
-    dz = (np.mean(alt_out) if isinstance(alt_out, np.ndarray) else alt_out) - current_alt_scalar
-    if dz < 0 and alpha == 0:
-        print("      WARNING: Downward continuation (dz < 0) attempted without regularization (alpha=0).")
-        print("               This is unstable. Results will be unreliable.")
-
-    if isinstance(map_in, (MapS, MapSd, MapV)) and isinstance(alt_out, (float, int, np.floating, np.integer)):
-        map_out.alt = float(alt_out)
-    elif isinstance(map_in, MapS) and isinstance(alt_out, np.ndarray): # Convert MapS to MapS3D
-        print("      INFO: upward_fft converting MapS to MapS3D for multiple output altitudes.")
-        num_levels = len(alt_out)
-        original_map_data = map_in.map
-        new_3d_map_data = np.stack([original_map_data.copy()] * num_levels, axis=-1)
-        new_3d_mask_data = None
-        if map_in.mask is not None:
-            new_3d_mask_data = np.stack([map_in.mask.copy()] * num_levels, axis=-1)
+    try:
+        # Import the FFT-based implementation from map_fft module
+        from .map_fft import upward_fft as map_fft_upward_fft
         
-        return MapS3D(info=f"{map_in.info}_to_3D",
-                      map=new_3d_map_data,
-                      xx=map_in.xx.copy(),
-                      yy=map_in.yy.copy(),
-                      zz=alt_out.copy(),
-                      mask=new_3d_mask_data,
-                      lat=map_in.lat.copy() if map_in.lat is not None else None,
-                      lon=map_in.lon.copy() if map_in.lon is not None else None)
-    elif isinstance(map_in, MapS3D) and isinstance(alt_out, np.ndarray):
-        # Placeholder: For MapS3D output, we'd need to actually compute each layer.
-        # For now, just update the alt array and keep the first layer's data replicated.
-        print("      INFO: upward_fft for MapS3D with multiple altitudes will replicate first data layer.")
-        num_levels = len(alt_out)
-        first_layer_map = map_in.map[:,:,0].copy()
-        first_layer_mask = map_in.mask[:,:,0].copy() if map_in.mask is not None else None
+        # Use the FFT-based implementation
+        return map_fft_upward_fft(map_in, alt_out, expand=expand, alpha=alpha)
+    
+    except ImportError:
+        print(f"WARNING: map_fft module not found. Using placeholder implementation for upward_fft.")
         
-        map_out.map = np.stack([first_layer_map] * num_levels, axis=-1)
-        if first_layer_mask is not None:
-            map_out.mask = np.stack([first_layer_mask] * num_levels, axis=-1)
+        # Fallback to placeholder implementation
+        map_out = dataclasses.replace(map_in) # Shallow copy for structure
+        
+        # Deep copy mutable fields
+        if hasattr(map_out, 'map') and map_out.map is not None: map_out.map = map_out.map.copy()
+        if hasattr(map_out, 'xx') and map_out.xx is not None: map_out.xx = map_out.xx.copy()
+        if hasattr(map_out, 'yy') and map_out.yy is not None: map_out.yy = map_out.yy.copy()
+        if hasattr(map_out, 'mask') and map_out.mask is not None: map_out.mask = map_out.mask.copy()
+        if hasattr(map_out, 'lat') and map_out.lat is not None: map_out.lat = map_out.lat.copy()
+        if hasattr(map_out, 'lon') and map_out.lon is not None: map_out.lon = map_out.lon.copy()
+
+        if isinstance(map_in, MapV):
+            if map_out.mapX is not None: map_out.mapX = map_out.mapX.copy()
+            if map_out.mapY is not None: map_out.mapY = map_out.mapY.copy()
+            if map_out.mapZ is not None: map_out.mapZ = map_out.mapZ.copy()
+        
+        current_alt_scalar = 0.0
+        if isinstance(map_in.alt, np.ndarray):
+            current_alt_scalar = np.mean(map_in.alt) if map_in.alt.size > 0 else 0.0
+        elif isinstance(map_in.alt, (float, int)):
+            current_alt_scalar = float(map_in.alt)
+
+        dz = (np.mean(alt_out) if isinstance(alt_out, np.ndarray) else alt_out) - current_alt_scalar
+        if dz < 0 and alpha == 0:
+            print("WARNING: Downward continuation (dz < 0) attempted without regularization (alpha=0).")
+            print("         This is unstable. Results will be unreliable.")
+
+        if isinstance(map_in, (MapS, MapSd, MapV)) and isinstance(alt_out, (float, int, np.floating, np.integer)):
+            map_out.alt = float(alt_out)
+        elif isinstance(map_in, MapS) and isinstance(alt_out, np.ndarray): # Convert MapS to MapS3D
+            print("INFO: upward_fft converting MapS to MapS3D for multiple output altitudes.")
+            num_levels = len(alt_out)
+            original_map_data = map_in.map
+            new_3d_map_data = np.stack([original_map_data.copy()] * num_levels, axis=-1)
+            new_3d_mask_data = None
+            if map_in.mask is not None:
+                new_3d_mask_data = np.stack([map_in.mask.copy()] * num_levels, axis=-1)
+            
+            return MapS3D(info=f"{map_in.info}_to_3D",
+                          map=new_3d_map_data,
+                          xx=map_in.xx.copy(),
+                          yy=map_in.yy.copy(),
+                          alt=alt_out.copy(),
+                          mask=new_3d_mask_data)
+        elif isinstance(map_in, MapS3D) and isinstance(alt_out, np.ndarray):
+            # Placeholder: For MapS3D output, we'd need to actually compute each layer.
+            # For now, just update the alt array and keep the first layer's data replicated.
+            print("INFO: upward_fft for MapS3D with multiple altitudes will replicate first data layer.")
+            num_levels = len(alt_out)
+            first_layer_map = map_in.map[:,:,0].copy()
+            first_layer_mask = map_in.mask[:,:,0].copy() if map_in.mask is not None else None
+            
+            map_out.map = np.stack([first_layer_map] * num_levels, axis=-1)
+            if first_layer_mask is not None:
+                map_out.mask = np.stack([first_layer_mask] * num_levels, axis=-1)
+            else:
+                map_out.mask = None
+            map_out.alt = alt_out.copy()
+        elif isinstance(map_in, MapS3D) and isinstance(alt_out, (float, int)):
+            # Output a MapS from a MapS3D if single altitude is requested
+            print("INFO: upward_fft converting MapS3D to MapS for single output altitude (using first layer data).")
+            return MapS(info=f"{map_in.info}_to_S",
+                        map=map_in.map[:,:,0].copy(), # Placeholder: use first layer
+                        xx=map_in.xx.copy(),
+                        yy=map_in.yy.copy(),
+                        alt=float(alt_out),
+                        mask=map_in.mask[:,:,0].copy() if map_in.mask is not None else None)
         else:
-            map_out.mask = None
-        map_out.alt = alt_out.copy()
-    elif isinstance(map_in, MapS3D) and isinstance(alt_out, (float, int)):
-        # Output a MapS from a MapS3D if single altitude is requested
-        print("      INFO: upward_fft converting MapS3D to MapS for single output altitude (using first layer data).")
-        return MapS(info=f"{map_in.info}_to_S",
-                    map=map_in.map[:,:,0].copy(), # Placeholder: use first layer
-                    xx=map_in.xx.copy(),
-                    yy=map_in.yy.copy(),
-                    alt=float(alt_out),
-                    mask=map_in.mask[:,:,0].copy() if map_in.mask is not None else None,
-                    lat=map_in.lat.copy() if map_in.lat is not None else None,
-                    lon=map_in.lon.copy() if map_in.lon is not None else None)
-    else:
-        map_out.alt = alt_out # This might be an array for MapSd if alt_out is array
+            map_out.alt = alt_out # This might be an array for MapSd if alt_out is array
 
-    return map_out
+        return map_out
 
 
 # Map Caching
@@ -1012,67 +1014,448 @@ def get_cached_map(map_cache_obj: MapCache, lat_query: float, lon_query: float, 
     return None
 
 
-# Placeholder/Simplified functions from Julia's map_functions.jl that are complex or have many dependencies
-def map_correct_igrf(map_obj: Union[MapS, MapSd, MapS3D], sub_igrf_date: Optional[float] = None, add_igrf_date: Optional[float] = None, **kwargs) -> Union[MapS, MapSd, MapS3D]:
+# Functions for IGRF correction
+def map_correct_igrf(map_obj: Union[MapS, MapSd, MapS3D], sub_igrf_date: Optional[float] = None, add_igrf_date: Optional[float] = None,
+                    zone_utm: int = 18, is_north: bool = True, map_units: str = 'rad', **kwargs) -> Union[MapS, MapSd, MapS3D]:
     """
-    Placeholder for IGRF correction. Requires a geomagnetic field model (e.g., IGRF).
+    Correct the International Geomagnetic Reference Field (IGRF), i.e., core field,
+    of a map by subtracting and/or adding the IGRF on specified date(s).
+    
+    Args:
+        map_obj: MapS, MapSd, or MapS3D scalar magnetic anomaly map struct
+        sub_igrf_date: Date of IGRF core field to subtract [yr], None to ignore
+        add_igrf_date: Date of IGRF core field to add [yr], None to ignore
+        zone_utm: UTM zone, only used if map_units = 'utm'
+        is_north: If true, map is in northern hemisphere, only used if map_units = 'utm'
+        map_units: Map xx/yy units {'rad','deg','utm'}
+        
+    Returns:
+        Map object with IGRF corrected map data
     """
-    print(f"Placeholder: map_correct_igrf called for map {map_obj.info}. IGRF correction not implemented.")
-    # In a real implementation, this would use a library like 'pyIGRF' or 'geomagpy'
-    # to calculate IGRF values at each point (lat, lon, alt, date) and subtract/add them.
-    return dataclasses.replace(map_obj) # Return a copy
+    # Create a copy of the input map to avoid modifying the original
+    map_result = dataclasses.replace(map_obj)
+    
+    # Deep copy mutable fields
+    if hasattr(map_result, 'map') and map_result.map is not None:
+        map_result.map = map_result.map.copy()
+    if hasattr(map_result, 'mask') and map_result.mask is not None:
+        map_result.mask = map_result.mask.copy()
+    
+    # Check if we need to do any IGRF correction
+    if sub_igrf_date is None and add_igrf_date is None:
+        return map_result
+    
+    try:
+        # Try to import pyIGRF for IGRF calculations
+        import pyIGRF
+    except ImportError:
+        print(f"Warning: pyIGRF module not found. IGRF correction not applied to map {map_obj.info}.")
+        return map_result
+    
+    # Process different map types
+    if isinstance(map_obj, (MapS, MapSd)):
+        # Get map parameters
+        _, ind1, _, _ = map_params(map_obj.map, map_obj.xx, map_obj.yy)
+        
+        # Handle altitude
+        if isinstance(map_obj, MapSd):
+            # For drape maps, altitude is a 2D grid
+            map_alt = map_obj.alt
+        else:
+            # For scalar maps, altitude is a single value
+            if isinstance(map_obj.alt, np.ndarray) and map_obj.alt.size > 0:
+                map_alt = np.full_like(map_obj.map, np.mean(map_obj.alt))
+            else:
+                map_alt = np.full_like(map_obj.map, map_obj.alt)
+        
+        # Process each point in the map
+        for i in range(map_obj.xx.size):
+            for j in range(map_obj.yy.size):
+                if ind1[j, i]:  # Only process valid data points
+                    # Get coordinates based on map units
+                    if map_units == 'utm':
+                        # Convert UTM to LLA
+                        try:
+                            from pyproj import Transformer
+                            transformer = Transformer.from_crs(
+                                f"+proj=utm +zone={zone_utm} +{'north' if is_north else 'south'} +ellps=WGS84",
+                                "+proj=longlat +ellps=WGS84 +datum=WGS84",
+                                always_xy=True
+                            )
+                            lon, lat = transformer.transform(map_obj.xx[i], map_obj.yy[j])
+                            alt = map_alt[j, i]
+                        except ImportError:
+                            print("Warning: pyproj not available for UTM to LLA conversion. Skipping IGRF correction.")
+                            return map_result
+                    elif map_units == 'rad':
+                        lat = np.rad2deg(map_obj.yy[j])
+                        lon = np.rad2deg(map_obj.xx[i])
+                        alt = map_alt[j, i]
+                    elif map_units == 'deg':
+                        lat = map_obj.yy[j]
+                        lon = map_obj.xx[i]
+                        alt = map_alt[j, i]
+                    else:
+                        raise ValueError(f"Unsupported map_units: {map_units}")
+                    
+                    # Subtract IGRF if requested
+                    if sub_igrf_date is not None:
+                        # Calculate IGRF values at this point
+                        igrf_values = pyIGRF.igrf_value(lat, lon, alt/1000, sub_igrf_date)  # alt in km for pyIGRF
+                        # Extract total field intensity (F)
+                        igrf_total = igrf_values[6]  # F is the 7th value (index 6)
+                        # Subtract from map
+                        map_result.map[j, i] -= igrf_total
+                    
+                    # Add IGRF if requested
+                    if add_igrf_date is not None:
+                        # Calculate IGRF values at this point
+                        igrf_values = pyIGRF.igrf_value(lat, lon, alt/1000, add_igrf_date)  # alt in km for pyIGRF
+                        # Extract total field intensity (F)
+                        igrf_total = igrf_values[6]  # F is the 7th value (index 6)
+                        # Add to map
+                        map_result.map[j, i] += igrf_total
+    
+    elif isinstance(map_obj, MapS3D):
+        # Process each altitude level separately
+        for i in range(len(map_obj.alt)):
+            # Create a MapS for this altitude level
+            level_map = MapS(
+                info=map_obj.info,
+                map=map_obj.map[:, :, i],
+                xx=map_obj.xx,
+                yy=map_obj.yy,
+                alt=map_obj.alt[i],
+                mask=map_obj.mask[:, :, i] if map_obj.mask is not None else None
+            )
+            
+            # Apply IGRF correction to this level
+            corrected_level = map_correct_igrf(
+                level_map,
+                sub_igrf_date=sub_igrf_date,
+                add_igrf_date=add_igrf_date,
+                zone_utm=zone_utm,
+                is_north=is_north,
+                map_units=map_units,
+                **kwargs
+            )
+            
+            # Update the result map with the corrected level
+            map_result.map[:, :, i] = corrected_level.map
+    
+    return map_result
 
-def map_combine(map1: MapS, map2: MapS, method: str = "average_overlap", copy:bool = True) -> MapS:
+def map_combine(map1: Union[MapS, MapSd], map2: Union[MapS, MapSd],
+                method: str = "average_overlap",
+                feather_width: float = 0.1,
+                resample_to: str = "map1",
+                copy: bool = True) -> Union[MapS, MapSd]:
     """
-    Simplified combination of two MapS objects. Assumes they are at the same altitude.
-    More complex combination (e.g., different altitudes, feathering) requires upward_fft and more logic.
+    Combines two map objects (MapS or MapSd) using various methods.
+    
+    Args:
+        map1: First map object
+        map2: Second map object
+        method: Combination method:
+            - "average_overlap": Average values in overlapping regions
+            - "feather": Smooth transition in overlap using distance-based weighting
+            - "priority_map1": Prioritize map1, use map2 only in gaps
+            - "priority_map2": Prioritize map2, use map1 only in gaps
+        feather_width: Width of feathering transition zone as fraction of overlap region (0-1)
+        resample_to: Grid to use for the result ("map1", "map2", or "common")
+        copy: If True, create a new map object; otherwise modify map1 in-place
+    
+    Returns:
+        Combined map object of the same type as inputs
     """
-    print(f"Placeholder: map_combine called for maps {map1.info} and {map2.info}. Simple combination.")
-    if not (np.allclose(map1.alt, map2.alt)):
-        print("Warning: map_combine expects maps at same altitude for simple combination. Altitudes differ.")
-        # Could attempt to continue one map to the other's altitude using upward_fft placeholder
-        # map2 = upward_fft(map2, map1.alt)
-
-    # For simplicity, this placeholder will assume maps need to be on the same grid.
-    # A full implementation would resample one map to the other's grid or a common grid.
-    if not (np.array_equal(map1.xx, map2.xx) and np.array_equal(map1.yy, map2.yy)):
-        print("Warning: map_combine placeholder requires maps to be on the same grid. Resampling not implemented here.")
-        # Fallback: return map1 or raise error
-        return map1 if not copy else dataclasses.replace(map1)
-
-    if copy:
-        combined_map_obj = dataclasses.replace(map1)
-        combined_map_obj.map = map1.map.copy()
-        if map1.mask is not None: combined_map_obj.mask = map1.mask.copy()
+    # Validate inputs
+    if not isinstance(map1, (MapS, MapSd)) or not isinstance(map2, (MapS, MapSd)):
+        raise TypeError("map_combine requires MapS or MapSd objects")
+    
+    if not isinstance(map1, type(map2)):
+        raise TypeError(f"Cannot combine maps of different types: {type(map1)} and {type(map2)}")
+    
+    # Handle altitude differences
+    if not np.allclose(map1.alt, map2.alt):
+        print(f"Maps at different altitudes: {map1.alt} vs {map2.alt}. Continuing map2 to map1's altitude.")
+        try:
+            # Use upward_fft to continue map2 to map1's altitude
+            map2 = upward_fft(map2, map1.alt)
+        except Exception as e:
+            print(f"Warning: Failed to continue map2 to map1's altitude: {e}")
+            print("Proceeding with original altitudes, results may be inaccurate.")
+    
+    # Determine target grid based on resample_to parameter
+    if resample_to == "map1":
+        target_xx, target_yy = map1.xx, map1.yy
+    elif resample_to == "map2":
+        target_xx, target_yy = map2.xx, map2.yy
+    elif resample_to == "common":
+        # Create a common grid that encompasses both maps
+        xx_min = min(np.min(map1.xx), np.min(map2.xx))
+        xx_max = max(np.max(map1.xx), np.max(map2.xx))
+        yy_min = min(np.min(map1.yy), np.min(map2.yy))
+        yy_max = max(np.max(map1.yy), np.max(map2.yy))
+        
+        # Use the finer resolution of the two maps
+        dx1 = get_step(map1.xx)
+        dx2 = get_step(map2.xx)
+        dy1 = get_step(map1.yy)
+        dy2 = get_step(map2.yy)
+        
+        dx = min(dx1, dx2) if min(dx1, dx2) > 0 else max(dx1, dx2)
+        dy = min(dy1, dy2) if min(dy1, dy2) > 0 else max(dy1, dy2)
+        
+        # Create new grid
+        target_xx = np.arange(xx_min, xx_max + dx/2, dx)
+        target_yy = np.arange(yy_min, yy_max + dy/2, dy)
     else:
-        combined_map_obj = map1
+        raise ValueError(f"Invalid resample_to value: {resample_to}. Must be 'map1', 'map2', or 'common'")
     
-    # Example: prioritize map1, fill with map2 where map1 has no data (mask or NaN/0)
-    # A more sophisticated method would average in overlap regions.
+    # Resample both maps to the target grid if needed
+    map1_resampled = map1
+    if not (np.array_equal(map1.xx, target_xx) and np.array_equal(map1.yy, target_yy)):
+        map1_resampled = map_resample(map1, target_yy, target_xx, copy=True)
     
-    map1_gaps = np.isnan(combined_map_obj.map) | (combined_map_obj.map == 0)
-    if combined_map_obj.mask is not None:
-        map1_gaps = map1_gaps | (~combined_map_obj.mask)
-
-    map2_valid = ~np.isnan(map2.map) & (map2.map != 0)
-    if map2.mask is not None:
-        map2_valid = map2_valid & map2.mask
-
-    fill_indices = map1_gaps & map2_valid
-    combined_map_obj.map[fill_indices] = map2.map[fill_indices]
+    map2_resampled = map2
+    if not (np.array_equal(map2.xx, target_xx) and np.array_equal(map2.yy, target_yy)):
+        map2_resampled = map_resample(map2, target_yy, target_xx, copy=True)
     
-    if combined_map_obj.mask is not None and map2.mask is not None:
-        combined_map_obj.mask[fill_indices] = True # Or map2.mask[fill_indices]
-    elif combined_map_obj.mask is None and map2.mask is not None:
-         combined_map_obj.mask = map2.mask.copy() # Start with map2's mask
-         combined_map_obj.mask[~fill_indices & map1_gaps] = False # Ensure map1 gaps stay masked if not filled
-    elif combined_map_obj.mask is None and map2.mask is None:
-        combined_map_obj.mask = (combined_map_obj.map != 0) & ~np.isnan(combined_map_obj.map)
-
-
-    combined_map_obj.info = f"Combined: {map1.info} & {map2.info}"
+    # Create output map object
+    if copy:
+        combined_map_obj = dataclasses.replace(map1_resampled)
+        combined_map_obj.map = map1_resampled.map.copy()
+        if map1_resampled.mask is not None:
+            combined_map_obj.mask = map1_resampled.mask.copy()
+        else:
+            combined_map_obj.mask = np.ones_like(map1_resampled.map, dtype=bool)
+    else:
+        combined_map_obj = map1_resampled
+        if combined_map_obj.mask is None:
+            combined_map_obj.mask = np.ones_like(combined_map_obj.map, dtype=bool)
+    
+    # Identify valid data regions in both maps
+    map1_valid = ~np.isnan(map1_resampled.map) & (map1_resampled.map != 0)
+    if map1_resampled.mask is not None:
+        map1_valid = map1_valid & map1_resampled.mask
+    
+    map2_valid = ~np.isnan(map2_resampled.map) & (map2_resampled.map != 0)
+    if map2_resampled.mask is not None:
+        map2_valid = map2_valid & map2_resampled.mask
+    
+    # Identify overlap and gap regions
+    overlap = map1_valid & map2_valid
+    map1_only = map1_valid & ~map2_valid
+    map2_only = map2_valid & ~map1_valid
+    
+    # Apply the selected combination method
+    if method == "average_overlap":
+        # Use map1 in map1-only regions
+        combined_map_obj.map[map1_only] = map1_resampled.map[map1_only]
+        combined_map_obj.mask[map1_only] = True
+        
+        # Use map2 in map2-only regions
+        combined_map_obj.map[map2_only] = map2_resampled.map[map2_only]
+        combined_map_obj.mask[map2_only] = True
+        
+        # Average in overlap regions
+        combined_map_obj.map[overlap] = (map1_resampled.map[overlap] + map2_resampled.map[overlap]) / 2
+        combined_map_obj.mask[overlap] = True
+    
+    elif method == "feather":
+        # Use map1 in map1-only regions
+        combined_map_obj.map[map1_only] = map1_resampled.map[map1_only]
+        combined_map_obj.mask[map1_only] = True
+        
+        # Use map2 in map2-only regions
+        combined_map_obj.map[map2_only] = map2_resampled.map[map2_only]
+        combined_map_obj.mask[map2_only] = True
+        
+        # For overlap regions, compute distance-based weights
+        if np.any(overlap):
+            try:
+                # Create distance transforms from the edges of each valid region
+                from scipy.ndimage import distance_transform_edt
+                
+                # Get distance from edge of map1 valid region
+                map1_edge_dist = distance_transform_edt(map1_valid)
+                # Normalize to [0, 1] within overlap region
+                if np.max(map1_edge_dist[overlap]) > 0:
+                    map1_edge_dist[overlap] /= np.max(map1_edge_dist[overlap])
+                
+                # Get distance from edge of map2 valid region
+                map2_edge_dist = distance_transform_edt(map2_valid)
+                # Normalize to [0, 1] within overlap region
+                if np.max(map2_edge_dist[overlap]) > 0:
+                    map2_edge_dist[overlap] /= np.max(map2_edge_dist[overlap])
+                
+                # Compute relative weights
+                w1 = map1_edge_dist[overlap]
+                w2 = map2_edge_dist[overlap]
+                sum_w = w1 + w2
+                
+                # Avoid division by zero
+                sum_w[sum_w == 0] = 1.0
+                
+                # Apply weighted average in overlap region
+                combined_map_obj.map[overlap] = (
+                    (w1 * map1_resampled.map[overlap] + w2 * map2_resampled.map[overlap]) / sum_w
+                )
+                combined_map_obj.mask[overlap] = True
+                
+            except ImportError:
+                print("Warning: scipy.ndimage not available for feathering. Using simple average instead.")
+                combined_map_obj.map[overlap] = (map1_resampled.map[overlap] + map2_resampled.map[overlap]) / 2
+                combined_map_obj.mask[overlap] = True
+    
+    elif method == "priority_map1":
+        # Use map1 wherever it's valid
+        combined_map_obj.map[map1_valid] = map1_resampled.map[map1_valid]
+        combined_map_obj.mask[map1_valid] = True
+        
+        # Use map2 only where map1 is invalid
+        combined_map_obj.map[map2_only] = map2_resampled.map[map2_only]
+        combined_map_obj.mask[map2_only] = True
+    
+    elif method == "priority_map2":
+        # Use map2 wherever it's valid
+        combined_map_obj.map[map2_valid] = map2_resampled.map[map2_valid]
+        combined_map_obj.mask[map2_valid] = True
+        
+        # Use map1 only where map2 is invalid
+        combined_map_obj.map[map1_only] = map1_resampled.map[map1_only]
+        combined_map_obj.mask[map1_only] = True
+    
+    else:
+        raise ValueError(f"Invalid combination method: {method}")
+    
+    # Update map info
+    combined_map_obj.info = f"Combined({method}): {map1.info} & {map2.info}"
+    
+    # Handle special case for MapSd - combine altitude grids if needed
+    if isinstance(combined_map_obj, MapSd) and isinstance(combined_map_obj.alt, np.ndarray):
+        if isinstance(map1.alt, np.ndarray) and isinstance(map2.alt, np.ndarray):
+            # Use the same combination method for altitude grids
+            alt_combined = np.zeros_like(combined_map_obj.map)
+            
+            if method in ["priority_map1", "average_overlap", "feather"]:
+                alt_combined[map1_valid] = map1_resampled.alt[map1_valid]
+                alt_combined[map2_only] = map2_resampled.alt[map2_only]
+                if method == "average_overlap" and np.any(overlap):
+                    alt_combined[overlap] = (map1_resampled.alt[overlap] + map2_resampled.alt[overlap]) / 2
+            else:  # priority_map2
+                alt_combined[map2_valid] = map2_resampled.alt[map2_valid]
+                alt_combined[map1_only] = map1_resampled.alt[map1_only]
+            
+            combined_map_obj.alt = alt_combined
+    
     return combined_map_obj
 
+
+def map_combine_multi(maps: List[Union[MapS, MapSd]],
+                      target_alt: Optional[float] = None,
+                      method: str = "average_overlap",
+                      resample_to: str = "common",
+                      copy: bool = True) -> Union[MapS, MapSd]:
+    """
+    Combines multiple maps at potentially different altitudes into a single map.
+    
+    Args:
+        maps: List of MapS or MapSd objects to combine
+        target_alt: Target altitude for the combined map. If None, uses altitude of first map.
+        method: Combination method (see map_combine for options)
+        resample_to: Grid to use for the result ("common" or index of map to use as reference)
+        copy: If True, create a new map object; otherwise modify first map in-place
+    
+    Returns:
+        Combined map object of the same type as inputs
+    """
+    if not maps:
+        raise ValueError("No maps provided to map_combine_multi")
+    
+    if len(maps) == 1:
+        return maps[0] if not copy else dataclasses.replace(maps[0])
+    
+    # Determine target altitude
+    if target_alt is None:
+        target_alt = maps[0].alt
+        if isinstance(target_alt, np.ndarray):
+            target_alt = np.mean(target_alt)
+    
+    # Continue all maps to target altitude
+    continued_maps = []
+    for i, map_obj in enumerate(maps):
+        if np.allclose(map_obj.alt, target_alt):
+            continued_maps.append(map_obj)
+        else:
+            try:
+                continued_map = upward_fft(map_obj, target_alt)
+                continued_maps.append(continued_map)
+            except Exception as e:
+                print(f"Warning: Failed to continue map {i} to target altitude: {e}")
+                print("Skipping this map in the combination.")
+    
+    if not continued_maps:
+        raise ValueError("No maps could be continued to target altitude")
+    
+    # Determine target grid
+    if resample_to == "common":
+        # Find bounds that encompass all maps
+        xx_min = min(np.min(m.xx) for m in continued_maps)
+        xx_max = max(np.max(m.xx) for m in continued_maps)
+        yy_min = min(np.min(m.yy) for m in continued_maps)
+        yy_max = max(np.max(m.yy) for m in continued_maps)
+        
+        # Use the finest resolution among all maps
+        dx_values = [get_step(m.xx) for m in continued_maps]
+        dy_values = [get_step(m.yy) for m in continued_maps]
+        
+        dx = min(dx for dx in dx_values if dx > 0) if any(dx > 0 for dx in dx_values) else dx_values[0]
+        dy = min(dy for dy in dy_values if dy > 0) if any(dy > 0 for dy in dy_values) else dy_values[0]
+        
+        # Create common grid
+        target_xx = np.arange(xx_min, xx_max + dx/2, dx)
+        target_yy = np.arange(yy_min, yy_max + dy/2, dy)
+    else:
+        # Use the grid of the specified map
+        try:
+            idx = int(resample_to)
+            if idx < 0 or idx >= len(continued_maps):
+                raise ValueError(f"Invalid resample_to index: {idx}")
+            target_xx = continued_maps[idx].xx
+            target_yy = continued_maps[idx].yy
+        except (ValueError, TypeError):
+            # Default to first map if invalid
+            print(f"Warning: Invalid resample_to value: {resample_to}. Using first map's grid.")
+            target_xx = continued_maps[0].xx
+            target_yy = continued_maps[0].yy
+    
+    # Resample all maps to target grid
+    resampled_maps = []
+    for i, map_obj in enumerate(continued_maps):
+        if np.array_equal(map_obj.xx, target_xx) and np.array_equal(map_obj.yy, target_yy):
+            resampled_maps.append(map_obj)
+        else:
+            try:
+                resampled_map = map_resample(map_obj, target_yy, target_xx, copy=True)
+                resampled_maps.append(resampled_map)
+            except Exception as e:
+                print(f"Warning: Failed to resample map {i} to target grid: {e}")
+                print("Skipping this map in the combination.")
+    
+    if not resampled_maps:
+        raise ValueError("No maps could be resampled to target grid")
+    
+    # Combine maps sequentially
+    result = resampled_maps[0]
+    for i in range(1, len(resampled_maps)):
+        result = map_combine(result, resampled_maps[i], method=method, copy=copy)
+    
+    # Update info
+    map_names = [m.info for m in maps]
+    result.info = f"Multi-combined({method}): {', '.join(map_names)}"
+    
+    return result
 
 # Functions from the original map_utils.py that are being kept or slightly adapted
 def get_map(map_name: str, variable_name: str = "map_data", *args, map_type: Optional[str] = None, **kwargs) -> Union[MapS, MapV, None]:
