@@ -1468,6 +1468,7 @@ def create_flux(
 
         map_vals_tuple = get_map_val(map_object_to_use, lat_arr, _lon_for_getmap, _alt_for_getmap,
                                      return_interpolator=False)
+        print('map_vals_tuple', map_vals_tuple)
         if isinstance(map_vals_tuple, tuple) and len(map_vals_tuple) == 3:
             map_val_x, map_val_y, map_val_z = map_vals_tuple
         else:
