@@ -14,7 +14,7 @@ from typing import List, Tuple, Callable, Dict, Any, Union, Optional
 
 from .core_utils import dn2dlat, de2dlon, dlat2dn, dlon2de, get_years # Added coordinate and years functions
 from .signal_util import linreg_matrix, get_bpf_sos, bpf_data, bpf_data_inplace
-from .tolles_lawson import create_TL_A
+from .tolles_lawson import create_TL_A, create_TL_A_modified_1, create_TL_A_modified_2
 from .map_utils import get_map_val, get_map # Import get_map_val and get_map from map_utils
 from .nav_utils import get_step # Import get_step from nav_utils
 from .magnav import (
@@ -29,6 +29,7 @@ from .magnav import (
 from .common_types import MagV # Import MagV from common_types
 from .dcm_util import dcm2euler, euler2dcm # Import dcm functions from dcm_util
 from .fdm_util import fdm # Import fdm function from fdm_util
+from .create_xyz import get_XYZ
 # from .common_types import MagV # Redundant import
 # from .dcm_util import dcm2euler, euler2dcm # Redundant import
 
@@ -74,6 +75,10 @@ def field_check(obj: Any, type_to_check: type) -> List[str]:
                     checked_fields.append(f_name)
     return checked_fields
 
+def field_check_3(obj: Any, symbol: str, type_to_check: type):
+    fields = field_check(obj, type_to_check)
+    assert symbol in fields
+    return fields
 
 # Constants from MagNav.jl (if not already in magnav.py)
 # r_earth = R_EARTH (already imported)
@@ -170,161 +175,435 @@ def get_segments(line_all: np.ndarray, lines: Union[int, List[int], str] = "all"
     return ind_segs_out, lines_out
 
 
-def get_ind(
-    line_all: np.ndarray,
-    lines: Union[int, List[int], str] = "all",
-    N_total: Optional[int] = None, # Total number of points, if line_all is not full length
-    l_window: int = -1,
-    N_max: int = -1,
-    N_min: int = 3,
-    N_seg_min: int = 3, # Min points per contiguous segment within a line before N_buffer
-    N_buffer: int = 0,
-    mod_val: int = 1,
-    mod_rem: Union[int, List[int]] = 0,
-    # KRR related parameters (placeholders for now)
-    # valid_frac_thresh: float = 0.9, line_val_perc: float = 0.05,
-    # krr_cov: bool = False, krr_pca: bool = False, krr_gamma: float = 1.0,
-    # krr_lambda: float = 1e-6, krr_poly_deg: int = 3, krr_poly_coef0: float = 1.0,
-    # krr_mean_max: float = np.inf, krr_std_max: float = np.inf,
-    # krr_norm: bool = True, krr_type: str = "scalar", # or "vector"
-    silent: bool = False
-) -> np.ndarray:
-    """
-    Get selected data indices based on various criteria.
-    This is a partial port of MagNav.jl's get_ind. KRR outlier rejection is not yet implemented.
+# def get_ind(
+#     line_all: np.ndarray,
+#     lines: Union[int, List[int], str] = "all",
+#     N_total: Optional[int] = None, # Total number of points, if line_all is not full length
+#     l_window: int = -1,
+#     N_max: int = -1,
+#     N_min: int = 3,
+#     N_seg_min: int = 3, # Min points per contiguous segment within a line before N_buffer
+#     N_buffer: int = 0,
+#     mod_val: int = 1,
+#     mod_rem: Union[int, List[int]] = 0,
+#     # KRR related parameters (placeholders for now)
+#     # valid_frac_thresh: float = 0.9, line_val_perc: float = 0.05,
+#     # krr_cov: bool = False, krr_pca: bool = False, krr_gamma: float = 1.0,
+#     # krr_lambda: float = 1e-6, krr_poly_deg: int = 3, krr_poly_coef0: float = 1.0,
+#     # krr_mean_max: float = np.inf, krr_std_max: float = np.inf,
+#     # krr_norm: bool = True, krr_type: str = "scalar", # or "vector"
+#     silent: bool = False
+# ) -> np.ndarray:
+#     """
+#     Get selected data indices based on various criteria.
+#     This is a partial port of MagNav.jl's get_ind. KRR outlier rejection is not yet implemented.
+#
+#     Args:
+#         line_all: Vector of line numbers for all data points.
+#         lines: Flight line number(s) to get data for. Can be int, list of ints, or "all".
+#         N_total: Total number of points if line_all is a subset. Defaults to len(line_all).
+#         l_window: Window length. If > 0, select points within windows around line transitions.
+#         N_max: Maximum number of data points to select.
+#         N_min: Minimum number of data points to select.
+#         N_seg_min: Minimum number of data points for a contiguous segment within a line.
+#         N_buffer: Number of data points to remove from beginning and end of each segment.
+#         mod_val: Select every `mod_val`-th data point.
+#         mod_rem: Remainder(s) for `mod_val` selection. Can be int or list of ints.
+#         silent: Suppress print statements.
+#
+#     Returns:
+#         ind_final: Boolean array of selected data indices.
+#     """
+#     if N_total is None:
+#         N_total = len(line_all)
+#
+#     ind_lines = np.zeros(N_total, dtype=bool)
+#
+#     if isinstance(lines, str) and lines.lower() == "all":
+#         selected_line_numbers = np.unique(line_all)
+#     elif isinstance(lines, int):
+#         selected_line_numbers = [lines]
+#     elif isinstance(lines, list):
+#         selected_line_numbers = lines
+#     else:
+#         raise ValueError("lines must be an int, list of ints, or 'all'")
+#
+#     for l_val in selected_line_numbers:
+#         ind_this_line = (line_all == l_val)
+#
+#         # Handle N_seg_min and N_buffer for contiguous segments within this line
+#         line_abs_indices = np.where(ind_this_line)[0]
+#         if len(line_abs_indices) == 0:
+#             continue
+#
+#         diffs = np.diff(line_abs_indices)
+#         segment_breaks = np.where(diffs > 1)[0]
+#
+#         current_pos = 0
+#         processed_indices_for_line = np.zeros(N_total, dtype=bool)
+#
+#         for i in range(len(segment_breaks) + 1):
+#             start_idx_in_line_abs = current_pos
+#             if i < len(segment_breaks):
+#                 end_idx_in_line_abs = segment_breaks[i]
+#             else:
+#                 end_idx_in_line_abs = len(line_abs_indices) -1
+#
+#             current_segment_abs_indices = line_abs_indices[start_idx_in_line_abs : end_idx_in_line_abs + 1]
+#             current_pos = end_idx_in_line_abs + 1
+#
+#             if len(current_segment_abs_indices) >= N_seg_min:
+#                 if N_buffer > 0:
+#                     if len(current_segment_abs_indices) > 2 * N_buffer:
+#                         buffered_segment_abs_indices = current_segment_abs_indices[N_buffer : -N_buffer]
+#                         processed_indices_for_line[buffered_segment_abs_indices] = True
+#                     # else segment too short after buffering, effectively skipped
+#                 else:
+#                     processed_indices_for_line[current_segment_abs_indices] = True
+#         ind_lines = ind_lines | processed_indices_for_line
+#
+#     ind_final = ind_lines.copy()
+#
+#     # l_window logic (select points around line transitions or within lines)
+#     if l_window > 0 and np.any(ind_final):
+#         ind_window = np.zeros(N_total, dtype=bool)
+#         line_changes = np.where(np.diff(line_all) != 0)[0] + 1
+#
+#         # Points considered "on-line" are those selected by ind_final
+#         on_line_indices = np.where(ind_final)[0]
+#
+#         if len(on_line_indices) > 0:
+#             for idx in on_line_indices:
+#                 start = max(0, idx - l_window // 2)
+#                 end = min(N_total, idx + l_window // 2 + (l_window % 2)) # +1 if odd
+#                 ind_window[start:end] = True
+#             ind_final = ind_final & ind_window # Intersect with original line selections
+#         else: # If no lines selected initially, l_window might not apply or select all if not careful
+#             ind_final = np.zeros(N_total, dtype=bool)
+#
+#
+#     # mod_val / mod_rem
+#     if mod_val > 1 and np.any(ind_final):
+#         ind_mod = np.zeros(N_total, dtype=bool)
+#         selected_indices_abs = np.where(ind_final)[0]
+#
+#         if isinstance(mod_rem, int):
+#             mod_rem = [mod_rem]
+#
+#         for rem_val in mod_rem:
+#             # Apply modulo on the indices *within the currently selected set*
+#             # This matches Julia: `(eachindex(ind_all)[ind_all] .% mod_val .== mod_rem)`
+#             # However, Julia's `eachindex` is 1-based. Python is 0-based.
+#             # A direct translation of the Julia logic:
+#             #   `idx_where_ind_final_is_true = np.where(ind_final)[0]`
+#             #   `condition = np.isin((idx_where_ind_final_is_true % mod_val), mod_rem)`
+#             #   `ind_mod[idx_where_ind_final_is_true[condition]] = True`
+#             # Simpler: apply to all indices and then AND with ind_final
+#             temp_mod_selector = np.zeros(N_total, dtype=bool)
+#             for i in range(N_total):
+#                 if i % mod_val == rem_val: # 0-based index modulo
+#                     temp_mod_selector[i] = True
+#             ind_mod = ind_mod | temp_mod_selector
+#
+#         ind_final = ind_final & ind_mod
+#
+#     # TODO: KRR outlier rejection from Julia:
+#     # This involves setting up features (potentially using get_x),
+#     # training KRR, predicting, and removing points with high error.
+#     # if !silent && (krr_cov || krr_pca || krr_type != "none")
+#     #    println("KRR outlier rejection not yet implemented in Python get_ind.")
+#     # end
+#
+#     # N_max: downsample if too many points
+#     if N_max > 0 and np.sum(ind_final) > N_max:
+#         selected_indices_abs = np.where(ind_final)[0]
+#         step = int(np.ceil(len(selected_indices_abs) / N_max))
+#         downsampled_indices_abs = selected_indices_abs[::step]
+#
+#         ind_final.fill(False)
+#         ind_final[downsampled_indices_abs] = True
+#
+#     # N_min: ensure minimum number of points
+#     if np.sum(ind_final) < N_min:
+#         if not silent:
+#             print(f"Warning: Fewer than N_min ({N_min}) points selected ({np.sum(ind_final)}). Returning empty selection.")
+#         ind_final.fill(False)
+#
+#     return ind_final
 
-    Args:
-        line_all: Vector of line numbers for all data points.
-        lines: Flight line number(s) to get data for. Can be int, list of ints, or "all".
-        N_total: Total number of points if line_all is a subset. Defaults to len(line_all).
-        l_window: Window length. If > 0, select points within windows around line transitions.
-        N_max: Maximum number of data points to select.
-        N_min: Minimum number of data points to select.
-        N_seg_min: Minimum number of data points for a contiguous segment within a line.
-        N_buffer: Number of data points to remove from beginning and end of each segment.
-        mod_val: Select every `mod_val`-th data point.
-        mod_rem: Remainder(s) for `mod_val` selection. Can be int or list of ints.
-        silent: Suppress print statements.
+
+def get_ind_windowed(xyz, line: float, df_line: pd.DataFrame, 
+            splits: Tuple = (1,), l_window: int = -1) -> Union[np.ndarray, Tuple]:
+    """
+    Get indices for a specific line from XYZ data and DataFrame.
+    
+    Parameters:
+    - xyz: XYZ object containing trajectory data
+    - line: Real number representing the line to extract
+    - df_line: DataFrame containing line information with columns 't_start', 't_end', 'line'
+    - splits: Tuple of split parameters (default: (1,))
+    - l_window: Integer window length for trimming (default: -1)
+    
+    Returns:
+    - inds: Array or tuple of indices
+    """
+    
+    # Get time limits from DataFrame for the specified line
+    line_mask = df_line['line'] == line
+    tt_lim = [df_line.loc[line_mask, 't_start'].iloc[0],
+              df_line.loc[line_mask, 't_end'].iloc[-1]]
+    
+    # Get field names equivalent - check if xyz has 'line' attribute
+    fields = dir(xyz)
+    if hasattr(xyz, 'line'):
+        line_ = xyz.line
+    else:
+        # Note: 'ind' variable is referenced but not defined in original code
+        # This appears to be a bug in the original Julia code
+        line_ = np.ones_like(xyz.traj.tt[ind])
+    
+    # Call the overloaded get_ind function with different signature
+    inds = get_ind_vectors(xyz.traj.tt, line_, 
+                             lines=[line], 
+                             tt_lim=tt_lim, 
+                             splits=splits)
+    
+    # Handle l_window trimming if specified
+    if l_window > 0:
+        if isinstance(inds, tuple):
+            for ind in inds:
+                N_trim = len(xyz.traj.lat[ind]) % l_window
+                for _ in range(N_trim):
+                    # Find last occurrence of 1 and set it to 0
+                    last_ones = np.where(ind == 1)[0]
+                    if len(last_ones) > 0:
+                        ind[last_ones[-1]] = 0
+        else:
+            N_trim = np.sum(inds) % l_window
+            for _ in range(N_trim):
+                # Find last occurrence of 1 and set it to 0
+                last_ones = np.where(inds == 1)[0]
+                if len(last_ones) > 0:
+                    inds[last_ones[-1]] = 0
+    
+    return inds
+
+
+def get_ind_vectors(tt: List[float], line: List[int], 
+                   ind: Optional[Union[List[bool], np.ndarray]] = None,
+                   lines: Tuple = (),
+                   tt_lim: Tuple = (),
+                   splits: Tuple[float, ...] = (1,)) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
+    """
+    Get BitVector of indices for further analysis from specified indices (subset),
+    lines, and/or time range. Any or all of these may be used. Defaults to use all
+    indices, lines, and times.
+
+    Arguments:
+    - tt:     time [s]
+    - line:   line number(s)
+    - ind:    (optional) selected data indices
+    - lines:  (optional) selected line number(s)
+    - tt_lim: (optional) end time limit or length-2 start & end time limits (inclusive) [s]
+    - splits: (optional) data splits, must sum to 1
 
     Returns:
-        ind_final: Boolean array of selected data indices.
+    - ind: BitVector (or tuple of BitVector) of selected data indices
     """
-    if N_total is None:
-        N_total = len(line_all)
     
-    ind_lines = np.zeros(N_total, dtype=bool)
+    assert abs(sum(splits) - 1) < 1e-10, f"sum of splits = {sum(splits)} ≠ 1"
+    assert len(tt_lim) <= 2, f"length of tt_lim = {len(tt_lim)} > 2"
+    assert len(splits) <= 3, f"number of splits = {len(splits)} > 3"
 
-    if isinstance(lines, str) and lines.lower() == "all":
-        selected_line_numbers = np.unique(line_all)
-    elif isinstance(lines, int):
-        selected_line_numbers = [lines]
-    elif isinstance(lines, list):
-        selected_line_numbers = lines
+    if ind is None:
+        ind = np.ones(len(tt), dtype=bool)
+    
+    tt = np.array(tt)
+    line = np.array(line)
+    
+    if isinstance(ind, (list, np.ndarray)) and len(ind) > 0 and isinstance(ind[0], bool):
+        ind_ = copy.deepcopy(ind)
+        ind_ = np.array(ind_, dtype=bool)
     else:
-        raise ValueError("lines must be an int, list of ints, or 'all'")
+        ind_ = np.isin(np.arange(len(tt)), ind)
 
-    for l_val in selected_line_numbers:
-        ind_this_line = (line_all == l_val)
-        
-        # Handle N_seg_min and N_buffer for contiguous segments within this line
-        line_abs_indices = np.where(ind_this_line)[0]
-        if len(line_abs_indices) == 0:
-            continue
+    N = len(tt)
 
-        diffs = np.diff(line_abs_indices)
-        segment_breaks = np.where(diffs > 1)[0]
-        
-        current_pos = 0
-        processed_indices_for_line = np.zeros(N_total, dtype=bool)
+    if len(lines) > 0:
+        ind = np.zeros(N, dtype=bool)
+        for l in lines:
+            ind = ind | (line == l)
+    else:
+        ind = np.ones(N, dtype=bool)
 
-        for i in range(len(segment_breaks) + 1):
-            start_idx_in_line_abs = current_pos
-            if i < len(segment_breaks):
-                end_idx_in_line_abs = segment_breaks[i]
-            else:
-                end_idx_in_line_abs = len(line_abs_indices) -1
-            
-            current_segment_abs_indices = line_abs_indices[start_idx_in_line_abs : end_idx_in_line_abs + 1]
-            current_pos = end_idx_in_line_abs + 1
+    if len(tt_lim) == 1:
+        ind = ind & (tt <= min(tt_lim[0]))
+    elif len(tt_lim) == 2:
+        print('ind=', ind)
+        print('tt_lim', tt_lim)
+        print('tt', tt)
+        ind = ind & (tt >= tt_lim[0]) & (tt <= tt_lim[1])
 
-            if len(current_segment_abs_indices) >= N_seg_min:
-                if N_buffer > 0:
-                    if len(current_segment_abs_indices) > 2 * N_buffer:
-                        buffered_segment_abs_indices = current_segment_abs_indices[N_buffer : -N_buffer]
-                        processed_indices_for_line[buffered_segment_abs_indices] = True
-                    # else segment too short after buffering, effectively skipped
-                else:
-                    processed_indices_for_line[current_segment_abs_indices] = True
-        ind_lines = ind_lines | processed_indices_for_line
+    # ind = ind & ind_
 
-    ind_final = ind_lines.copy()
+    if np.sum(ind) == 0:
+        logging.info("ind contains all falses")
 
-    # l_window logic (select points around line transitions or within lines)
-    if l_window > 0 and np.any(ind_final):
-        ind_window = np.zeros(N_total, dtype=bool)
-        line_changes = np.where(np.diff(line_all) != 0)[0] + 1
-        
-        # Points considered "on-line" are those selected by ind_final
-        on_line_indices = np.where(ind_final)[0]
-
-        if len(on_line_indices) > 0:
-            for idx in on_line_indices:
-                start = max(0, idx - l_window // 2)
-                end = min(N_total, idx + l_window // 2 + (l_window % 2)) # +1 if odd
-                ind_window[start:end] = True
-            ind_final = ind_final & ind_window # Intersect with original line selections
-        else: # If no lines selected initially, l_window might not apply or select all if not careful
-            ind_final = np.zeros(N_total, dtype=bool)
+    if len(splits) == 1:
+        return ind
+    elif len(splits) == 2:
+        ind1 = ind & (np.cumsum(ind) <= int(round(np.sum(ind) * splits[0])))
+        ind2 = ind & ~ind1
+        return (ind1, ind2)
+    elif len(splits) == 3:
+        ind1 = ind & (np.cumsum(ind) <= int(round(np.sum(ind) * splits[0])))
+        ind2 = ind & (np.cumsum(ind) <= int(round(np.sum(ind) * (splits[0] + splits[1])))) & ~ind1
+        ind3 = ind & ~(ind1 | ind2)
+        return (ind1, ind2, ind3)
 
 
-    # mod_val / mod_rem
-    if mod_val > 1 and np.any(ind_final):
-        ind_mod = np.zeros(N_total, dtype=bool)
-        selected_indices_abs = np.where(ind_final)[0]
-        
-        if isinstance(mod_rem, int):
-            mod_rem = [mod_rem]
-        
-        for rem_val in mod_rem:
-            # Apply modulo on the indices *within the currently selected set*
-            # This matches Julia: `(eachindex(ind_all)[ind_all] .% mod_val .== mod_rem)`
-            # However, Julia's `eachindex` is 1-based. Python is 0-based.
-            # A direct translation of the Julia logic:
-            #   `idx_where_ind_final_is_true = np.where(ind_final)[0]`
-            #   `condition = np.isin((idx_where_ind_final_is_true % mod_val), mod_rem)`
-            #   `ind_mod[idx_where_ind_final_is_true[condition]] = True`
-            # Simpler: apply to all indices and then AND with ind_final
-            temp_mod_selector = np.zeros(N_total, dtype=bool)
-            for i in range(N_total):
-                if i % mod_val == rem_val: # 0-based index modulo
-                    temp_mod_selector[i] = True
-            ind_mod = ind_mod | temp_mod_selector
-            
-        ind_final = ind_final & ind_mod
+def get_ind_xyz(xyz, 
+               ind: Optional[np.ndarray] = None,
+               lines: Tuple = (),
+               tt_lim: Tuple = (),
+               splits: Tuple[float, ...] = (1,)) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
+    """
+    Get BitVector of indices for further analysis from specified indices (subset),
+    lines, and/or time range. Any or all of these may be used. Defaults to use all
+    indices, lines, and times.
 
-    # TODO: KRR outlier rejection from Julia:
-    # This involves setting up features (potentially using get_x),
-    # training KRR, predicting, and removing points with high error.
-    # if !silent && (krr_cov || krr_pca || krr_type != "none")
-    #    println("KRR outlier rejection not yet implemented in Python get_ind.")
-    # end
+    Arguments:
+    - xyz:    XYZ flight data struct
+    - ind:    (optional) selected data indices
+    - lines:  (optional) selected line number(s)
+    - tt_lim: (optional) end time limit or length-2 start & end time limits (inclusive) [s]
+    - splits: (optional) data splits, must sum to 1
 
-    # N_max: downsample if too many points
-    if N_max > 0 and np.sum(ind_final) > N_max:
-        selected_indices_abs = np.where(ind_final)[0]
-        step = int(np.ceil(len(selected_indices_abs) / N_max))
-        downsampled_indices_abs = selected_indices_abs[::step]
-        
-        ind_final.fill(False)
-        ind_final[downsampled_indices_abs] = True
+    Returns:
+    - ind: BitVector (or tuple of BitVector) of selected data indices
+    """
+    if ind is None:
+        ind = np.ones(xyz.traj.N, dtype=bool)
+    
+    # Check if xyz has line attribute
+    if hasattr(xyz, 'line'):
+        line_ = xyz.line
+    else:
+        line_ = np.ones(len(xyz.traj.tt[ind]))
+    
+    return get_ind_vectors(xyz.traj.tt, line_,
+                          ind=ind,
+                          lines=lines,
+                          tt_lim=tt_lim,
+                          splits=splits)
 
-    # N_min: ensure minimum number of points
-    if np.sum(ind_final) < N_min:
-        if not silent:
-            print(f"Warning: Fewer than N_min ({N_min}) points selected ({np.sum(ind_final)}). Returning empty selection.")
-        ind_final.fill(False)
-        
-    return ind_final
+
+def get_ind_xyz_line_df(xyz, line: float, df_line: pd.DataFrame,
+                       splits: Tuple[float, ...] = (1,),
+                       l_window: int = -1) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
+    """
+    Get BitVector of indices for further analysis via DataFrame lookup.
+
+    Arguments:
+    - xyz:     XYZ flight data struct
+    - line:    line number
+    - df_line: lookup table (DataFrame) of lines
+    |**Field**|**Type**|**Description**
+    |:--|:--|:--
+    `flight`   |`Symbol`| flight name (e.g., `:Flt1001`)
+    `line`     |`Real`  | line number, i.e., segments within `flight`
+    `t_start`  |`Real`  | start time of `line` to use [s]
+    `t_end`    |`Real`  | end   time of `line` to use [s]
+    `map_name` |`Symbol`| (optional) name of magnetic anomaly map relevant to `line`
+    - splits:   (optional) data splits, must sum to 1
+    - l_window: (optional) trim data by N % l_window, -1 to ignore
+
+    Returns:
+    - ind: BitVector (or tuple of BitVector) of selected data indices
+    """
+    
+    line_mask = df_line['line'] == line
+    tt_lim = [df_line.loc[line_mask, 't_start'].iloc[0],
+              df_line.loc[line_mask, 't_end'].iloc[-1]]
+    
+    # Check if xyz has line attribute
+    if hasattr(xyz, 'line'):
+        line_ = xyz.line
+    else:
+        # Note: this creates a dummy ind for the ones() call, but it's not used properly in original
+        # Following the original logic exactly
+        ind_dummy = np.ones(xyz.traj.N, dtype=bool)  # This matches the original ind reference
+        line_ = np.ones(len(xyz.traj.tt[ind_dummy]))
+    
+    inds = get_ind_vectors(xyz.traj.tt, line_,
+                          lines=[line],
+                          tt_lim=tt_lim,
+                          splits=splits)
+
+    if l_window > 0:
+        if isinstance(inds, tuple):
+            for ind in inds:
+                N_trim = np.sum(xyz.traj.lat[ind]) % l_window
+                for _ in range(N_trim):
+                    last_true_idx = np.where(ind == 1)[0][-1] if np.any(ind == 1) else None
+                    if last_true_idx is not None:
+                        ind[last_true_idx] = 0
+        else:
+            N_trim = np.sum(inds) % l_window
+            for _ in range(N_trim):
+                last_true_idx = np.where(inds == 1)[0][-1] if np.any(inds == 1) else None
+                if last_true_idx is not None:
+                    inds[last_true_idx] = 0
+
+    return inds
+
+
+def get_ind_xyz_lines_df(xyz, lines, df_line: pd.DataFrame,
+                        splits: Tuple[float, ...] = (1,),
+                        l_window: int = -1) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
+    """
+    Get BitVector of selected data indices for further analysis via DataFrame lookup.
+
+    Arguments:
+    - xyz:     XYZ flight data struct
+    - lines:   selected line number(s)
+    - df_line: lookup table (DataFrame) of lines
+    |**Field**|**Type**|**Description**
+    |:--|:--|:--
+    `flight`   |`Symbol`| flight name (e.g., `:Flt1001`)
+    `line`     |`Real`  | line number, i.e., segments within `flight`
+    `t_start`  |`Real`  | start time of `line` to use [s]
+    `t_end`    |`Real`  | end   time of `line` to use [s]
+    `map_name` |`Symbol`| (optional) name of magnetic anomaly map relevant to `line`
+    - splits:   (optional) data splits, must sum to 1
+    - l_window: (optional) trim data by N % l_window, -1 to ignore
+
+    Returns:
+    - ind: BitVector (or tuple of BitVector) of selected data indices
+    """
+    
+    assert abs(sum(splits) - 1) < 1e-10, f"sum of splits = {sum(splits)} ≠ 1"
+    assert len(splits) <= 3, f"number of splits = {len(splits)} > 3"
+
+    ind = np.zeros(xyz.traj.N, dtype=bool)
+    for line in lines:
+        if line in df_line['line'].values:
+            line_ind = get_ind_xyz_line_df(xyz, line, df_line, l_window=l_window)
+            ind = ind | line_ind
+
+    if len(splits) == 1:
+        return ind
+    elif len(splits) == 2:
+        ind1 = ind & (np.cumsum(ind) <= int(round(np.sum(ind) * splits[0])))
+        ind2 = ind & ~ind1
+        return (ind1, ind2)
+    elif len(splits) == 3:
+        ind1 = ind & (np.cumsum(ind) <= int(round(np.sum(ind) * splits[0])))
+        ind2 = ind & (np.cumsum(ind) <= int(round(np.sum(ind) * (splits[0] + splits[1])))) & ~ind1
+        ind3 = ind & ~(ind1 | ind2)
+        return (ind1, ind2, ind3)
+
+
 
 
 def linreg_vector(y: np.ndarray, lambda_ridge: float = 0) -> np.ndarray:
@@ -516,7 +795,7 @@ def get_x(xyz: XYZ,
     for use_vec_str in magv_field_names:
         mag_v_data = getattr(xyz, use_vec_str) # This is a MagV object
         # Assuming create_TL_A handles indexing internally using the `ind` boolean array
-        A_matrix = create_TL_A(mag_v_data, ind, terms=terms)
+        A_matrix = create_TL_A_modified_2(mag_v_data, ind, terms=terms)
         if A_matrix.shape[0] == N: # Ensure A_matrix has the correct number of rows
             d[f"TL_A_{use_vec_str}"] = A_matrix
         else:
@@ -602,7 +881,7 @@ def get_x(xyz: XYZ,
             
     # Attitude features (dcm2euler, euler2dcm are external)
     if hasattr(xyz.ins, 'Cnb'):
-        Cnb_ind = xyz.ins.Cnb[ind, :, :] # Apply boolean index to the first (N) axis
+        Cnb_ind = xyz.ins.Cnb[:, :, ind] # Apply boolean index to the first (N) axis
         # Assuming dcm2euler takes (3,3,N) and returns (N,), (N,), (N,) for roll, pitch, yaw
         roll, pitch, yaw = dcm2euler(Cnb_ind, order='body2nav') # Use appropriate order string
 
@@ -1603,6 +1882,9 @@ def filter_events(flight_name: str, df_event: pd.DataFrame,
         df_filtered = df_filtered[df_filtered['event'].astype(str).str.lower().str.contains(keyword.lower())]
         
     return df_filtered
+
+
+
 def get_Axy(lines: Union[int, List[int]],
             df_line: pd.DataFrame,
             df_flight: pd.DataFrame,
@@ -1664,21 +1946,23 @@ def get_Axy(lines: Union[int, List[int]],
     if features_setup is None: features_setup = ["mag_1_uc", "TL_A_flux_a"]
     if features_no_norm is None: features_no_norm = []
     if terms is None: terms = ["permanent", "induced", "eddy"]
+    if terms == []: terms = ["permanent", "induced", "eddy"]
     if terms_A is None: terms_A = ["permanent", "induced", "eddy", "bias"]
+    if terms_A == []: terms_A = ["permanent", "induced", "eddy", "bias"]
 
     if isinstance(lines, int):
         lines = [lines]
-    
+
     unique_input_lines = sorted(list(set(lines)))
     valid_lines_from_df = df_line['line'].unique()
-    
+
     processed_lines = []
     for l_num in unique_input_lines:
         if l_num in valid_lines_from_df:
             processed_lines.append(l_num)
         elif not silent:
             print(f"Info: Line {l_num} not in df_line, skipping.")
-    
+
     if not processed_lines: # If no valid lines to process
         # Determine expected number of columns for A and x to return empty arrays of correct shape
         # This is a bit tricky without loading data. For A, it depends on terms_A.
@@ -1693,7 +1977,7 @@ def get_Axy(lines: Union[int, List[int]],
         # For x, this is harder. If features_out was available from a dry run of get_x, use that.
         # For now, returning 0 columns for x if no lines.
         num_x_cols = 0 # Placeholder, ideally infer from features_setup
-        
+
         empty_A = np.empty((0, num_A_cols))
         empty_x = np.empty((0, num_x_cols))
         empty_y = np.array([])
@@ -1705,158 +1989,389 @@ def get_Axy(lines: Union[int, List[int]],
         else:
             return empty_A, empty_x, empty_y, empty_no_norm, empty_features, empty_l_segs
 
-    # Check flight data compatibility (xyz_set)
-    line_details_for_set_check = df_line[df_line['line'].isin(processed_lines)]
-    flight_names_for_set_check = line_details_for_set_check['flight'].unique()
-    flight_details_for_set_check = df_flight[df_flight['flight'].isin(flight_names_for_set_check)]
-    if flight_details_for_set_check['xyz_set'].nunique() > 1:
-         raise ValueError("Incompatible xyz_sets in df_flight for the selected lines.")
-
-    A_list, Bt_list, B_dot_list = [], [], []
-    x_list, y_list, l_segs_list = [], [], []
-    no_norm_mask_out, features_out = None, None
-    
-    current_xyz: Optional[XYZ] = None
-    current_flight_name: Optional[str] = None
-
-    get_XYZ_func, get_map_func, get_map_val_func = None, None, None
-    try:
-        from .create_xyz import create_xyz as get_XYZ_imported
-        get_XYZ_func = get_XYZ_imported
-    except ImportError: pass
-    try:
-        from .map_utils import get_map as get_map_imported, get_map_val as get_map_val_imported
-        get_map_func = get_map_imported
-        get_map_val_func = get_map_val_imported
-    except ImportError: pass
 
 
-    for line_num in processed_lines:
-        line_info_df = df_line[df_line['line'] == line_num]
-        if line_info_df.empty: continue
-        line_info = line_info_df.iloc[0]
-        flight_name = line_info['flight']
 
-        if flight_name != current_flight_name:
-            if get_XYZ_func:
-                current_xyz = get_XYZ_func(flight_name, df_flight, reorient_vec=reorient_vec, silent=silent)
-            else: # Placeholder XYZ
-                if not silent: print(f"Warning: get_XYZ not available. Using placeholder XYZ for flight {flight_name}")
-                dummy_traj = Traj(N=10, dt=0.1, tt=np.arange(10)*0.1, lat=np.zeros(10), lon=np.zeros(10), alt=np.zeros(10), vn=np.zeros(10), ve=np.zeros(10), vd=np.zeros(10), fn=np.zeros(10), fe=np.zeros(10), fd=np.zeros(10), Cnb=np.array([np.eye(3)]*10).transpose(1,2,0))
-                dummy_ins = INS(N=10, dt=0.1, tt=np.arange(10)*0.1, lat=np.zeros(10), lon=np.zeros(10), alt=np.zeros(10), vn=np.zeros(10), ve=np.zeros(10), vd=np.zeros(10), fn=np.zeros(10), fe=np.zeros(10), fd=np.zeros(10), Cnb=np.array([np.eye(3)]*10).transpose(1,2,0), P=np.zeros((17,17,10)))
-                dummy_magv = MagV(x=np.zeros(10),y=np.zeros(10),z=np.zeros(10),t=np.zeros(10))
-                current_xyz = XYZ0(info="dummy_Axy", traj=dummy_traj, ins=dummy_ins, flux_a=dummy_magv, flight=np.array([flight_name]*10,dtype=object), line=np.full(10,line_num), year=np.full(10,2020), doy=np.ones(10), diurnal=np.zeros(10), igrf=np.zeros(10), mag_1_c=np.zeros(10), mag_1_uc=np.zeros(10))
-            current_flight_name = flight_name
-        
-        if current_xyz is None: continue
 
-        ind_for_line = get_ind(current_xyz.line, lines=line_num, N_total=current_xyz.traj.N, l_window=l_window, N_seg_min=1, N_buffer=0, silent=silent)
-        t_start = line_info.get('t_start', -np.inf); t_end = line_info.get('t_end', np.inf)
-        if hasattr(current_xyz.traj, 'tt') and len(current_xyz.traj.tt) == current_xyz.traj.N:
-            time_mask = (current_xyz.traj.tt >= t_start) & (current_xyz.traj.tt <= t_end)
-            ind_for_line = ind_for_line & time_mask
-        
-        if not np.any(ind_for_line):
-            l_segs_list.append(0)
-            continue
-        
-        l_segs_list.append(np.sum(ind_for_line))
+    lines = processed_lines
+    # # check if lines are in df_line, remove if not
+    # lines_to_remove = []
+    # for l in lines:
+    #     if l not in df_line['line'].unique():
+    #         if not silent:
+    #             logging.info(f"line {l} is not in df_line, skipping")
+    #         lines_to_remove.append(l)
+    #
+    # for l in lines_to_remove:
+    #     lines.remove(l)
 
-        # X matrix
-        xi, no_norm_i, features_i, _ = get_x(current_xyz, ind_for_line,
-                                            features_setup=features_setup,
-                                            features_no_norm=features_no_norm,
-                                            terms=terms, sub_diurnal=sub_diurnal,
-                                            sub_igrf=sub_igrf, bpf_mag_data=bpf_mag_data_in_x)
-        x_list.append(xi)
-        if no_norm_mask_out is None:
-            no_norm_mask_out = no_norm_i
-            features_out = features_i
-        elif not np.array_equal(no_norm_mask_out, no_norm_i) or features_out != features_i:
-            raise ValueError("Feature set or no_norm mask mismatch between lines/flights for x matrix.")
+    # check if lines contains any duplicates, throw error if so
+    assert len(lines) == len(set(lines)), f"duplicate lines in {lines}"
 
-        # Map values for Y and potentially for A_external
-        map_val_for_line: Union[float, np.ndarray] = -1
-        if y_type in ['b', 'c'] or map_TL:
-            map_name_series = line_info.get('map_name')
-            if map_name_series is None or pd.isna(map_name_series):
-                raise ValueError(f"map_name missing in df_line for line {line_num} when y_type is '{y_type}' or map_TL is True.")
-            map_name = str(map_name_series)
-            if get_map_func and get_map_val_func:
-                current_map_data = get_map_func(map_name, df_map)
-                map_val_for_line = get_map_val_func(current_map_data, current_xyz.traj, ind_for_line, alpha=200)
-            else: # Placeholder map_val
-                if not silent: print(f"Warning: get_map/get_map_val not available. Using zeros for map_val for line {line_num}.")
-                map_val_for_line = np.zeros(np.sum(ind_for_line))
-        
-        # Y vector
-        fs_for_y = 1.0/current_xyz.traj.dt if hasattr(current_xyz.traj, 'dt') and current_xyz.traj.dt > 0 else None
-        yi = get_y(current_xyz, ind_for_line, map_val=map_val_for_line, y_type=y_type,
-                   use_mag_str=use_mag_str, use_mag_c_str=use_mag_c_str,
-                   sub_diurnal=sub_diurnal, sub_igrf=sub_igrf,
-                   bpf_scalar_mag=(y_type=='e'), fs_override=fs_for_y) # bpf_scalar_mag for y_type 'e'
-        y_list.append(yi)
+    # check if flight data matches up, throw error if not
+    flights = df_flight['flight'].astype(str).tolist()
+    flights_ = [df_line[df_line['line'] == l]['flight'].iloc[0] for l in lines]
+    flights_ = [str(f) for f in flights_]
+    xyz_sets = [df_flight[df_flight['flight'] == f]['xyz_set'].iloc[0] for f in flights_]
+    assert all(xyz_set == xyz_sets[0] for xyz_set in xyz_sets), "incompatible xyz_sets in df_flight"
 
-        # External A matrix
-        if not hasattr(current_xyz, use_vec_str) or not isinstance(getattr(current_xyz, use_vec_str), MagV):
-            raise ValueError(f"Vector magnetometer '{use_vec_str}' not found or not MagV type in XYZ for external A.")
-        
-        vec_mag_data_for_A = getattr(current_xyz, use_vec_str)
-        Bt_for_A: Optional[np.ndarray] = None
-        if mod_TL:
-            if not hasattr(current_xyz, use_mag_str):
-                raise ValueError(f"Scalar mag '{use_mag_str}' for mod_TL not in XYZ.")
-            Bt_for_A = getattr(current_xyz, use_mag_str)[ind_for_line]
-        elif map_TL:
-            if not isinstance(map_val_for_line, np.ndarray) or len(map_val_for_line) != np.sum(ind_for_line):
-                 raise ValueError("map_val_for_line must be a valid array for map_TL.")
-            Bt_for_A = map_val_for_line
-        
-        # create_TL_A now returns A, Bt_used, B_dot_used
-        Ai, Bt_i, B_dot_i = create_TL_A(vec_mag_data_for_A, ind_for_line,
-                                        Bt_scalar_override=Bt_for_A,
-                                        terms=terms_A,
-                                        return_B_components=True) # Always get components
-        
-        if y_type == 'e' and bpf_A_if_y_type_e:
-            fs_for_A = 1.0/current_xyz.traj.dt if hasattr(current_xyz.traj, 'dt') and current_xyz.traj.dt > 0 else None
-            if fs_for_A:
-                # BPF each column of Ai
-                sos_A = get_bpf_sos(fs=fs_for_A) # Default passbands
-                for k_col in range(Ai.shape[1]):
-                    Ai[:, k_col] = bpf_data(Ai[:, k_col], sos=sos_A)
-            elif not silent:
-                print(f"Warning: Cannot BPF external A matrix for y_type 'e' on line {line_num} due to missing dt.")
+    # initial values
+    flt_old = "FltInitial"
+    A_test = create_TL_A_modified_1(np.array([1.0]), np.array([1.0]), np.array([1.0]), terms=terms_A)
+    print('A_test shape', A_test.shape)
+    # A_test shape(1, 18)
+    A = np.empty((0, len(A_test)), dtype=A_test.dtype)
+    Bt = np.empty(0, dtype=A_test.dtype)
+    B_dot = np.empty((0, 3), dtype=A_test.dtype)
+    x = None
+    y = None
+    no_norm = None
+    features = None
+    xyz = None
+    l_segs = np.zeros(len(lines), dtype=int)
 
-        A_list.append(Ai)
-        if return_B_comps:
-            Bt_list.append(Bt_i)
-            B_dot_list.append(B_dot_i)
+    for line in lines:
+        flt = str(df_line[df_line['line'] == line]['flight'].iloc[0])
+        if flt != flt_old:
+            xyz = get_XYZ(flt, df_flight, reorient_vec=reorient_vec, silent=silent)
+        flt_old = flt
 
-    if not x_list: # All lines were skipped or resulted in no data
-        num_A_cols = A_list[0].shape[1] if A_list else 0
-        num_x_cols = x_list[0].shape[1] if x_list else (len(features_out) if features_out else 0)
-        
-        final_A = np.empty((0, num_A_cols))
-        final_x = np.empty((0, num_x_cols))
-        final_y = np.array([])
-        final_no_norm = np.array([], dtype=bool) if no_norm_mask_out is None else no_norm_mask_out
-        final_features = [] if features_out is None else features_out
-        final_l_segs = np.array(l_segs_list, dtype=int)
+        ind = get_ind_xyz_line_df(xyz, line, df_line, l_window=l_window)
+        first_zero_idx = np.where(l_segs == 0)[0][0]
+        l_segs[first_zero_idx] = len(xyz.traj.lat[ind])
 
-        if return_B_comps:
-            return final_A, np.array([]), np.empty((0,3)), final_x, final_y, final_no_norm, final_features, final_l_segs
+        # x matrix
+        if x is None:
+            x, no_norm, features, _seg = get_x(xyz, ind, features_setup,
+                                        features_no_norm=features_no_norm,
+                                        terms=terms,
+                                        sub_diurnal=sub_diurnal,
+                                        sub_igrf=sub_igrf,
+                                        bpf_mag_data=bpf_mag_data_in_x)
         else:
-            return final_A, final_x, final_y, final_no_norm, final_features, final_l_segs
+            x_new = get_x(xyz, ind, features_setup,
+                         features_no_norm=features_no_norm,
+                         terms=terms,
+                         sub_diurnal=sub_diurnal,
+                         sub_igrf=sub_igrf,
+                         bpf_mag_data=bpf_mag_data_in_x)[0]
+            x = np.vstack([x, x_new])
 
-    final_A = np.vstack(A_list)
-    final_x = np.vstack(x_list)
-    final_y = np.concatenate(y_list)
-    final_l_segs = np.array(l_segs_list, dtype=int)
+        # map values along trajectory (if needed)
+        if y_type in ["b", "c"]:
+            map_name = str(df_line[df_line['line'] == line]['map_name'].iloc[0])
+            map_val = get_map_val(get_map(map_name, df_map), xyz.traj, ind, α=200)
+        else:
+            map_val = -1
+
+        # `A` matrix for selected vector magnetometer & `B` measurements
+        field_check_3(xyz, use_vec_str, MagV) ## wip, make this function and make it work
+        if mod_TL:
+            A_, Bt_, B_dot_ = create_TL_A(getattr(xyz, use_vec_str), ind,
+                                         Bt=getattr(xyz, use_mag),
+                                         terms=terms_A,
+                                         return_B=True)
+        elif map_TL:
+            A_, Bt_, B_dot_ = create_TL_A(getattr(xyz, use_vec_str), ind,
+                                         Bt=map_val,
+                                         terms=terms_A,
+                                         return_B=True)
+        else:
+            A_, Bt_, B_dot_ = create_TL_A(getattr(xyz, use_vec_str), ind,
+                                         terms=terms_A,
+                                         return_B=True)
+        fs = 1 / xyz.traj.dt
+        if y_type == "e":
+            bpf_data(A_, bpf=get_bpf(fs=fs))
+
+        # shape A, shape A_(264409, 18)(5817, 18)
+        print('shape A, shape A_', A.shape, A_.shape)
+        A = np.vstack([A, A_])
+        Bt = np.concatenate([Bt, Bt_])
+        B_dot = np.vstack([B_dot, B_dot_])
+
+        # y vector
+        if y is None:
+            y = get_y(xyz, ind, map_val,
+                     y_type=y_type,
+                     use_mag_str=use_mag_str,
+                     use_mag_c_str=use_mag_c_str,
+                     sub_diurnal=sub_diurnal,
+                     sub_igrf=sub_igrf)
+        else:
+            y_new = get_y(xyz, ind, map_val,
+                         y_type=y_type,
+                         use_mag_str=use_mag_str,
+                         use_mag_c_str=use_mag_c_str,
+                         sub_diurnal=sub_diurnal,
+                         sub_igrf=sub_igrf)
+            y = np.concatenate([y, y_new])
 
     if return_B_comps:
-        final_Bt = np.concatenate(Bt_list) if Bt_list else np.array([])
-        final_B_dot = np.vstack(B_dot_list) if B_dot_list else np.empty((0,3))
-        return final_A, final_Bt, final_B_dot, final_x, final_y, no_norm_mask_out, features_out, final_l_segs
+        return A, Bt, B_dot, x, y, no_norm, features, l_segs
     else:
-        return final_A, final_x, final_y, no_norm_mask_out, features_out, final_l_segs
+        return A, x, y, no_norm, features, l_segs
+
+
+
+
+
+# def get_Axy(lines: Union[int, List[int]],
+#             df_line: pd.DataFrame,
+#             df_flight: pd.DataFrame,
+#             df_map: pd.DataFrame,
+#             features_setup: Optional[List[str]] = None,
+#             features_no_norm: Optional[List[str]] = None,
+#             y_type: str = 'd',
+#             use_mag_str: str = 'mag_1_uc',
+#             use_mag_c_str: str = 'mag_1_c',
+#             use_vec_str: str = 'flux_a', # For the "external" A matrix
+#             terms: Optional[List[str]] = None, # For A matrix within get_x features
+#             terms_A: Optional[List[str]] = None, # For the "external" A matrix
+#             sub_diurnal: bool = False,
+#             sub_igrf: bool = False,
+#             bpf_mag_data_in_x: bool = False, # Renamed from bpf_mag for clarity
+#             reorient_vec: bool = False,
+#             l_window: int = -1,
+#             mod_TL: bool = False, # If true, create modified "external" TL A matrix with use_mag_str
+#             map_TL: bool = False, # If true, create map-based "external" TL A matrix
+#             return_B_comps: bool = False, # Renamed from return_B
+#             bpf_A_if_y_type_e: bool = True, # Specific BPF for external A if y_type is 'e'
+#             silent: bool = True
+#            ) -> tuple:
+#     """
+#     Get "external" Tolles-Lawson A matrix, x data matrix, & y target vector
+#     from multiple flight lines, possibly multiple flights. Optionally return Bt & B_dot
+#     used to create the "external" Tolles-Lawson A matrix.
+#
+#     Args:
+#         lines: Selected line number(s).
+#         df_line: DataFrame lookup for lines.
+#         df_flight: DataFrame lookup for flight data.
+#         df_map: DataFrame lookup for map data.
+#         features_setup: Features for x matrix (see get_x). Default: ["mag_1_uc", "TL_A_flux_a"]
+#         features_no_norm: Features not to normalize in x (see get_x). Default: []
+#         y_type: Target type for y vector (see get_y). Default: 'd'.
+#         use_mag_str: Uncompensated scalar mag for y (see get_y). Default: 'mag_1_uc'.
+#         use_mag_c_str: Compensated scalar mag for y (see get_y). Default: 'mag_1_c'.
+#         use_vec_str: Vector mag for "external" A matrix. Default: 'flux_a'.
+#         terms: TL terms for A matrix within x features. Default: ["permanent", "induced", "eddy"].
+#         terms_A: TL terms for "external" A matrix. Default: ["permanent", "induced", "eddy", "bias"].
+#         sub_diurnal: Subtract diurnal (see get_x, get_y). Default: False.
+#         sub_igrf: Subtract IGRF (see get_x, get_y). Default: False.
+#         bpf_mag_data_in_x: BPF scalar mag data in x matrix (see get_x). Default: False.
+#         reorient_vec: Reorient vector magnetometer (for get_XYZ). Default: False.
+#         l_window: Windowing for get_ind. Default: -1 (no windowing/trimming by get_ind).
+#         mod_TL: Use scalar mag (use_mag_str) for Bt in external A. Default: False.
+#         map_TL: Use map_val for Bt in external A. Default: False.
+#         return_B_comps: If true, also return Bt & B_dot for external A. Default: False.
+#         bpf_A_if_y_type_e: If y_type is 'e', apply BPF to the external A matrix. Default: True.
+#         silent: Suppress info prints. Default: True.
+#
+#     Returns:
+#         Tuple containing:
+#             A_ext (external A matrix), x (feature matrix), y (target vector),
+#             no_norm_mask (for x), features_names (for x), l_segs (segment lengths).
+#         If return_B_comps is True, also returns Bt_ext, B_dot_ext.
+#     """
+#     if features_setup is None: features_setup = ["mag_1_uc", "TL_A_flux_a"]
+#     if features_no_norm is None: features_no_norm = []
+#     if terms is None: terms = ["permanent", "induced", "eddy"]
+#     if terms == []: terms = ["permanent", "induced", "eddy"]
+#     if terms_A is None: terms_A = ["permanent", "induced", "eddy", "bias"]
+#     if terms_A == []: terms_A = ["permanent", "induced", "eddy", "bias"]
+#
+#     if isinstance(lines, int):
+#         lines = [lines]
+#
+#     unique_input_lines = sorted(list(set(lines)))
+#     valid_lines_from_df = df_line['line'].unique()
+#
+#     processed_lines = []
+#     for l_num in unique_input_lines:
+#         if l_num in valid_lines_from_df:
+#             processed_lines.append(l_num)
+#         elif not silent:
+#             print(f"Info: Line {l_num} not in df_line, skipping.")
+#
+#     if not processed_lines: # If no valid lines to process
+#         # Determine expected number of columns for A and x to return empty arrays of correct shape
+#         # This is a bit tricky without loading data. For A, it depends on terms_A.
+#         # For x, it depends on features_setup and the structure of those features.
+#         # Placeholder:
+#         num_A_cols = 0
+#         if "permanent" in terms_A: num_A_cols +=3
+#         if "induced"   in terms_A: num_A_cols +=6 # Max 5 for symmetric, 6 for general
+#         if "eddy"      in terms_A: num_A_cols +=9
+#         if "bias"      in terms_A: num_A_cols +=1
+#
+#         # For x, this is harder. If features_out was available from a dry run of get_x, use that.
+#         # For now, returning 0 columns for x if no lines.
+#         num_x_cols = 0 # Placeholder, ideally infer from features_setup
+#
+#         empty_A = np.empty((0, num_A_cols))
+#         empty_x = np.empty((0, num_x_cols))
+#         empty_y = np.array([])
+#         empty_no_norm = np.array([], dtype=bool)
+#         empty_features = []
+#         empty_l_segs = np.array([], dtype=int)
+#         if return_B_comps:
+#             return empty_A, np.empty((0,3)), empty_y, empty_x, empty_y, empty_no_norm, empty_features, empty_l_segs
+#         else:
+#             return empty_A, empty_x, empty_y, empty_no_norm, empty_features, empty_l_segs
+#
+#     # Check flight data compatibility (xyz_set)
+#     line_details_for_set_check = df_line[df_line['line'].isin(processed_lines)]
+#     flight_names_for_set_check = line_details_for_set_check['flight'].unique()
+#     flight_details_for_set_check = df_flight[df_flight['flight'].isin(flight_names_for_set_check)]
+#     if flight_details_for_set_check['xyz_set'].nunique() > 1:
+#          raise ValueError("Incompatible xyz_sets in df_flight for the selected lines.")
+#
+#     A_list, Bt_list, B_dot_list = [], [], []
+#     x_list, y_list, l_segs_list = [], [], []
+#     no_norm_mask_out, features_out = None, None
+#
+#     current_xyz: Optional[XYZ] = None
+#     current_flight_name: Optional[str] = None
+#
+#     get_XYZ_func, get_map_func, get_map_val_func = None, None, None
+#     try:
+#         from .create_xyz import get_XYZ as get_XYZ_imported
+#         get_XYZ_func = get_XYZ_imported
+#     except ImportError: pass
+#     try:
+#         from .map_utils import get_map as get_map_imported, get_map_val as get_map_val_imported
+#         get_map_func = get_map_imported
+#         get_map_val_func = get_map_val_imported
+#     except ImportError: pass
+#
+#
+#     for line_num in processed_lines:
+#         line_info_df = df_line[df_line['line'] == line_num]
+#         if line_info_df.empty: continue
+#         line_info = line_info_df.iloc[0]
+#         flight_name = line_info['flight']
+#
+#         if flight_name != current_flight_name:
+#             if get_XYZ_func:
+#                 current_xyz = get_XYZ_func(flight_name, df_flight, reorient_vec=reorient_vec, silent=silent)
+#             else: # Placeholder XYZ
+#                 if not silent: print(f"Warning: get_XYZ not available. Using placeholder XYZ for flight {flight_name}")
+#                 dummy_traj = Traj(N=10, dt=0.1, tt=np.arange(10)*0.1, lat=np.zeros(10), lon=np.zeros(10), alt=np.zeros(10), vn=np.zeros(10), ve=np.zeros(10), vd=np.zeros(10), fn=np.zeros(10), fe=np.zeros(10), fd=np.zeros(10), Cnb=np.array([np.eye(3)]*10).transpose(1,2,0))
+#                 dummy_ins = INS(N=10, dt=0.1, tt=np.arange(10)*0.1, lat=np.zeros(10), lon=np.zeros(10), alt=np.zeros(10), vn=np.zeros(10), ve=np.zeros(10), vd=np.zeros(10), fn=np.zeros(10), fe=np.zeros(10), fd=np.zeros(10), Cnb=np.array([np.eye(3)]*10).transpose(1,2,0), P=np.zeros((17,17,10)))
+#                 dummy_magv = MagV(x=np.zeros(10),y=np.zeros(10),z=np.zeros(10),t=np.zeros(10))
+#                 current_xyz = XYZ0(info="dummy_Axy", traj=dummy_traj, ins=dummy_ins, flux_a=dummy_magv, flight=np.array([flight_name]*10,dtype=object), line=np.full(10,line_num), year=np.full(10,2020), doy=np.ones(10), diurnal=np.zeros(10), igrf=np.zeros(10), mag_1_c=np.zeros(10), mag_1_uc=np.zeros(10))
+#             current_flight_name = flight_name
+#
+#         if current_xyz is None: continue
+#
+#         ind_for_line = get_ind_windowed(current_xyz, line=line_num, df_line=df_line, l_window=l_window)
+#         t_start = line_info.get('t_start', -np.inf); t_end = line_info.get('t_end', np.inf)
+#         if hasattr(current_xyz.traj, 'tt') and len(current_xyz.traj.tt) == current_xyz.traj.N:
+#             time_mask = (current_xyz.traj.tt >= t_start) & (current_xyz.traj.tt <= t_end)
+#             ind_for_line = ind_for_line & time_mask
+#
+#         if not np.any(ind_for_line):
+#             l_segs_list.append(0)
+#             continue
+#
+#         l_segs_list.append(np.sum(ind_for_line))
+#
+#         # X matrix
+#         xi, no_norm_i, features_i, _ = get_x(current_xyz, ind_for_line,
+#                                             features_setup=features_setup,
+#                                             features_no_norm=features_no_norm,
+#                                             terms=terms, sub_diurnal=sub_diurnal,
+#                                             sub_igrf=sub_igrf, bpf_mag_data=bpf_mag_data_in_x)
+#         x_list.append(xi)
+#         if no_norm_mask_out is None:
+#             no_norm_mask_out = no_norm_i
+#             features_out = features_i
+#         elif not np.array_equal(no_norm_mask_out, no_norm_i) or features_out != features_i:
+#             raise ValueError("Feature set or no_norm mask mismatch between lines/flights for x matrix.")
+#
+#         # Map values for Y and potentially for A_external
+#         map_val_for_line: Union[float, np.ndarray] = -1
+#         if y_type in ['b', 'c'] or map_TL:
+#             map_name_series = line_info.get('map_name')
+#             if map_name_series is None or pd.isna(map_name_series):
+#                 raise ValueError(f"map_name missing in df_line for line {line_num} when y_type is '{y_type}' or map_TL is True.")
+#             map_name = str(map_name_series)
+#             if get_map_func and get_map_val_func:
+#                 current_map_data = get_map_func(map_name, df_map)
+#                 map_val_for_line = get_map_val_func(current_map_data, current_xyz.traj, ind_for_line, alpha=200)
+#             else: # Placeholder map_val
+#                 if not silent: print(f"Warning: get_map/get_map_val not available. Using zeros for map_val for line {line_num}.")
+#                 map_val_for_line = np.zeros(np.sum(ind_for_line))
+#
+#         # Y vector
+#         fs_for_y = 1.0/current_xyz.traj.dt if hasattr(current_xyz.traj, 'dt') and current_xyz.traj.dt > 0 else None
+#         yi = get_y(current_xyz, ind_for_line, map_val=map_val_for_line, y_type=y_type,
+#                    use_mag_str=use_mag_str, use_mag_c_str=use_mag_c_str,
+#                    sub_diurnal=sub_diurnal, sub_igrf=sub_igrf,
+#                    bpf_scalar_mag=(y_type=='e'), fs_override=fs_for_y) # bpf_scalar_mag for y_type 'e'
+#         y_list.append(yi)
+#
+#         # External A matrix
+#         if not hasattr(current_xyz, use_vec_str) or not isinstance(getattr(current_xyz, use_vec_str), MagV):
+#             raise ValueError(f"Vector magnetometer '{use_vec_str}' not found or not MagV type in XYZ for external A.")
+#
+#         vec_mag_data_for_A = getattr(current_xyz, use_vec_str)
+#         Bt_for_A: Optional[np.ndarray] = None
+#         if mod_TL:
+#             if not hasattr(current_xyz, use_mag_str):
+#                 raise ValueError(f"Scalar mag '{use_mag_str}' for mod_TL not in XYZ.")
+#             Bt_for_A = getattr(current_xyz, use_mag_str)[ind_for_line]
+#         elif map_TL:
+#             if not isinstance(map_val_for_line, np.ndarray) or len(map_val_for_line) != np.sum(ind_for_line):
+#                  raise ValueError("map_val_for_line must be a valid array for map_TL.")
+#             Bt_for_A = map_val_for_line
+#
+#         # create_TL_A now returns A, Bt_used, B_dot_used
+#         Ai, Bt_i, B_dot_i = create_TL_A_modified_2(vec_mag_data_for_A, ind_for_line,
+#                                         Bt_scalar_override=Bt_for_A,
+#                                         terms=terms_A,
+#                                         return_B_components=True) # Always get components
+#
+#         if y_type == 'e' and bpf_A_if_y_type_e:
+#             fs_for_A = 1.0/current_xyz.traj.dt if hasattr(current_xyz.traj, 'dt') and current_xyz.traj.dt > 0 else None
+#             if fs_for_A:
+#                 # BPF each column of Ai
+#                 sos_A = get_bpf_sos(fs=fs_for_A) # Default passbands
+#                 for k_col in range(Ai.shape[1]):
+#                     Ai[:, k_col] = bpf_data(Ai[:, k_col], sos=sos_A)
+#             elif not silent:
+#                 print(f"Warning: Cannot BPF external A matrix for y_type 'e' on line {line_num} due to missing dt.")
+#
+#         A_list.append(Ai)
+#         if return_B_comps:
+#             Bt_list.append(Bt_i)
+#             B_dot_list.append(B_dot_i)
+#
+#     if not x_list: # All lines were skipped or resulted in no data
+#         num_A_cols = A_list[0].shape[1] if A_list else 0
+#         num_x_cols = x_list[0].shape[1] if x_list else (len(features_out) if features_out else 0)
+#
+#         final_A = np.empty((0, num_A_cols))
+#         final_x = np.empty((0, num_x_cols))
+#         final_y = np.array([])
+#         final_no_norm = np.array([], dtype=bool) if no_norm_mask_out is None else no_norm_mask_out
+#         final_features = [] if features_out is None else features_out
+#         final_l_segs = np.array(l_segs_list, dtype=int)
+#
+#         if return_B_comps:
+#             return final_A, np.array([]), np.empty((0,3)), final_x, final_y, final_no_norm, final_features, final_l_segs
+#         else:
+#             return final_A, final_x, final_y, final_no_norm, final_features, final_l_segs
+#
+#     final_A = np.vstack(A_list)
+#     final_x = np.vstack(x_list)
+#     final_y = np.concatenate(y_list)
+#     final_l_segs = np.array(l_segs_list, dtype=int)
+#
+#     if return_B_comps:
+#         final_Bt = np.concatenate(Bt_list) if Bt_list else np.array([])
+#         final_B_dot = np.vstack(B_dot_list) if B_dot_list else np.empty((0,3))
+#         return final_A, final_Bt, final_B_dot, final_x, final_y, no_norm_mask_out, features_out, final_l_segs
+#     else:
+#         return final_A, final_x, final_y, no_norm_mask_out, features_out, final_l_segs

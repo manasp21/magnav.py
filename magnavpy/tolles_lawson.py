@@ -269,6 +269,177 @@ def create_TL_A(flux_or_Bx: Union[MagV, np.ndarray],
                                    Bt_scale=Bt_scale,
                                    return_B=return_B)
 
+def create_TL_A_modified_2(flux, ind,
+                     Bt       = None,
+                     terms    = None,
+                     Bt_scale = 50000,
+                     return_B = False):
+    return create_TL_A_modified_1(flux.x[ind],flux.y[ind],flux.z[ind], Bt=Bt,terms=terms,Bt_scale=Bt_scale,return_B=return_B)
+
+def create_TL_A_modified_1(Bx, By, Bz, 
+                Bt=None,
+                terms=None,
+                Bt_scale=50000,
+                return_B=False):
+    
+    # Default parameter handling
+    if Bt is None:
+        Bt = np.sqrt(Bx**2 + By**2 + Bz**2)
+    
+    if terms is None:
+        terms = ['permanent', 'induced', 'eddy']
+    
+    # Ensure terms is a list
+    if not isinstance(terms, list):
+        terms = [terms]
+
+    Bx_hat = Bx / Bt
+    By_hat = By / Bt
+    Bz_hat = Bz / Bt
+
+    Bx_dot = fdm(Bx)
+    By_dot = fdm(By)
+    Bz_dot = fdm(Bz)
+
+    Bx_hat_Bx = Bx_hat * Bx / Bt_scale
+    Bx_hat_By = Bx_hat * By / Bt_scale
+    Bx_hat_Bz = Bx_hat * Bz / Bt_scale
+    By_hat_By = By_hat * By / Bt_scale
+    By_hat_Bz = By_hat * Bz / Bt_scale
+    Bz_hat_Bz = Bz_hat * Bz / Bt_scale
+
+    Bx_hat_Bx_dot = Bx_hat * Bx_dot / Bt_scale
+    Bx_hat_By_dot = Bx_hat * By_dot / Bt_scale
+    Bx_hat_Bz_dot = Bx_hat * Bz_dot / Bt_scale
+    By_hat_Bx_dot = By_hat * Bx_dot / Bt_scale
+    By_hat_By_dot = By_hat * By_dot / Bt_scale
+    By_hat_Bz_dot = By_hat * Bz_dot / Bt_scale
+    Bz_hat_Bx_dot = Bz_hat * Bx_dot / Bt_scale
+    Bz_hat_By_dot = Bz_hat * By_dot / Bt_scale
+    Bz_hat_Bz_dot = Bz_hat * Bz_dot / Bt_scale
+
+    # note: original (slightly incorrect) eddy current terms
+    # Bx_hat_Bx_dot = Bx_hat * fdm(Bx_hat) * Bt / Bt_scale
+    # Bx_hat_By_dot = Bx_hat * fdm(By_hat) * Bt / Bt_scale
+    # Bx_hat_Bz_dot = Bx_hat * fdm(Bz_hat) * Bt / Bt_scale
+    # By_hat_Bx_dot = By_hat * fdm(Bx_hat) * Bt / Bt_scale
+    # By_hat_By_dot = By_hat * fdm(By_hat) * Bt / Bt_scale
+    # By_hat_Bz_dot = By_hat * fdm(Bz_hat) * Bt / Bt_scale
+    # Bz_hat_Bx_dot = Bz_hat * fdm(Bx_hat) * Bt / Bt_scale
+    # Bz_hat_By_dot = Bz_hat * fdm(By_hat) * Bt / Bt_scale
+    # Bz_hat_Bz_dot = Bz_hat * fdm(Bz_hat) * Bt / Bt_scale
+
+    A = np.empty((len(Bt), 0), dtype=Bt.dtype)
+    print("A matrix=", A)
+    
+    # add (3) permanent field terms - all
+    if any(term in terms for term in ['permanent', 'p', 'permanent3', 'p3']):
+        A = np.column_stack([A, Bx_hat, By_hat, Bz_hat]) if A.size > 0 else np.column_stack([Bx_hat, By_hat, Bz_hat])
+
+    # add (6) induced field terms - all
+    if any(term in terms for term in ['induced', 'i', 'induced6', 'i6']):
+        new_cols = np.column_stack([Bx_hat_Bx, Bx_hat_By, Bx_hat_Bz, By_hat_By, By_hat_Bz, Bz_hat_Bz])
+        A = np.column_stack([A, new_cols]) if A.size > 0 else new_cols
+
+    # add (5) induced field terms - all except Bz_hat_Bz
+    if any(term in terms for term in ['induced5', 'i5']):
+        new_cols = np.column_stack([Bx_hat_Bx, Bx_hat_By, Bx_hat_Bz, By_hat_By, By_hat_Bz])
+        A = np.column_stack([A, new_cols]) if A.size > 0 else new_cols
+
+    # add (3) induced field terms - Bx_hat_Bx, By_hat_By, Bz_hat_Bz
+    if any(term in terms for term in ['induced3', 'i3']):
+        new_cols = np.column_stack([Bx_hat_Bx, By_hat_By, Bz_hat_Bz])
+        A = np.column_stack([A, new_cols]) if A.size > 0 else new_cols
+
+    # add (9) eddy current terms - all
+    if any(term in terms for term in ['eddy', 'e', 'eddy9', 'e9']):
+        new_cols1 = np.column_stack([Bx_hat_Bx_dot, Bx_hat_By_dot, Bx_hat_Bz_dot])
+        A = np.column_stack([A, new_cols1]) if A.size > 0 else new_cols1
+        new_cols2 = np.column_stack([By_hat_Bx_dot, By_hat_By_dot, By_hat_Bz_dot])
+        A = np.column_stack([A, new_cols2])
+        new_cols3 = np.column_stack([Bz_hat_Bx_dot, Bz_hat_By_dot, Bz_hat_Bz_dot])
+        A = np.column_stack([A, new_cols3])
+
+    # add (8) eddy current terms - all except Bz_hat_Bz_dot
+    if any(term in terms for term in ['eddy8', 'e8']):
+        new_cols1 = np.column_stack([Bx_hat_Bx_dot, Bx_hat_By_dot, Bx_hat_Bz_dot])
+        A = np.column_stack([A, new_cols1]) if A.size > 0 else new_cols1
+        new_cols2 = np.column_stack([By_hat_Bx_dot, By_hat_By_dot, By_hat_Bz_dot])
+        A = np.column_stack([A, new_cols2])
+        new_cols3 = np.column_stack([Bz_hat_Bx_dot, Bz_hat_By_dot])
+        A = np.column_stack([A, new_cols3])
+
+    # add (3) eddy current terms - Bx_hat_Bx_dot, By_hat_By_dot, Bz_hat_Bz_dot
+    if any(term in terms for term in ['eddy3', 'e3']):
+        new_cols = np.column_stack([Bx_hat_Bx_dot, By_hat_By_dot, Bz_hat_Bz_dot])
+        A = np.column_stack([A, new_cols]) if A.size > 0 else new_cols
+
+    # add (3) derivative terms - Bx_dot, By_dot, Bz_dot
+    if any(term in terms for term in ['fdm', 'f', 'fdm3', 'f3']):
+        new_cols = np.column_stack([Bx_dot, By_dot, Bz_dot])
+        A = np.column_stack([A, new_cols]) if A.size > 0 else new_cols
+
+    # add (1) bias term
+    if any(term in terms for term in ['bias', 'b']):
+        bias_col = np.ones(len(Bt), dtype=Bt.dtype)
+        A = np.column_stack([A, bias_col]) if A.size > 0 else bias_col.reshape(-1, 1)
+    
+    A = A[0]
+    if np.all(A == 0) and A.size == 0:
+        raise ValueError(f"{terms} terms are invalid")
+
+    if return_B:
+        B_dot = np.column_stack([Bx_dot, By_dot, Bz_dot])
+        return (A, Bt, B_dot)
+    else:
+        return A
+    
+def create_TL_A_modified(Bx, By, Bz, add_induced=True, add_eddy=True, Bt_scale=50000):
+    """
+    Create Tolles-Lawson A matrix using vector magnetometer measurements.
+
+    Arguments:
+    - `Bx, By, Bz` : vector magnetometer measurements
+    - `add_induced, add_eddy` : (optional) add induced and/or eddy terms to Tolles-Lawson A matrix.
+    - `Bt_scale` : (optional) scaling factor for induced and eddy current terms
+
+    Returns:
+    - `A` : Tolles-Lawson A matrix
+    """
+    Bt = np.sqrt(Bx**2 + By**2 + Bz**2)
+    s  = Bt / Bt_scale # scale
+    cosX, cosY, cosZ = Bx/Bt, By/Bt, Bz/Bt
+    cosX_dot = np.gradient(cosX)
+    cosY_dot = np.gradient(cosY)
+    cosZ_dot = np.gradient(cosZ)        
+
+    # (3) permanent moment
+    A = np.column_stack((cosX, cosY, cosZ))
+
+    # (6) induced moment
+    if add_induced:
+        A_ind = np.column_stack((s*cosX*cosX,
+                                 s*cosX*cosY,
+                                 s*cosX*cosZ,
+                                 s*cosY*cosY,
+                                 s*cosY*cosZ,
+                                 s*cosZ*cosZ))
+        A = np.column_stack((A, A_ind))
+
+    # (9) eddy current
+    if add_eddy:        
+        A_edd = np.column_stack((s*cosX*cosX_dot,
+                                 s*cosX*cosY_dot,
+                                 s*cosX*cosZ_dot,
+                                 s*cosY*cosX_dot,
+                                 s*cosY*cosY_dot,
+                                 s*cosY*cosZ_dot,
+                                 s*cosZ*cosX_dot,
+                                 s*cosZ*cosY_dot,
+                                 s*cosZ*cosZ_dot))
+        A = np.column_stack((A, A_edd))
+
+    return A
 def _create_TL_coef_components(Bx: np.ndarray, By: np.ndarray, Bz: np.ndarray, B_scalar: np.ndarray, *,
                                Bt_actual: Optional[np.ndarray],
                                lambda_val: float,

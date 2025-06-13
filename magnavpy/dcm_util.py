@@ -20,7 +20,7 @@ def skew(v: np.ndarray) -> np.ndarray:
         [-v[1], v[0], 0]
     ])
 
-def dcm2euler(Cnb: np.ndarray, order: str = 'zyx') -> np.ndarray:
+def dcm2euler(Cnb: np.ndarray, order: str = 'zyx') -> tuple:
     """
     Convert Direction Cosine Matrix (DCM) to Euler angles.
 
@@ -167,9 +167,9 @@ def dcm2euler(Cnb: np.ndarray, order: str = 'zyx') -> np.ndarray:
             raise ValueError(f"Unsupported Euler angle order for dcm2euler: {order}")
 
     if Cnb.ndim == 2: # If input was 3x3, return a 1D array
-        return np.array([angle1_out[0], angle2_out[0], angle3_out[0]])
+        return (angle1_out[0], angle2_out[0], angle3_out[0])
     # If input was 3x3xN, return an Nx3 array
-    return np.stack((angle1_out, angle2_out, angle3_out), axis=1)
+    return (angle1_out, angle2_out, angle3_out)
 
 def euler2dcm(angle1: Union[float, np.ndarray],
               angle2: Union[float, np.ndarray],

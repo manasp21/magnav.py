@@ -44,8 +44,10 @@ INS = MagNav.INS
 
 
 import magnavpy.analysis_util as au
+import magnavpy.signal_util as su
 from magnavpy.plot_functions import plot_mag
 import magnavpy.compensation as compensation
+# import magnavpy.compensation as compensation
 import magnavpy.tolles_lawson as tolles_lawson
 
 """
@@ -60,8 +62,7 @@ from pathlib import Path
 import copy
 from typing import Union, Tuple, List, Any, Optional, Dict, BinaryIO
 
-# Constants
-g_earth = 9.80665  # Earth's gravity in m/s²
+
 #
 # @dataclass
 # class MagV:
@@ -199,68 +200,8 @@ def add_extension(filename: str, extension: str) -> str:
         return filename + extension
     return filename
 
-def xyz_fields(fields_type: str) -> list:
-    """Return list of field names for XYZ20 data"""
-    # This represents the :fields20 symbol from Julia
-    if fields_type == "fields20":
-        return [
-            'flight', 'line', 'year', 'doy', 'tt', 'utm_x', 'utm_y', 'utm_z', 'msl',
-            'lat', 'lon', 'baro', 'diurnal', 'mag_1_c', 'mag_1_lag', 'mag_1_dc',
-            'mag_1_igrf', 'mag_1_uc', 'mag_2_uc', 'mag_3_uc', 'mag_4_uc', 'mag_5_uc',
-            'mag_6_uc', 'ogs_mag', 'ogs_alt', 'ins_wander', 'ins_lat', 'ins_lon',
-            'ins_alt', 'ins_roll', 'ins_pitch', 'ins_yaw', 'ins_vn', 'ins_vw', 'ins_vu',
-            'roll_rate', 'pitch_rate', 'yaw_rate', 'ins_acc_x', 'ins_acc_y', 'ins_acc_z',
-            'lgtl_acc', 'ltrl_acc', 'nrml_acc', 'pitot_p', 'static_p', 'total_p',
-            'cur_com_1', 'cur_ac_hi', 'cur_ac_lo', 'cur_tank', 'cur_flap', 'cur_strb',
-            'cur_srvo_o', 'cur_srvo_m', 'cur_srvo_i', 'cur_heat', 'cur_acpwr',
-            'cur_outpwr', 'cur_bat_1', 'cur_bat_2', 'vol_acpwr', 'vol_outpwr',
-            'vol_bat_1', 'vol_bat_2', 'vol_res_p', 'vol_res_n', 'vol_back_p',
-            'vol_back_n', 'vol_gyro_1', 'vol_gyro_2', 'vol_acc_p', 'vol_acc_n',
-            'vol_block', 'vol_back', 'vol_srvo', 'vol_cabt', 'vol_fan',
-            'flux_a_x', 'flux_a_y', 'flux_a_z', 'flux_a_t',
-            'flux_b_x', 'flux_b_y', 'flux_b_z', 'flux_b_t',
-            'flux_c_x', 'flux_c_y', 'flux_c_z', 'flux_c_t',
-            'flux_d_x', 'flux_d_y', 'flux_d_z', 'flux_d_t'
-        ]
-    return []
 
-def read_check(h5_file: h5py.File, field: str, N_or_default: Union[int, Any], silent: bool = False) -> np.ndarray:
-    """Read field from HDF5 file with error checking"""
-    try:
-        if field in h5_file.keys():
-            data = h5_file[field][:]
-            if isinstance(N_or_default, int):
-                # If expecting array of length N, pad or truncate as needed
-                N = N_or_default
-                if len(data) < N:
-                    # Pad with last value or zeros
-                    if len(data) > 0:
-                        padded = np.full(N, data[-1] if np.isscalar(data[-1]) else 0)
-                        padded[:len(data)] = data
-                        return padded
-                    else:
-                        return np.zeros(N)
-                elif len(data) > N:
-                    return data[:N]
-                else:
-                    return data
-            else:
-                # Return scalar or default value
-                return data if len(data) > 0 else N_or_default
-        else:
-            if not silent:
-                logging.warning(f"Field '{field}' not found in HDF5 file")
-            if isinstance(N_or_default, int):
-                return np.zeros(N_or_default)
-            else:
-                return N_or_default
-    except Exception as e:
-        if not silent:
-            logging.warning(f"Error reading field '{field}': {e}")
-        if isinstance(N_or_default, int):
-            return np.zeros(N_or_default)
-        else:
-            return N_or_default
+
 
 def fdm(x: np.ndarray) -> np.ndarray:
     """Finite difference method (forward differences)"""
@@ -274,9 +215,7 @@ def fdm(x: np.ndarray) -> np.ndarray:
     result[-1] = result[-2] if len(x) > 1 else 0
     return result
 
-def deg2rad(degrees: np.ndarray) -> np.ndarray:
-    """Convert degrees to radians"""
-    return np.deg2rad(degrees)
+
 
 def euler2dcm(roll: Union[float, np.ndarray], pitch: Union[float, np.ndarray], 
               yaw: Union[float, np.ndarray], convention: str) -> np.ndarray:
@@ -320,134 +259,134 @@ def euler2dcm(roll: Union[float, np.ndarray], pitch: Union[float, np.ndarray],
     else:
         return dcm
 
-
-def get_XYZ20(xyz_h5: str, 
-              info: str = None,
-              tt_sort: bool = True,
-              silent: bool = False) -> XYZ20:
-    """
-    Load XYZ20 data from HDF5 file
-    
-    Parameters:
-    xyz_h5: path to HDF5 file
-    info: information string (defaults to filename)
-    tt_sort: whether to sort by time
-    silent: suppress info messages
-    """
-    
-    if info is None:
-        info = Path(xyz_h5).name
-        xyz_h5 = add_extension(xyz_h5, ".h5")
-    else:
-        xyz_h5 = info.loc[info['flight']==xyz_h5]['xyz_file'].values[0]
-    fields = "fields20"
-    
-    if not silent:
-        logging.info(f"reading in XYZ20 data: {xyz_h5}")
-    
-    # Open HDF5 file for reading
-    with h5py.File(xyz_h5, "r") as xyz:
-        # Find maximum length across all datasets
-        print('xyz of h5', xyz)
-        N = max([xyz[k].shape[0] for k in xyz.keys() if xyz[k].shape != ()]) #max([len(read(xyz, k)) for k in xyz.keys()])
-        d = {}
-        
-        # Sort by time if requested
-        if tt_sort:
-            tt_data = read_check(xyz, 'tt', N, silent)
-            ind = np.argsort(tt_data)
-        else:
-            ind = np.arange(N)
-        
-        # Read all fields
-        for field in xyz_fields(fields):
-            if field != 'ignore':
-                d[field] = read_check(xyz, field, N, silent)[ind]
-        
-        # Read info field
-        field = 'info'
-        info_data = read_check(xyz, field, info)
-        d[field] = info_data
-        
-        # Read auxiliary fields
-        for field in ['aux_1', 'aux_2', 'aux_3']:
-            d[field] = read_check(xyz, field, N, True)
-    
-    # Calculate time step
-    dt = round(d['tt'][1] - d['tt'][0], 9) if N > 1 else 0.1
-    
-    # Convert degrees to radians for angular measurements
-    for field in ['lat', 'lon', 'ins_roll', 'ins_pitch', 'ins_yaw',
-                  'roll_rate', 'pitch_rate', 'yaw_rate']:
-        d[field] = deg2rad(d[field])
-    
-    # Calculate IGRF difference for convenience
-    d['igrf'] = d['mag_1_dc'] - d['mag_1_igrf']
-    
-    # Calculate trajectory velocities & specific forces from position
-    d['vn'] = fdm(d['utm_y']) / dt
-    d['ve'] = fdm(d['utm_x']) / dt
-    d['vd'] = -fdm(d['utm_z']) / dt
-    d['fn'] = fdm(d['vn']) / dt
-    d['fe'] = fdm(d['ve']) / dt
-    d['fd'] = fdm(d['vd']) / dt - g_earth
-    
-    # Direction cosine matrix (body to navigation) from roll, pitch, yaw
-    d['Cnb'] = np.zeros((3, 3, N))  # unknown
-    d['ins_Cnb'] = euler2dcm(d['ins_roll'], d['ins_pitch'], d['ins_yaw'], 'body2nav')
-    d['ins_P'] = np.zeros((1, 1, N))  # unknown
-    
-    # INS velocities in NED direction
-    d['ins_ve'] = -d['ins_vw']
-    d['ins_vd'] = -d['ins_vu']
-    
-    # INS specific forces from measurements, rotated by wander angle (CW for NED)
-    ins_f = np.zeros((N, 3))
-    for i in range(N):
-        wander_dcm = euler2dcm(0, 0, -d['ins_wander'][i], 'body2nav')
-        acc_vector = np.array([d['ins_acc_x'][i], -d['ins_acc_y'][i], -d['ins_acc_z'][i]])
-        ins_f[i, :] = wander_dcm @ acc_vector
-    
-    d['ins_fn'] = ins_f[:, 0]
-    d['ins_fe'] = ins_f[:, 1] 
-    d['ins_fd'] = ins_f[:, 2]
-    
-    # Alternative INS specific forces from finite differences (commented out)
-    # d['ins_fn'] = fdm(-d['ins_vn']) / dt
-    # d['ins_fe'] = fdm(-d['ins_ve']) / dt
-    # d['ins_fd'] = fdm(-d['ins_vd']) / dt - g_earth
-    
-    return XYZ20(
-        d['info'],
-        Traj(N, dt, d['tt'], d['lat'], d['lon'], d['utm_z'], d['vn'],
-             d['ve'], d['vd'], d['fn'], d['fe'], d['fd'], d['Cnb']),
-        INS(N, dt, d['tt'], d['ins_lat'], d['ins_lon'], d['ins_alt'],
-            d['ins_vn'], d['ins_ve'], d['ins_vd'], d['ins_fn'],
-            d['ins_fe'], d['ins_fd'], d['ins_Cnb'], d['ins_P']),
-        MagV(d['flux_a_x'], d['flux_a_y'], d['flux_a_z'], d['flux_a_t']),
-        MagV(d['flux_b_x'], d['flux_b_y'], d['flux_b_z'], d['flux_b_t']),
-        MagV(d['flux_c_x'], d['flux_c_y'], d['flux_c_z'], d['flux_c_t']),
-        MagV(d['flux_d_x'], d['flux_d_y'], d['flux_d_z'], d['flux_d_t']),
-        d['flight'], d['line'], d['year'], d['doy'],
-        d['utm_x'], d['utm_y'], d['utm_z'], d['msl'],
-        d['baro'], d['diurnal'], d['igrf'], d['mag_1_c'],
-        d['mag_1_lag'], d['mag_1_dc'], d['mag_1_igrf'], d['mag_1_uc'],
-        d['mag_2_uc'], d['mag_3_uc'], d['mag_4_uc'], d['mag_5_uc'],
-        d['mag_6_uc'], d['ogs_mag'], d['ogs_alt'], d['ins_wander'],
-        d['ins_roll'], d['ins_pitch'], d['ins_yaw'], d['roll_rate'],
-        d['pitch_rate'], d['yaw_rate'], d['ins_acc_x'], d['ins_acc_y'],
-        d['ins_acc_z'], d['lgtl_acc'], d['ltrl_acc'], d['nrml_acc'],
-        d['pitot_p'], d['static_p'], d['total_p'], d['cur_com_1'],
-        d['cur_ac_hi'], d['cur_ac_lo'], d['cur_tank'], d['cur_flap'],
-        d['cur_strb'], d['cur_srvo_o'], d['cur_srvo_m'], d['cur_srvo_i'],
-        d['cur_heat'], d['cur_acpwr'], d['cur_outpwr'], d['cur_bat_1'],
-        d['cur_bat_2'], d['vol_acpwr'], d['vol_outpwr'], d['vol_bat_1'],
-        d['vol_bat_2'], d['vol_res_p'], d['vol_res_n'], d['vol_back_p'],
-        d['vol_back_n'], d['vol_gyro_1'], d['vol_gyro_2'], d['vol_acc_p'],
-        d['vol_acc_n'], d['vol_block'], d['vol_back'], d['vol_srvo'],
-        d['vol_cabt'], d['vol_fan'], d['aux_1'], d['aux_2'],
-        d['aux_3']
-    )
+#
+# def get_XYZ20(xyz_h5: str, 
+#               info: str = None,
+#               tt_sort: bool = True,
+#               silent: bool = False) -> XYZ20:
+#     """
+#     Load XYZ20 data from HDF5 file
+#
+#     Parameters:
+#     xyz_h5: path to HDF5 file
+#     info: information string (defaults to filename)
+#     tt_sort: whether to sort by time
+#     silent: suppress info messages
+#     """
+#
+#     if info is None:
+#         info = Path(xyz_h5).name
+#         xyz_h5 = add_extension(xyz_h5, ".h5")
+#     else:
+#         xyz_h5 = info.loc[info['flight']==xyz_h5]['xyz_file'].values[0]
+#     fields = "fields20"
+#
+#     if not silent:
+#         logging.info(f"reading in XYZ20 data: {xyz_h5}")
+#
+#     # Open HDF5 file for reading
+#     with h5py.File(xyz_h5, "r") as xyz:
+#         # Find maximum length across all datasets
+#         print('xyz of h5', xyz)
+#         N = max([xyz[k].shape[0] for k in xyz.keys() if xyz[k].shape != ()]) #max([len(read(xyz, k)) for k in xyz.keys()])
+#         d = {}
+#
+#         # Sort by time if requested
+#         if tt_sort:
+#             tt_data = read_check(xyz, 'tt', N, silent)
+#             ind = np.argsort(tt_data)
+#         else:
+#             ind = np.arange(N)
+#
+#         # Read all fields
+#         for field in xyz_fields(fields):
+#             if field != 'ignore':
+#                 d[field] = read_check(xyz, field, N, silent)[ind]
+#
+#         # Read info field
+#         field = 'info'
+#         info_data = read_check(xyz, field, info)
+#         d[field] = info_data
+#
+#         # Read auxiliary fields
+#         for field in ['aux_1', 'aux_2', 'aux_3']:
+#             d[field] = read_check(xyz, field, N, True)
+#
+#     # Calculate time step
+#     dt = round(d['tt'][1] - d['tt'][0], 9) if N > 1 else 0.1
+#
+#     # Convert degrees to radians for angular measurements
+#     for field in ['lat', 'lon', 'ins_roll', 'ins_pitch', 'ins_yaw',
+#                   'roll_rate', 'pitch_rate', 'yaw_rate']:
+#         d[field] = deg2rad(d[field])
+#
+#     # Calculate IGRF difference for convenience
+#     d['igrf'] = d['mag_1_dc'] - d['mag_1_igrf']
+#
+#     # Calculate trajectory velocities & specific forces from position
+#     d['vn'] = fdm(d['utm_y']) / dt
+#     d['ve'] = fdm(d['utm_x']) / dt
+#     d['vd'] = -fdm(d['utm_z']) / dt
+#     d['fn'] = fdm(d['vn']) / dt
+#     d['fe'] = fdm(d['ve']) / dt
+#     d['fd'] = fdm(d['vd']) / dt - g_earth
+#
+#     # Direction cosine matrix (body to navigation) from roll, pitch, yaw
+#     d['Cnb'] = np.zeros((3, 3, N))  # unknown
+#     d['ins_Cnb'] = euler2dcm(d['ins_roll'], d['ins_pitch'], d['ins_yaw'], 'body2nav')
+#     d['ins_P'] = np.zeros((1, 1, N))  # unknown
+#
+#     # INS velocities in NED direction
+#     d['ins_ve'] = -d['ins_vw']
+#     d['ins_vd'] = -d['ins_vu']
+#
+#     # INS specific forces from measurements, rotated by wander angle (CW for NED)
+#     ins_f = np.zeros((N, 3))
+#     for i in range(N):
+#         wander_dcm = euler2dcm(0, 0, -d['ins_wander'][i], 'body2nav')
+#         acc_vector = np.array([d['ins_acc_x'][i], -d['ins_acc_y'][i], -d['ins_acc_z'][i]])
+#         ins_f[i, :] = wander_dcm @ acc_vector
+#
+#     d['ins_fn'] = ins_f[:, 0]
+#     d['ins_fe'] = ins_f[:, 1] 
+#     d['ins_fd'] = ins_f[:, 2]
+#
+#     # Alternative INS specific forces from finite differences (commented out)
+#     # d['ins_fn'] = fdm(-d['ins_vn']) / dt
+#     # d['ins_fe'] = fdm(-d['ins_ve']) / dt
+#     # d['ins_fd'] = fdm(-d['ins_vd']) / dt - g_earth
+#
+#     return XYZ20(
+#         d['info'],
+#         Traj(N, dt, d['tt'], d['lat'], d['lon'], d['utm_z'], d['vn'],
+#              d['ve'], d['vd'], d['fn'], d['fe'], d['fd'], d['Cnb']),
+#         INS(N, dt, d['tt'], d['ins_lat'], d['ins_lon'], d['ins_alt'],
+#             d['ins_vn'], d['ins_ve'], d['ins_vd'], d['ins_fn'],
+#             d['ins_fe'], d['ins_fd'], d['ins_Cnb'], d['ins_P']),
+#         MagV(d['flux_a_x'], d['flux_a_y'], d['flux_a_z'], d['flux_a_t']),
+#         MagV(d['flux_b_x'], d['flux_b_y'], d['flux_b_z'], d['flux_b_t']),
+#         MagV(d['flux_c_x'], d['flux_c_y'], d['flux_c_z'], d['flux_c_t']),
+#         MagV(d['flux_d_x'], d['flux_d_y'], d['flux_d_z'], d['flux_d_t']),
+#         d['flight'], d['line'], d['year'], d['doy'],
+#         d['utm_x'], d['utm_y'], d['utm_z'], d['msl'],
+#         d['baro'], d['diurnal'], d['igrf'], d['mag_1_c'],
+#         d['mag_1_lag'], d['mag_1_dc'], d['mag_1_igrf'], d['mag_1_uc'],
+#         d['mag_2_uc'], d['mag_3_uc'], d['mag_4_uc'], d['mag_5_uc'],
+#         d['mag_6_uc'], d['ogs_mag'], d['ogs_alt'], d['ins_wander'],
+#         d['ins_roll'], d['ins_pitch'], d['ins_yaw'], d['roll_rate'],
+#         d['pitch_rate'], d['yaw_rate'], d['ins_acc_x'], d['ins_acc_y'],
+#         d['ins_acc_z'], d['lgtl_acc'], d['ltrl_acc'], d['nrml_acc'],
+#         d['pitot_p'], d['static_p'], d['total_p'], d['cur_com_1'],
+#         d['cur_ac_hi'], d['cur_ac_lo'], d['cur_tank'], d['cur_flap'],
+#         d['cur_strb'], d['cur_srvo_o'], d['cur_srvo_m'], d['cur_srvo_i'],
+#         d['cur_heat'], d['cur_acpwr'], d['cur_outpwr'], d['cur_bat_1'],
+#         d['cur_bat_2'], d['vol_acpwr'], d['vol_outpwr'], d['vol_bat_1'],
+#         d['vol_bat_2'], d['vol_res_p'], d['vol_res_n'], d['vol_back_p'],
+#         d['vol_back_n'], d['vol_gyro_1'], d['vol_gyro_2'], d['vol_acc_p'],
+#         d['vol_acc_n'], d['vol_block'], d['vol_back'], d['vol_srvo'],
+#         d['vol_cabt'], d['vol_fan'], d['aux_1'], d['aux_2'],
+#         d['aux_3']
+#     )
 
 
 
@@ -555,68 +494,69 @@ setup dataframe ends
 # flight information, magnetometer readings, and auxilliary sensor data.
 
 
-def get_XYZ(flight: str, df_flight: pd.DataFrame,
-            tt_sort: bool = True,
-            reorient_vec: bool = False,
-            silent: bool = False):
-    """
-    Get XYZ data for a specific flight from a DataFrame.
-    
-    Parameters:
-    -----------
-    flight : str
-        Flight identifier
-    df_flight : pandas.DataFrame
-        DataFrame containing flight data
-    tt_sort : bool, optional
-        Whether to sort by time (default: True)
-    reorient_vec : bool, optional
-        Whether to reorient vectors (default: False)
-    silent : bool, optional
-        Whether to suppress output (default: False)
-    
-    Returns:
-    --------
-    xyz : object
-        XYZ data object
-    """
-    
-    # Find first index where flight column matches the input flight
-    flight_symbols = df_flight['flight'].astype(str)
-    ind = None
-    for i, f in enumerate(flight_symbols):
-        if f == flight:
-            ind = i
-            break
-    
-    if ind is None:
-        raise ValueError(f"Flight '{flight}' not found in DataFrame")
-    
-    xyz_file = str(df_flight.iloc[ind]['xyz_file'])
-    xyz_type = str(df_flight.iloc[ind]['xyz_type'])
-    
-    # Call appropriate get_XYZ function based on xyz_type
-    if xyz_type == 'XYZ0':
-        xyz = get_XYZ0(xyz_file, tt_sort=tt_sort, silent=silent)
-    elif xyz_type == 'XYZ1':
-        xyz = get_XYZ1(xyz_file, tt_sort=tt_sort, silent=silent)
-    elif xyz_type == 'XYZ20':
-        xyz = get_XYZ20(xyz_file, tt_sort=tt_sort, silent=silent)
-    elif xyz_type == 'XYZ21':
-        xyz = get_XYZ21(xyz_file, tt_sort=tt_sort, silent=silent)
-    else:
-        raise ValueError(f"{xyz_type} xyz_type not defined")
-    
-    # Optionally reorient vectors
-    if reorient_vec:
-        xyz_reorient_vec_(xyz)
-    
-    return xyz
+# def get_XYZ(flight: str, df_flight: pd.DataFrame,
+#             tt_sort: bool = True,
+#             reorient_vec: bool = False,
+#             silent: bool = False):
+#     """
+#     Get XYZ data for a specific flight from a DataFrame.
+#
+#     Parameters:
+#     -----------
+#     flight : str
+#         Flight identifier
+#     df_flight : pandas.DataFrame
+#         DataFrame containing flight data
+#     tt_sort : bool, optional
+#         Whether to sort by time (default: True)
+#     reorient_vec : bool, optional
+#         Whether to reorient vectors (default: False)
+#     silent : bool, optional
+#         Whether to suppress output (default: False)
+#
+#     Returns:
+#     --------
+#     xyz : object
+#         XYZ data object
+#     """
+#
+#     # Find first index where flight column matches the input flight
+#     flight_symbols = df_flight['flight'].astype(str)
+#     ind = None
+#     for i, f in enumerate(flight_symbols):
+#         if f == flight:
+#             ind = i
+#             break
+#
+#     if ind is None:
+#         raise ValueError(f"Flight '{flight}' not found in DataFrame")
+#
+#     xyz_file = str(df_flight.iloc[ind]['xyz_file'])
+#     xyz_type = str(df_flight.iloc[ind]['xyz_type'])
+#
+#     # Call appropriate get_XYZ function based on xyz_type
+#     if xyz_type == 'XYZ0':
+#         xyz = get_XYZ0(xyz_file, tt_sort=tt_sort, silent=silent)
+#     elif xyz_type == 'XYZ1':
+#         xyz = get_XYZ1(xyz_file, tt_sort=tt_sort, silent=silent)
+#     elif xyz_type == 'XYZ20':
+#         xyz = get_XYZ20(xyz_file, tt_sort=tt_sort, silent=silent)
+#     elif xyz_type == 'XYZ21':
+#         xyz = get_XYZ21(xyz_file, tt_sort=tt_sort, silent=silent)
+#     else:
+#         raise ValueError(f"{xyz_type} xyz_type not defined")
+#
+#     # Optionally reorient vectors
+#     if reorient_vec:
+#         xyz_reorient_vec_(xyz)
+#
+#     return xyz
 
 
 
 flight = 'Flt1006'  # select flight, full list in df_flight
 
+from magnavpy.create_xyz import get_XYZ
 xyz = get_XYZ(flight, df_flight)  # load flight data (equivalent Julia function)
 
 # The `xyz` flight data struct contains all the flight data from the HDF5 file, but Boolean indices can be used as a mask to return specific portion(s) of flight data.
@@ -646,219 +586,6 @@ print(fields)
 
 
 
-def get_ind_vectors(tt: List[float], line: List[int], 
-                   ind: Optional[Union[List[bool], np.ndarray]] = None,
-                   lines: Tuple = (),
-                   tt_lim: Tuple = (),
-                   splits: Tuple[float, ...] = (1,)) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
-    """
-    Get BitVector of indices for further analysis from specified indices (subset),
-    lines, and/or time range. Any or all of these may be used. Defaults to use all
-    indices, lines, and times.
-
-    Arguments:
-    - tt:     time [s]
-    - line:   line number(s)
-    - ind:    (optional) selected data indices
-    - lines:  (optional) selected line number(s)
-    - tt_lim: (optional) end time limit or length-2 start & end time limits (inclusive) [s]
-    - splits: (optional) data splits, must sum to 1
-
-    Returns:
-    - ind: BitVector (or tuple of BitVector) of selected data indices
-    """
-    
-    assert abs(sum(splits) - 1) < 1e-10, f"sum of splits = {sum(splits)} ≠ 1"
-    assert len(tt_lim) <= 2, f"length of tt_lim = {len(tt_lim)} > 2"
-    assert len(splits) <= 3, f"number of splits = {len(splits)} > 3"
-
-    if ind is None:
-        ind = np.ones(len(tt), dtype=bool)
-    
-    tt = np.array(tt)
-    line = np.array(line)
-    
-    if isinstance(ind, (list, np.ndarray)) and len(ind) > 0 and isinstance(ind[0], bool):
-        ind_ = copy.deepcopy(ind)
-        ind_ = np.array(ind_, dtype=bool)
-    else:
-        ind_ = np.isin(np.arange(len(tt)), ind)
-
-    N = len(tt)
-
-    if len(lines) > 0:
-        ind = np.zeros(N, dtype=bool)
-        for l in lines:
-            ind = ind | (line == l)
-    else:
-        ind = np.ones(N, dtype=bool)
-
-    if len(tt_lim) == 1:
-        ind = ind & (tt <= min(tt_lim[0]))
-    elif len(tt_lim) == 2:
-        print('ind=', ind)
-        print('tt_lim', tt_lim)
-        print('tt', tt)
-        ind = ind & (tt >= tt_lim[0]) & (tt <= tt_lim[1])
-
-    # ind = ind & ind_
-
-    if np.sum(ind) == 0:
-        logging.info("ind contains all falses")
-
-    if len(splits) == 1:
-        return ind
-    elif len(splits) == 2:
-        ind1 = ind & (np.cumsum(ind) <= int(round(np.sum(ind) * splits[0])))
-        ind2 = ind & ~ind1
-        return (ind1, ind2)
-    elif len(splits) == 3:
-        ind1 = ind & (np.cumsum(ind) <= int(round(np.sum(ind) * splits[0])))
-        ind2 = ind & (np.cumsum(ind) <= int(round(np.sum(ind) * (splits[0] + splits[1])))) & ~ind1
-        ind3 = ind & ~(ind1 | ind2)
-        return (ind1, ind2, ind3)
-
-
-def get_ind_xyz(xyz, 
-               ind: Optional[np.ndarray] = None,
-               lines: Tuple = (),
-               tt_lim: Tuple = (),
-               splits: Tuple[float, ...] = (1,)) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
-    """
-    Get BitVector of indices for further analysis from specified indices (subset),
-    lines, and/or time range. Any or all of these may be used. Defaults to use all
-    indices, lines, and times.
-
-    Arguments:
-    - xyz:    XYZ flight data struct
-    - ind:    (optional) selected data indices
-    - lines:  (optional) selected line number(s)
-    - tt_lim: (optional) end time limit or length-2 start & end time limits (inclusive) [s]
-    - splits: (optional) data splits, must sum to 1
-
-    Returns:
-    - ind: BitVector (or tuple of BitVector) of selected data indices
-    """
-    if ind is None:
-        ind = np.ones(xyz.traj.N, dtype=bool)
-    
-    # Check if xyz has line attribute
-    if hasattr(xyz, 'line'):
-        line_ = xyz.line
-    else:
-        line_ = np.ones(len(xyz.traj.tt[ind]))
-    
-    return get_ind_vectors(xyz.traj.tt, line_,
-                          ind=ind,
-                          lines=lines,
-                          tt_lim=tt_lim,
-                          splits=splits)
-
-
-def get_ind_xyz_line_df(xyz, line: float, df_line: pd.DataFrame,
-                       splits: Tuple[float, ...] = (1,),
-                       l_window: int = -1) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
-    """
-    Get BitVector of indices for further analysis via DataFrame lookup.
-
-    Arguments:
-    - xyz:     XYZ flight data struct
-    - line:    line number
-    - df_line: lookup table (DataFrame) of lines
-    |**Field**|**Type**|**Description**
-    |:--|:--|:--
-    `flight`   |`Symbol`| flight name (e.g., `:Flt1001`)
-    `line`     |`Real`  | line number, i.e., segments within `flight`
-    `t_start`  |`Real`  | start time of `line` to use [s]
-    `t_end`    |`Real`  | end   time of `line` to use [s]
-    `map_name` |`Symbol`| (optional) name of magnetic anomaly map relevant to `line`
-    - splits:   (optional) data splits, must sum to 1
-    - l_window: (optional) trim data by N % l_window, -1 to ignore
-
-    Returns:
-    - ind: BitVector (or tuple of BitVector) of selected data indices
-    """
-    
-    line_mask = df_line['line'] == line
-    tt_lim = [df_line.loc[line_mask, 't_start'].iloc[0],
-              df_line.loc[line_mask, 't_end'].iloc[-1]]
-    
-    # Check if xyz has line attribute
-    if hasattr(xyz, 'line'):
-        line_ = xyz.line
-    else:
-        # Note: this creates a dummy ind for the ones() call, but it's not used properly in original
-        # Following the original logic exactly
-        ind_dummy = np.ones(xyz.traj.N, dtype=bool)  # This matches the original ind reference
-        line_ = np.ones(len(xyz.traj.tt[ind_dummy]))
-    
-    inds = get_ind_vectors(xyz.traj.tt, line_,
-                          lines=[line],
-                          tt_lim=tt_lim,
-                          splits=splits)
-
-    if l_window > 0:
-        if isinstance(inds, tuple):
-            for ind in inds:
-                N_trim = np.sum(xyz.traj.lat[ind]) % l_window
-                for _ in range(N_trim):
-                    last_true_idx = np.where(ind == 1)[0][-1] if np.any(ind == 1) else None
-                    if last_true_idx is not None:
-                        ind[last_true_idx] = 0
-        else:
-            N_trim = np.sum(inds) % l_window
-            for _ in range(N_trim):
-                last_true_idx = np.where(inds == 1)[0][-1] if np.any(inds == 1) else None
-                if last_true_idx is not None:
-                    inds[last_true_idx] = 0
-
-    return inds
-
-
-def get_ind_xyz_lines_df(xyz, lines, df_line: pd.DataFrame,
-                        splits: Tuple[float, ...] = (1,),
-                        l_window: int = -1) -> Union[np.ndarray, Tuple[np.ndarray, ...]]:
-    """
-    Get BitVector of selected data indices for further analysis via DataFrame lookup.
-
-    Arguments:
-    - xyz:     XYZ flight data struct
-    - lines:   selected line number(s)
-    - df_line: lookup table (DataFrame) of lines
-    |**Field**|**Type**|**Description**
-    |:--|:--|:--
-    `flight`   |`Symbol`| flight name (e.g., `:Flt1001`)
-    `line`     |`Real`  | line number, i.e., segments within `flight`
-    `t_start`  |`Real`  | start time of `line` to use [s]
-    `t_end`    |`Real`  | end   time of `line` to use [s]
-    `map_name` |`Symbol`| (optional) name of magnetic anomaly map relevant to `line`
-    - splits:   (optional) data splits, must sum to 1
-    - l_window: (optional) trim data by N % l_window, -1 to ignore
-
-    Returns:
-    - ind: BitVector (or tuple of BitVector) of selected data indices
-    """
-    
-    assert abs(sum(splits) - 1) < 1e-10, f"sum of splits = {sum(splits)} ≠ 1"
-    assert len(splits) <= 3, f"number of splits = {len(splits)} > 3"
-
-    ind = np.zeros(xyz.traj.N, dtype=bool)
-    for line in lines:
-        if line in df_line['line'].values:
-            line_ind = get_ind_xyz_line_df(xyz, line, df_line, l_window=l_window)
-            ind = ind | line_ind
-
-    if len(splits) == 1:
-        return ind
-    elif len(splits) == 2:
-        ind1 = ind & (np.cumsum(ind) <= int(round(np.sum(ind) * splits[0])))
-        ind2 = ind & ~ind1
-        return (ind1, ind2)
-    elif len(splits) == 3:
-        ind1 = ind & (np.cumsum(ind) <= int(round(np.sum(ind) * splits[0])))
-        ind2 = ind & (np.cumsum(ind) <= int(round(np.sum(ind) * (splits[0] + splits[1])))) & ~ind1
-        ind3 = ind & ~(ind1 | ind2)
-        return (ind1, ind2, ind3)
 
 
 
@@ -866,7 +593,7 @@ TL_i = 6  # select first calibration box of 1006.04
 # from MagNav.analysis_util import *
 # TL_ind = au.get_ind_segs(xyz, lines=[df_cal.t_start[TL_i], df_cal.t_end[TL_i]])
 # TL_ind = au.get_segments(xyz, lines=[df_cal.t_start[TL_i], df_cal.t_end[TL_i]])
-TL_ind_other = get_ind_xyz(xyz, tt_lim=[df_cal.t_start[TL_i], df_cal.t_end[TL_i]])  # equivalent Julia function
+TL_ind_other = au.get_ind_xyz(xyz, tt_lim=[df_cal.t_start[TL_i], df_cal.t_end[TL_i]])  # equivalent Julia function
 TL_ind = TL_ind_other
 
 # Here `df_all` is filtered into `df_options` to ensure that the selected flight line(s) for testing correspond with the selected flight (`:Flt1006`).
@@ -877,7 +604,7 @@ print(df_options)
 # For testing, we use Boolean indices (mask) corresponding to flight line 1006.08 in `df_options`.
 
 line = 1006.08  # select flight line (row) from df_options
-ind = get_ind_xyz_line_df(xyz, line, df_options)  # get Boolean indices
+ind = au.get_ind_xyz_line_df(xyz, line, df_options)  # get Boolean indices
 
 # For training, we select all available flight data from Flights 1003-1006 into `lines_train`, except the held-out flight `line`.
 
@@ -995,15 +722,50 @@ lpf_sig = -compensation.bpf_data(xyz.cur_strb[ind], bpf=lpf) # apply low-pass fi
 lambda_val       = 0.025   # ridge parameter for ridge regression
 use_vec = 'flux_d' # selected vector (flux) magnetometer
 terms_A = ['permanent', 'induced', 'eddy'] # Tolles-Lawson terms to use
-flux    = getattr(xyz,use_vec) # load Flux D data
+flux    = getattr(xyz, use_vec) # load Flux D data
 
 TL_d_4  = tolles_lawson.create_TL_coef(flux, xyz.mag_4_uc, TL_ind, # create Tolles-Lawson
                          terms=terms_A, lambda_val=lambda_val)       # coefficients with Flux D & Mag 4
 
-A = tolles_lawson.create_TL_A(flux, ind)     # Tolles-Lawson `A` matrix for Flux D
-### should return 8391 X 18 matrix ..
+A = tolles_lawson.create_TL_A_modified(flux.x[ind], flux.y[ind], flux.z[ind])     # Tolles-Lawson `A` matrix for Flux D
+### should return 8391 X 18 matrix .. , now after using the _modified function, it is returning
 # returning 108318 X 18 matrix
 
 mag_1_sgl = xyz.mag_1_c[ind]  # professionally compensated tail stinger, Mag 1
 mag_4_uc  = xyz.mag_4_uc[ind] # uncompensated Mag 4
-mag_4_c   = mag_4_uc - au.detrend(A*TL_d_4, mean_only=True) # compensated Mag 4
+
+mag_4_c   = mag_4_uc - au.detrend(A@TL_d_4, mean_only=True) # compensated Mag 4 # use @ instead of * for multiplying matrices
+
+
+
+##### Begin training NN
+features = ['mag_4_uc', 'TL_A_flux_d', 'lpf_cur_com_1', 'lpf_cur_strb', 'lpf_cur_outpwr', 'lpf_cur_ac_lo']
+y_type      = 'd'
+use_mag     = 'mag_4_uc'
+sub_diurnal = True
+sub_igrf    = True
+norm_type_x = 'standardize'
+norm_type_y = 'standardize'
+
+model_type  = 'm2b'
+η_adam      = 0.001
+epoch_adam  = 100
+hidden      = [8]
+
+comp_params = compensation.NNCompParams(features_setup = features,
+                           model_type     = model_type,
+                           y_type         = y_type,
+                           use_mag        = use_mag,
+                           use_vec        = use_vec,
+                           terms_A        = terms_A,
+                           sub_diurnal    = sub_diurnal,
+                           sub_igrf       = sub_igrf,
+                           norm_type_x    = norm_type_x,
+                           norm_type_y    = norm_type_y,
+                           TL_coef        = TL_d_4,
+                           eta_adam         = η_adam,
+                           epoch_adam     = epoch_adam,
+                           hidden         = hidden)
+
+(comp_params,y_train,y_train_hat,err_train,feats) = compensation.comp_train_df(comp_params,lines_train,df_all,df_flight,df_map)
+# (_,y_test_hat,_) = compensation.comp_test(comp_params,[line],df_all,df_flight,df_map)
