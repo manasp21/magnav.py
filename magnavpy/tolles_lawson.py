@@ -330,7 +330,7 @@ def create_TL_A_modified_1(Bx, By, Bz,
     # Bz_hat_Bz_dot = Bz_hat * fdm(Bz_hat) * Bt / Bt_scale
 
     A = np.empty((len(Bt), 0), dtype=Bt.dtype)
-    print("A matrix=", A)
+    # print("A matrix=", A)
     
     # add (3) permanent field terms - all
     if any(term in terms for term in ['permanent', 'p', 'permanent3', 'p3']):

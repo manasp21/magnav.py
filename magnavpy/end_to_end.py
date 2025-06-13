@@ -62,135 +62,6 @@ from pathlib import Path
 import copy
 from typing import Union, Tuple, List, Any, Optional, Dict, BinaryIO
 
-
-#
-# @dataclass
-# class MagV:
-#     """Magnetometer vector data"""
-#     x: np.ndarray
-#     y: np.ndarray
-#     z: np.ndarray
-#     t: np.ndarray
-#
-# @dataclass
-# class Traj:
-#     """Trajectory data structure"""
-#     N: int
-#     dt: float
-#     tt: np.ndarray
-#     lat: np.ndarray
-#     lon: np.ndarray
-#     utm_z: np.ndarray
-#     vn: np.ndarray
-#     ve: np.ndarray
-#     vd: np.ndarray
-#     fn: np.ndarray
-#     fe: np.ndarray
-#     fd: np.ndarray
-#     Cnb: np.ndarray
-#
-# @dataclass
-# class INS:
-#     """INS data structure"""
-#     N: int
-#     dt: float
-#     tt: np.ndarray
-#     ins_lat: np.ndarray
-#     ins_lon: np.ndarray
-#     ins_alt: np.ndarray
-#     ins_vn: np.ndarray
-#     ins_ve: np.ndarray
-#     ins_vd: np.ndarray
-#     ins_fn: np.ndarray
-#     ins_fe: np.ndarray
-#     ins_fd: np.ndarray
-#     ins_Cnb: np.ndarray
-#     ins_P: np.ndarray
-#
-# @dataclass
-# class XYZ20:
-#     """XYZ20 data structure containing all flight data"""
-#     info: Any
-#     traj: Traj
-#     ins: INS
-#     flux_a: MagV
-#     flux_b: MagV
-#     flux_c: MagV
-#     flux_d: MagV
-#     flight: np.ndarray
-#     line: np.ndarray
-#     year: np.ndarray
-#     doy: np.ndarray
-#     utm_x: np.ndarray
-#     utm_y: np.ndarray
-#     utm_z: np.ndarray
-#     msl: np.ndarray
-#     baro: np.ndarray
-#     diurnal: np.ndarray
-#     igrf: np.ndarray
-#     mag_1_c: np.ndarray
-#     mag_1_lag: np.ndarray
-#     mag_1_dc: np.ndarray
-#     mag_1_igrf: np.ndarray
-#     mag_1_uc: np.ndarray
-#     mag_2_uc: np.ndarray
-#     mag_3_uc: np.ndarray
-#     mag_4_uc: np.ndarray
-#     mag_5_uc: np.ndarray
-#     mag_6_uc: np.ndarray
-#     ogs_mag: np.ndarray
-#     ogs_alt: np.ndarray
-#     ins_wander: np.ndarray
-#     ins_roll: np.ndarray
-#     ins_pitch: np.ndarray
-#     ins_yaw: np.ndarray
-#     roll_rate: np.ndarray
-#     pitch_rate: np.ndarray
-#     yaw_rate: np.ndarray
-#     ins_acc_x: np.ndarray
-#     ins_acc_y: np.ndarray
-#     ins_acc_z: np.ndarray
-#     lgtl_acc: np.ndarray
-#     ltrl_acc: np.ndarray
-#     nrml_acc: np.ndarray
-#     pitot_p: np.ndarray
-#     static_p: np.ndarray
-#     total_p: np.ndarray
-#     cur_com_1: np.ndarray
-#     cur_ac_hi: np.ndarray
-#     cur_ac_lo: np.ndarray
-#     cur_tank: np.ndarray
-#     cur_flap: np.ndarray
-#     cur_strb: np.ndarray
-#     cur_srvo_o: np.ndarray
-#     cur_srvo_m: np.ndarray
-#     cur_srvo_i: np.ndarray
-#     cur_heat: np.ndarray
-#     cur_acpwr: np.ndarray
-#     cur_outpwr: np.ndarray
-#     cur_bat_1: np.ndarray
-#     cur_bat_2: np.ndarray
-#     vol_acpwr: np.ndarray
-#     vol_outpwr: np.ndarray
-#     vol_bat_1: np.ndarray
-#     vol_bat_2: np.ndarray
-#     vol_res_p: np.ndarray
-#     vol_res_n: np.ndarray
-#     vol_back_p: np.ndarray
-#     vol_back_n: np.ndarray
-#     vol_gyro_1: np.ndarray
-#     vol_gyro_2: np.ndarray
-#     vol_acc_p: np.ndarray
-#     vol_acc_n: np.ndarray
-#     vol_block: np.ndarray
-#     vol_back: np.ndarray
-#     vol_srvo: np.ndarray
-#     vol_cabt: np.ndarray
-#     vol_fan: np.ndarray
-#     aux_1: np.ndarray
-#     aux_2: np.ndarray
-#     aux_3: np.ndarray
-
 import magnavpy.common_types as common_types
 MagV = common_types.MagV
 
@@ -258,136 +129,6 @@ def euler2dcm(roll: Union[float, np.ndarray], pitch: Union[float, np.ndarray],
         return dcm[:, :, 0]
     else:
         return dcm
-
-#
-# def get_XYZ20(xyz_h5: str, 
-#               info: str = None,
-#               tt_sort: bool = True,
-#               silent: bool = False) -> XYZ20:
-#     """
-#     Load XYZ20 data from HDF5 file
-#
-#     Parameters:
-#     xyz_h5: path to HDF5 file
-#     info: information string (defaults to filename)
-#     tt_sort: whether to sort by time
-#     silent: suppress info messages
-#     """
-#
-#     if info is None:
-#         info = Path(xyz_h5).name
-#         xyz_h5 = add_extension(xyz_h5, ".h5")
-#     else:
-#         xyz_h5 = info.loc[info['flight']==xyz_h5]['xyz_file'].values[0]
-#     fields = "fields20"
-#
-#     if not silent:
-#         logging.info(f"reading in XYZ20 data: {xyz_h5}")
-#
-#     # Open HDF5 file for reading
-#     with h5py.File(xyz_h5, "r") as xyz:
-#         # Find maximum length across all datasets
-#         print('xyz of h5', xyz)
-#         N = max([xyz[k].shape[0] for k in xyz.keys() if xyz[k].shape != ()]) #max([len(read(xyz, k)) for k in xyz.keys()])
-#         d = {}
-#
-#         # Sort by time if requested
-#         if tt_sort:
-#             tt_data = read_check(xyz, 'tt', N, silent)
-#             ind = np.argsort(tt_data)
-#         else:
-#             ind = np.arange(N)
-#
-#         # Read all fields
-#         for field in xyz_fields(fields):
-#             if field != 'ignore':
-#                 d[field] = read_check(xyz, field, N, silent)[ind]
-#
-#         # Read info field
-#         field = 'info'
-#         info_data = read_check(xyz, field, info)
-#         d[field] = info_data
-#
-#         # Read auxiliary fields
-#         for field in ['aux_1', 'aux_2', 'aux_3']:
-#             d[field] = read_check(xyz, field, N, True)
-#
-#     # Calculate time step
-#     dt = round(d['tt'][1] - d['tt'][0], 9) if N > 1 else 0.1
-#
-#     # Convert degrees to radians for angular measurements
-#     for field in ['lat', 'lon', 'ins_roll', 'ins_pitch', 'ins_yaw',
-#                   'roll_rate', 'pitch_rate', 'yaw_rate']:
-#         d[field] = deg2rad(d[field])
-#
-#     # Calculate IGRF difference for convenience
-#     d['igrf'] = d['mag_1_dc'] - d['mag_1_igrf']
-#
-#     # Calculate trajectory velocities & specific forces from position
-#     d['vn'] = fdm(d['utm_y']) / dt
-#     d['ve'] = fdm(d['utm_x']) / dt
-#     d['vd'] = -fdm(d['utm_z']) / dt
-#     d['fn'] = fdm(d['vn']) / dt
-#     d['fe'] = fdm(d['ve']) / dt
-#     d['fd'] = fdm(d['vd']) / dt - g_earth
-#
-#     # Direction cosine matrix (body to navigation) from roll, pitch, yaw
-#     d['Cnb'] = np.zeros((3, 3, N))  # unknown
-#     d['ins_Cnb'] = euler2dcm(d['ins_roll'], d['ins_pitch'], d['ins_yaw'], 'body2nav')
-#     d['ins_P'] = np.zeros((1, 1, N))  # unknown
-#
-#     # INS velocities in NED direction
-#     d['ins_ve'] = -d['ins_vw']
-#     d['ins_vd'] = -d['ins_vu']
-#
-#     # INS specific forces from measurements, rotated by wander angle (CW for NED)
-#     ins_f = np.zeros((N, 3))
-#     for i in range(N):
-#         wander_dcm = euler2dcm(0, 0, -d['ins_wander'][i], 'body2nav')
-#         acc_vector = np.array([d['ins_acc_x'][i], -d['ins_acc_y'][i], -d['ins_acc_z'][i]])
-#         ins_f[i, :] = wander_dcm @ acc_vector
-#
-#     d['ins_fn'] = ins_f[:, 0]
-#     d['ins_fe'] = ins_f[:, 1] 
-#     d['ins_fd'] = ins_f[:, 2]
-#
-#     # Alternative INS specific forces from finite differences (commented out)
-#     # d['ins_fn'] = fdm(-d['ins_vn']) / dt
-#     # d['ins_fe'] = fdm(-d['ins_ve']) / dt
-#     # d['ins_fd'] = fdm(-d['ins_vd']) / dt - g_earth
-#
-#     return XYZ20(
-#         d['info'],
-#         Traj(N, dt, d['tt'], d['lat'], d['lon'], d['utm_z'], d['vn'],
-#              d['ve'], d['vd'], d['fn'], d['fe'], d['fd'], d['Cnb']),
-#         INS(N, dt, d['tt'], d['ins_lat'], d['ins_lon'], d['ins_alt'],
-#             d['ins_vn'], d['ins_ve'], d['ins_vd'], d['ins_fn'],
-#             d['ins_fe'], d['ins_fd'], d['ins_Cnb'], d['ins_P']),
-#         MagV(d['flux_a_x'], d['flux_a_y'], d['flux_a_z'], d['flux_a_t']),
-#         MagV(d['flux_b_x'], d['flux_b_y'], d['flux_b_z'], d['flux_b_t']),
-#         MagV(d['flux_c_x'], d['flux_c_y'], d['flux_c_z'], d['flux_c_t']),
-#         MagV(d['flux_d_x'], d['flux_d_y'], d['flux_d_z'], d['flux_d_t']),
-#         d['flight'], d['line'], d['year'], d['doy'],
-#         d['utm_x'], d['utm_y'], d['utm_z'], d['msl'],
-#         d['baro'], d['diurnal'], d['igrf'], d['mag_1_c'],
-#         d['mag_1_lag'], d['mag_1_dc'], d['mag_1_igrf'], d['mag_1_uc'],
-#         d['mag_2_uc'], d['mag_3_uc'], d['mag_4_uc'], d['mag_5_uc'],
-#         d['mag_6_uc'], d['ogs_mag'], d['ogs_alt'], d['ins_wander'],
-#         d['ins_roll'], d['ins_pitch'], d['ins_yaw'], d['roll_rate'],
-#         d['pitch_rate'], d['yaw_rate'], d['ins_acc_x'], d['ins_acc_y'],
-#         d['ins_acc_z'], d['lgtl_acc'], d['ltrl_acc'], d['nrml_acc'],
-#         d['pitot_p'], d['static_p'], d['total_p'], d['cur_com_1'],
-#         d['cur_ac_hi'], d['cur_ac_lo'], d['cur_tank'], d['cur_flap'],
-#         d['cur_strb'], d['cur_srvo_o'], d['cur_srvo_m'], d['cur_srvo_i'],
-#         d['cur_heat'], d['cur_acpwr'], d['cur_outpwr'], d['cur_bat_1'],
-#         d['cur_bat_2'], d['vol_acpwr'], d['vol_outpwr'], d['vol_bat_1'],
-#         d['vol_bat_2'], d['vol_res_p'], d['vol_res_n'], d['vol_back_p'],
-#         d['vol_back_n'], d['vol_gyro_1'], d['vol_gyro_2'], d['vol_acc_p'],
-#         d['vol_acc_n'], d['vol_block'], d['vol_back'], d['vol_srvo'],
-#         d['vol_cabt'], d['vol_fan'], d['aux_1'], d['aux_2'],
-#         d['aux_3']
-#     )
-
 
 
 """
@@ -494,66 +235,6 @@ setup dataframe ends
 # flight information, magnetometer readings, and auxilliary sensor data.
 
 
-# def get_XYZ(flight: str, df_flight: pd.DataFrame,
-#             tt_sort: bool = True,
-#             reorient_vec: bool = False,
-#             silent: bool = False):
-#     """
-#     Get XYZ data for a specific flight from a DataFrame.
-#
-#     Parameters:
-#     -----------
-#     flight : str
-#         Flight identifier
-#     df_flight : pandas.DataFrame
-#         DataFrame containing flight data
-#     tt_sort : bool, optional
-#         Whether to sort by time (default: True)
-#     reorient_vec : bool, optional
-#         Whether to reorient vectors (default: False)
-#     silent : bool, optional
-#         Whether to suppress output (default: False)
-#
-#     Returns:
-#     --------
-#     xyz : object
-#         XYZ data object
-#     """
-#
-#     # Find first index where flight column matches the input flight
-#     flight_symbols = df_flight['flight'].astype(str)
-#     ind = None
-#     for i, f in enumerate(flight_symbols):
-#         if f == flight:
-#             ind = i
-#             break
-#
-#     if ind is None:
-#         raise ValueError(f"Flight '{flight}' not found in DataFrame")
-#
-#     xyz_file = str(df_flight.iloc[ind]['xyz_file'])
-#     xyz_type = str(df_flight.iloc[ind]['xyz_type'])
-#
-#     # Call appropriate get_XYZ function based on xyz_type
-#     if xyz_type == 'XYZ0':
-#         xyz = get_XYZ0(xyz_file, tt_sort=tt_sort, silent=silent)
-#     elif xyz_type == 'XYZ1':
-#         xyz = get_XYZ1(xyz_file, tt_sort=tt_sort, silent=silent)
-#     elif xyz_type == 'XYZ20':
-#         xyz = get_XYZ20(xyz_file, tt_sort=tt_sort, silent=silent)
-#     elif xyz_type == 'XYZ21':
-#         xyz = get_XYZ21(xyz_file, tt_sort=tt_sort, silent=silent)
-#     else:
-#         raise ValueError(f"{xyz_type} xyz_type not defined")
-#
-#     # Optionally reorient vectors
-#     if reorient_vec:
-#         xyz_reorient_vec_(xyz)
-#
-#     return xyz
-
-
-
 flight = 'Flt1006'  # select flight, full list in df_flight
 
 from magnavpy.create_xyz import get_XYZ
@@ -623,84 +304,6 @@ print(lines_train)
 # Note that these are filtered using the `ind` Boolean indices corresponding to the held-out flight `line`.
 
 
-
-def field_check(s, *args):
-    """
-    Internal helper function with multiple signatures for field checking.
-    
-    Signatures:
-    - field_check(s, t): Find data fields of type t in struct s
-    - field_check(s, field): Check if field exists in struct s  
-    - field_check(s, field, t): Check if field exists and is of type t
-    """
-    
-    def _get_field_names(obj):
-        """Get field names of an object, similar to Julia's fieldnames()"""
-        if hasattr(obj, '__dict__'):
-            return list(vars(obj).keys())
-        elif hasattr(obj, '__slots__'):
-            return list(obj.__slots__)
-        else:
-            # For other objects, get non-callable, non-private attributes
-            return [attr for attr in dir(obj) 
-                    if not callable(getattr(obj, attr, None)) and not attr.startswith('_')]
-    
-    if len(args) == 1:
-        arg = args[0]
-        if isinstance(arg, type):
-            # field_check(s, t::Union{DataType,UnionAll})
-            """
-            Internal helper function to find data fields of a specified type in given struct.
-
-            **Arguments:**
-            - `s`: struct
-            - `t`: type
-
-            **Returns:**
-            - `fields`: data fields of type `t` in struct `s`
-            """
-            t = arg
-            fields = _get_field_names(s)
-            # Find indices where field values are of type t, then return corresponding field names
-            field_type_checks = [isinstance(getattr(s, f), t) for f in fields]
-            indices = [i for i, check in enumerate(field_type_checks) if check]
-            return [fields[i] for i in indices]
-        else:
-            # field_check(s, field::Symbol)
-            """
-            Internal helper function to check if a specified data field is in a given struct.
-
-            **Arguments:**
-            - `s`:     struct
-            - `field`: data field
-
-            **Returns:**
-            - `AssertionError` if `field` is not in struct `s`
-            """
-            field = arg
-            t = type(s)
-            assert hasattr(s, field), f"{field} field not in {t} type"
-    elif len(args) == 2:
-        # field_check(s, field::Symbol, t::Union{DataType,UnionAll})
-        """
-        Internal helper function to check if a specified data field is in a given
-        struct and of a given type.
-
-        **Arguments:**
-        - `s`:     struct
-        - `field`: data field
-        - `t`:     type
-
-        **Returns:**
-        - `AssertionError` if `field` is not in struct `s` or not type `t`
-        """
-        field, t = args
-        field_check(s, field)
-        assert isinstance(getattr(s, field), t), f"{field} is not {t} type"
-    else:
-        raise ValueError("Invalid number of arguments for field_check")
-
-
 # Plotting functions would be implemented separately
 use_mags  = ['mag_1_uc', 'mag_4_uc', 'mag_5_uc']
 show_plot = True
@@ -749,7 +352,7 @@ norm_type_y = 'standardize'
 
 model_type  = 'm2b'
 η_adam      = 0.001
-epoch_adam  = 100
+epoch_adam  = 3000
 hidden      = [8]
 
 comp_params = compensation.NNCompParams(features_setup = features,
@@ -768,4 +371,31 @@ comp_params = compensation.NNCompParams(features_setup = features,
                            hidden         = hidden)
 
 (comp_params,y_train,y_train_hat,err_train,feats) = compensation.comp_train_df(comp_params,lines_train,df_all,df_flight,df_map)
-# (_,y_test_hat,_) = compensation.comp_test(comp_params,[line],df_all,df_flight,df_map)
+(_,y_test_hat,_,features_test) = compensation.comp_test_df(comp_params,[line],df_all,df_flight,df_map)
+
+
+tt = (xyz.traj.tt[ind] - xyz.traj.tt[ind][1]) / 60;
+di = (xyz.diurnal + xyz.igrf)[ind] # diurnal & core (IGRF)
+
+fig, ax = plt.subplots()
+ax.set_xlabel("time [min]")
+ax.set_ylabel("magnetic field [nT]")
+
+# Plot the data series
+ax.plot(tt, au.detrend(mag_1_sgl - di, mean_only=True), label="truth")
+ax.plot(tt, au.detrend(mag_4_uc - di, mean_only=True), label="uncompensated")
+ax.plot(tt, au.detrend(mag_4_c - di, mean_only=True), label="Tolles-Lawson")
+ax.plot(tt, au.detrend(mag_4_uc - y_test_hat - di, mean_only=True), label="model 2b")
+
+# Add legend
+ax.legend()
+
+# Store the plot reference as p8 for consistency with original
+p4 = fig
+
+
+print("raw σ:     ",round(np.std( mag_4_uc               - mag_1_sgl))," nT")
+print("TL σ:      ",round(np.std( mag_4_c                - mag_1_sgl))," nT")
+print("TL + NN σ: ",round(np.std((mag_4_uc - y_test_hat) - mag_1_sgl))," nT")
+
+p4.show()

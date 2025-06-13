@@ -24,7 +24,7 @@ from typing import Tuple, List, Optional, Union, Dict, Any
 import warnings
 from dataclasses import dataclass
 from enum import Enum
-from magnavpy.analysis_util import field_check_3
+from magnavpy.analysis_util import field_check, field_check_3
 from .tolles_lawson import create_TL_A, create_TL_A_modified_1, create_TL_A_modified_2
 from .analysis_util import get_Axy as get_Axy_actual, get_XYZ, get_ind_xyz_line_df, get_x, get_y
 from .common_types import MagV # Import MagV for type checking
@@ -2515,7 +2515,7 @@ def comp_test(comp_params, xyz=None, ind=None, map_s=None, temp_params=None, sil
     
     # Create TL A matrix and load data
     if xyz is not None and ind is not None:
-        field_check(xyz, use_vec, type(None))
+        field_check(xyz, use_vec)
         
         if model_type == 'mod_TL':
             A = create_tl_a(getattr(xyz, use_vec)[ind], terms_A,
@@ -2524,7 +2524,7 @@ def comp_test(comp_params, xyz=None, ind=None, map_s=None, temp_params=None, sil
             A = create_tl_a(getattr(xyz, use_vec)[ind], terms_A, bt=map_val)
         else:
             vec_data = getattr(xyz, use_vec)[ind] if hasattr(xyz, use_vec) else np.random.randn(3, len(ind))
-            A = create_tl_a(vec_data, terms_A)
+            A = create_TL_A(vec_data, terms_A)
             Bt = getattr(xyz, use_mag)[ind] if hasattr(xyz, use_mag) else np.random.randn(len(ind))
             B_dot = np.gradient(vec_data, axis=1)
         
@@ -2576,6 +2576,127 @@ def comp_test(comp_params, xyz=None, ind=None, map_s=None, temp_params=None, sil
         print_time(elapsed_time, 1)
     
     return y, y_hat, err, features
+
+def comp_test_df(comp_params, lines, df_line, df_flight, df_map,
+                 temp_params=None, silent: bool = False):
+    """
+    Evaluate performance of an aeromagnetic compensation model using DataFrame-based data.
+    
+    Args:
+        comp_params: Compensation parameters
+        lines: Selected line number(s) for testing
+        df_line: Lookup table (DataFrame) of lines
+        df_flight: Lookup table (DataFrame) of flight data files
+        df_map: Lookup table (DataFrame) of map data files
+        temp_params: Temporary parameters (optional)
+        silent: If True, suppress output
+        
+    Returns:
+        Tuple of (y, y_hat, err, features)
+    """
+    import time
+    
+    # Set random seed for reproducibility
+    np.random.seed(2)
+    t0 = time.time()
+    
+    # Extract parameters
+    model_type = getattr(comp_params, 'model_type', 'm1')
+    y_type = getattr(comp_params, 'y_type', 'd')
+    use_mag = getattr(comp_params, 'use_mag', 'mag_1_uc')
+    use_vec = getattr(comp_params, 'use_vec', 'flux_a')
+    features_setup = getattr(comp_params, 'features_setup', [])
+    features_no_norm = getattr(comp_params, 'features_no_norm', [])
+    terms = getattr(comp_params, 'terms', ['permanent', 'induced', 'eddy'])
+    terms_A = getattr(comp_params, 'terms_A', ['permanent', 'induced', 'eddy'])
+    data_norms = getattr(comp_params, 'data_norms', None)
+    model = getattr(comp_params, 'model', None)
+    TL_coef = getattr(comp_params, 'TL_coef', np.zeros(18, dtype=np.float32))
+    
+    # Force y_type for certain models during testing
+    if model_type in ['TL', 'mod_TL'] and y_type != 'd':
+        if not silent:
+            print(f"Forcing y_type {y_type} => d (Δmag)")
+        y_type = 'd'
+    elif model_type == 'map_TL' and y_type != 'c':
+        if not silent:
+            print(f"Forcing y_type {y_type} => c (aircraft field #1, using map)")
+        y_type = 'c'
+    
+    # Load data using DataFrame specifications
+    mod_TL = model_type == 'mod_TL'
+    map_TL = model_type == 'map_TL'
+    
+    if model_type in ['m3tl', 'm3s', 'm3v', 'm3sc', 'm3vc', 'm3w', 'm3tf']:
+        A, Bt, B_dot, x, y, _, features, l_segs = get_Axy_df(
+            lines, df_line, df_flight, df_map, features_setup,
+            features_no_norm=features_no_norm,
+            y_type=y_type,
+            use_mag=use_mag,
+            use_vec=use_vec,
+            terms=terms,
+            terms_A=terms_A,
+            sub_diurnal=getattr(comp_params, 'sub_diurnal', False),
+            sub_igrf=getattr(comp_params, 'sub_igrf', False),
+            bpf_mag=getattr(comp_params, 'bpf_mag', False),
+            reorient_vec=getattr(comp_params, 'reorient_vec', False),
+            mod_TL=mod_TL,
+            map_TL=map_TL,
+            return_B=True,
+            silent=silent
+        )
+    else:
+        A, x, y, _, features, l_segs = get_Axy_df(
+            lines, df_line, df_flight, df_map, features_setup,
+            features_no_norm=features_no_norm,
+            y_type=y_type,
+            use_mag=use_mag,
+            use_vec=use_vec,
+            terms=terms,
+            terms_A=terms_A,
+            sub_diurnal=getattr(comp_params, 'sub_diurnal', False),
+            sub_igrf=getattr(comp_params, 'sub_igrf', False),
+            bpf_mag=getattr(comp_params, 'bpf_mag', False),
+            reorient_vec=getattr(comp_params, 'reorient_vec', False),
+            mod_TL=mod_TL,
+            map_TL=map_TL,
+            return_B=False,
+            silent=silent
+        )
+        Bt = np.array([])
+        B_dot = np.array([]).reshape(0, 0)
+    
+    # Evaluate the model based on model_type
+    if model_type == 'm1':
+        y_hat, err = nn_comp_1_test_raw(x, y, data_norms, model, l_segs=l_segs, silent=silent)
+        
+    elif model_type in ['m2a', 'm2b', 'm2c', 'm2d']:
+        y_hat, err = nn_comp_2_test_raw(A, x, y, data_norms, model,
+                                       model_type=model_type, TL_coef=TL_coef,
+                                       l_segs=l_segs, silent=silent)
+        
+    elif model_type in ['m3tl', 'm3s', 'm3v', 'm3sc', 'm3vc', 'm3w', 'm3tf']:
+        l_window = getattr(temp_params, 'l_window', 5) if temp_params else 5
+        y_hat, err = nn_comp_3_test_raw(A, Bt, B_dot, x, y, data_norms, model,
+                                       model_type=model_type, y_type=y_type,
+                                       TL_coef=TL_coef, terms_A=terms_A,
+                                       l_segs=l_segs, l_window=l_window, silent=silent)
+        
+    elif model_type in ['TL', 'mod_TL', 'map_TL']:
+        y_hat, err = linear_test_raw(A, y, data_norms, model, l_segs=l_segs, silent=silent)
+        
+    elif model_type in ['elasticnet', 'plsr']:
+        y_hat, err = linear_test_raw(x, y, data_norms, model, l_segs=l_segs, silent=silent)
+        
+    else:
+        raise ValueError(f"Unknown model_type: {model_type}")
+    
+    if not silent:
+        elapsed_time = time.time() - t0
+        print_time(elapsed_time, 1)
+    
+    return y, y_hat, err, features
+
 
 def comp_train_test(comp_params, xyz_train=None, xyz_test=None, ind_train=None, ind_test=None,
                    map_s_train=None, map_s_test=None, temp_params=None, silent: bool = False):
