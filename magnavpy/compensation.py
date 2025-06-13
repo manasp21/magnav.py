@@ -2854,8 +2854,7 @@ def comp_train_df(comp_params, lines, df_line, df_flight, df_map,
         )
     else:
         # For other models, we need A, x, y
-        ## A should be of size (423096, 18)
-        # but is actually coming more !!!(4885404, 18)
+        ## A should be of size (423096, 18), now it is
         A, x, y, no_norm, features, l_segs = get_Axy_df(
             lines, df_line, df_flight, df_map, features_setup,
             features_no_norm=features_no_norm,
@@ -2935,7 +2934,7 @@ def comp_train_df(comp_params, lines, df_line, df_flight, df_map,
         
     elif model_type in ['m2a', 'm2b', 'm2c', 'm2d']:
         print('A shape going for train=', A.shape)
-        # A matrix going in nn comp2, should be = (423096, 18). this is not correct
+        # A matrix going in nn comp2, should be = (423096, 18). this is now correct
         model, TL_coef, data_norms, y_hat, err = nn_comp_2_train(
             A, x, y, no_norm,
             model_type=model_type,
