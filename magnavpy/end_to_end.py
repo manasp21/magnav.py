@@ -352,7 +352,7 @@ norm_type_y = 'standardize'
 
 model_type  = 'm2b'
 η_adam      = 0.001
-epoch_adam  = 3000
+epoch_adam  = 5000 #100 #3000
 hidden      = [8]
 
 comp_params = compensation.NNCompParams(features_setup = features,
@@ -373,29 +373,21 @@ comp_params = compensation.NNCompParams(features_setup = features,
 (comp_params,y_train,y_train_hat,err_train,feats) = compensation.comp_train_df(comp_params,lines_train,df_all,df_flight,df_map)
 (_,y_test_hat,_,features_test) = compensation.comp_test_df(comp_params,[line],df_all,df_flight,df_map)
 
-
-tt = (xyz.traj.tt[ind] - xyz.traj.tt[ind][1]) / 60;
-di = (xyz.diurnal + xyz.igrf)[ind] # diurnal & core (IGRF)
-
-fig, ax = plt.subplots()
-ax.set_xlabel("time [min]")
-ax.set_ylabel("magnetic field [nT]")
-
-# Plot the data series
-ax.plot(tt, au.detrend(mag_1_sgl - di, mean_only=True), label="truth")
-ax.plot(tt, au.detrend(mag_4_uc - di, mean_only=True), label="uncompensated")
-ax.plot(tt, au.detrend(mag_4_c - di, mean_only=True), label="Tolles-Lawson")
-ax.plot(tt, au.detrend(mag_4_uc - y_test_hat - di, mean_only=True), label="model 2b")
-
-# Add legend
-ax.legend()
-
-# Store the plot reference as p8 for consistency with original
-p4 = fig
-
-
 print("raw σ:     ",round(np.std( mag_4_uc               - mag_1_sgl))," nT")
 print("TL σ:      ",round(np.std( mag_4_c                - mag_1_sgl))," nT")
 print("TL + NN σ: ",round(np.std((mag_4_uc - y_test_hat) - mag_1_sgl))," nT")
 
-p4.show()
+tt = (xyz.traj.tt[ind] - xyz.traj.tt[ind][1]) / 60;
+di = (xyz.diurnal + xyz.igrf)[ind] # diurnal & core (IGRF)
+
+# Plot the data series
+fig, ax = plt.subplots(dpi=plt.rcParams['figure.dpi'])
+ax.set_xlabel("time [min]")
+ax.set_ylabel("magnetic field [nT]")
+ax.plot(tt.tolist(), au.detrend(mag_1_sgl - di, mean_only=True).tolist(), label="truth")
+ax.plot(tt, au.detrend(mag_4_uc - di, mean_only=True), label="uncompensated")
+ax.plot(tt, au.detrend(mag_4_c - di, mean_only=True), label="Tolles-Lawson")
+ax.plot(tt, au.detrend(mag_4_uc - y_test_hat - di, mean_only=True), label="model 2b")
+ax.legend()
+plt.show()
+p4 = fig
